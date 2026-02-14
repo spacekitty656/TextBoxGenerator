@@ -551,6 +551,239 @@ label {
 }
 
 
+
+.test-window-button {
+  align-self: flex-start;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #9ca3af;
+  border-radius: 6px;
+  background: linear-gradient(#f3f4f6, #d1d5db);
+  color: #111827;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.color-window-overlay.hidden {
+  display: none;
+}
+
+.color-window-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 32%);
+  z-index: 40;
+  display: grid;
+  place-items: center;
+}
+
+.color-window {
+  width: min(96vw, 540px);
+  border-radius: 12px;
+  border: 1px solid #4b5563;
+  background: #2b2d30;
+  box-shadow: 0 20px 50px rgb(0 0 0 / 45%);
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.color-window-header {
+  height: 44px;
+  background: linear-gradient(#1d1f22, #232529);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  border-bottom: 1px solid #3f4349;
+}
+
+.color-window-header h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 400;
+  color: #d1d5db;
+}
+
+.close-window-button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.color-window-body {
+  display: grid;
+  grid-template-columns: 225px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+}
+
+.panel-label {
+  font-size: 0.82rem;
+  color: #ffffff;
+}
+
+.color-left-panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.basic-colors-grid,
+.custom-colors-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+}
+
+.basic-colors-grid::before,
+.custom-colors-grid::before {
+  content: '';
+  grid-column: 1 / -1;
+  display: none;
+}
+
+.color-swatch {
+  display: block;
+  width: 100%;
+  height: 18px;
+  border: 1px solid #121212;
+  padding: 0;
+  cursor: pointer;
+}
+
+.color-swatch:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 1px;
+}
+
+.pick-screen-color-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+}
+
+.pick-screen-color-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.custom-label {
+  margin-top: 8px;
+}
+
+.window-secondary-button,
+.window-primary-button {
+  border: 1px solid #5b616a;
+  border-radius: 4px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.window-secondary-button {
+  background: linear-gradient(#494d53, #3a3d42);
+  color: #ffffff;
+}
+
+.window-primary-button {
+  background: linear-gradient(#4b81b8, #356ca5);
+  color: #ffffff;
+}
+
+.color-right-panel {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.color-map-row {
+  display: grid;
+  grid-template-columns: 1fr 16px;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.color-map {
+  height: 200px;
+  position: relative;
+  border: 1px solid #2a2a2a;
+  background:
+    linear-gradient(to top, #ffffff, rgb(255 255 255 / 0%)),
+    linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+}
+
+.color-map::after {
+  content: '+';
+  position: absolute;
+  right: 14px;
+  top: 8px;
+  font-size: 2rem;
+  color: #111;
+}
+
+.color-slider {
+  border: 1px solid #2a2a2a;
+  background: linear-gradient(to bottom, #ff7f00, #222);
+}
+
+.color-values-row {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 14px;
+}
+
+.selected-color-preview {
+  border: 1px solid #2f2f2f;
+  background: #ff9e17;
+  min-height: 120px;
+}
+
+.value-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.value-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+}
+
+.value-grid label,
+.html-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.value-grid input,
+.html-value input {
+  width: 56px;
+  background: #2f3136;
+  color: #fff;
+  border: 1px solid #4b5563;
+  border-radius: 4px;
+  padding: 0.2rem 0.35rem;
+}
+
+.html-value input {
+  width: 96px;
+}
+
+.dialog-action-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .app-version {
   position: fixed;
   right: 0.75rem;
