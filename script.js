@@ -80,6 +80,32 @@ const closeColorWindowButton = document.getElementById('close-color-window');
 const basicColorsGrid = document.querySelector('.basic-colors-grid');
 const customColorsGrid = document.querySelector('.custom-colors-grid');
 
+const colorMap = document.getElementById('color-map');
+const colorMapHandle = document.getElementById('color-map-handle');
+const colorSlider = document.getElementById('color-slider');
+const colorSliderHandle = document.getElementById('color-slider-handle');
+const selectedColorPreview = document.getElementById('selected-color-preview');
+const colorValueInputs = {
+  hue: document.getElementById('color-value-hue'),
+  sat: document.getElementById('color-value-sat'),
+  val: document.getElementById('color-value-val'),
+  red: document.getElementById('color-value-red'),
+  green: document.getElementById('color-value-green'),
+  blue: document.getElementById('color-value-blue'),
+  hex: document.getElementById('color-value-hex'),
+};
+const colorWindowOkButton = document.getElementById('color-window-ok');
+const colorWindowCancelButton = document.getElementById('color-window-cancel');
+
+const colorPickerState = {
+  hue: 35,
+  sat: 232,
+  val: 255,
+  draftHex: '#ff9e17',
+  activeHex: '#ff9e17',
+  dragTarget: null,
+};
+
 const basicColorPalette = [
   '#000000', '#800000', '#008000', '#808000', '#000080', '#800080', '#008080', '#c0c0c0',
   '#808080', '#ff0000', '#00ff00', '#ffff00', '#0000ff', '#ff00ff', '#00ffff', '#ffffff',
@@ -119,11 +145,204 @@ function populateColorGrid(gridElement, colors) {
   });
 }
 
+
+function clampNumber(value, min, max, fallback) {
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function hsvToRgb(hue, satByte, valByte) {
+  const saturation = Math.min(1, Math.max(0, satByte / 255));
+  const value = Math.min(1, Math.max(0, valByte / 255));
+  const wrappedHue = ((hue % 360) + 360) % 360;
+  const chroma = value * saturation;
+  const hueSection = wrappedHue / 60;
+  const second = chroma * (1 - Math.abs((hueSection % 2) - 1));
+
+  let redPrime = 0;
+  let greenPrime = 0;
+  let bluePrime = 0;
+
+  if (hueSection >= 0 && hueSection < 1) {
+    redPrime = chroma;
+    greenPrime = second;
+  } else if (hueSection < 2) {
+    redPrime = second;
+    greenPrime = chroma;
+  } else if (hueSection < 3) {
+    greenPrime = chroma;
+    bluePrime = second;
+  } else if (hueSection < 4) {
+    greenPrime = second;
+    bluePrime = chroma;
+  } else if (hueSection < 5) {
+    redPrime = second;
+    bluePrime = chroma;
+  } else {
+    redPrime = chroma;
+    bluePrime = second;
+  }
+
+  const match = value - chroma;
+
+  return {
+    red: Math.round((redPrime + match) * 255),
+    green: Math.round((greenPrime + match) * 255),
+    blue: Math.round((bluePrime + match) * 255),
+  };
+}
+
+function rgbToHsv(red, green, blue) {
+  const r = Math.min(1, Math.max(0, red / 255));
+  const g = Math.min(1, Math.max(0, green / 255));
+  const b = Math.min(1, Math.max(0, blue / 255));
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+
+  let hue = 0;
+
+  if (delta !== 0) {
+    if (max === r) {
+      hue = 60 * (((g - b) / delta) % 6);
+    } else if (max === g) {
+      hue = 60 * (((b - r) / delta) + 2);
+    } else {
+      hue = 60 * (((r - g) / delta) + 4);
+    }
+  }
+
+  if (hue < 0) {
+    hue += 360;
+  }
+
+  const saturation = max === 0 ? 0 : delta / max;
+
+  return {
+    hue: Math.round(hue),
+    sat: Math.round(saturation * 255),
+    val: Math.round(max * 255),
+  };
+}
+
+function rgbToHex(red, green, blue) {
+  const toHex = (value) => value.toString(16).padStart(2, '0');
+  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+}
+
+function hexToRgb(hex) {
+  const normalized = hex.trim().replace(/^#/, '');
+
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return null;
+  }
+
+  return {
+    red: Number.parseInt(normalized.slice(0, 2), 16),
+    green: Number.parseInt(normalized.slice(2, 4), 16),
+    blue: Number.parseInt(normalized.slice(4, 6), 16),
+  };
+}
+
+function syncColorPickerUI() {
+  const hue = clampNumber(colorPickerState.hue, 0, 360, 0);
+  const sat = clampNumber(colorPickerState.sat, 0, 255, 0);
+  const val = clampNumber(colorPickerState.val, 0, 255, 0);
+  colorPickerState.hue = hue;
+  colorPickerState.sat = sat;
+  colorPickerState.val = val;
+
+  const rgb = hsvToRgb(hue === 360 ? 0 : hue, sat, val);
+  const hex = rgbToHex(rgb.red, rgb.green, rgb.blue);
+  colorPickerState.draftHex = hex;
+
+  if (selectedColorPreview) {
+    selectedColorPreview.style.backgroundColor = hex;
+  }
+
+  if (colorMap) {
+    colorMap.style.background = `linear-gradient(to top, #000000, rgb(0 0 0 / 0%)), linear-gradient(to right, #ffffff, hsl(${hue}, 100%, 50%))`;
+  }
+
+  if (colorMapHandle && colorMap) {
+    const xPercent = (sat / 255) * 100;
+    const yPercent = 100 - ((val / 255) * 100);
+    colorMapHandle.style.left = `${xPercent}%`;
+    colorMapHandle.style.top = `${yPercent}%`;
+  }
+
+  if (colorSliderHandle) {
+    const yPercent = (hue / 360) * 100;
+    colorSliderHandle.style.top = `${yPercent}%`;
+  }
+
+  if (colorValueInputs.hue) {
+    colorValueInputs.hue.value = String(hue);
+    colorValueInputs.sat.value = String(sat);
+    colorValueInputs.val.value = String(val);
+    colorValueInputs.red.value = String(rgb.red);
+    colorValueInputs.green.value = String(rgb.green);
+    colorValueInputs.blue.value = String(rgb.blue);
+    colorValueInputs.hex.value = hex;
+  }
+}
+
+function updateMapFromPointer(event) {
+  if (!colorMap) {
+    return;
+  }
+
+  const rect = colorMap.getBoundingClientRect();
+  const x = Math.min(rect.width, Math.max(0, event.clientX - rect.left));
+  const y = Math.min(rect.height, Math.max(0, event.clientY - rect.top));
+  colorPickerState.sat = Math.round((x / rect.width) * 255);
+  colorPickerState.val = Math.round((1 - (y / rect.height)) * 255);
+  syncColorPickerUI();
+}
+
+function updateHueFromPointer(event) {
+  if (!colorSlider) {
+    return;
+  }
+
+  const rect = colorSlider.getBoundingClientRect();
+  const y = Math.min(rect.height, Math.max(0, event.clientY - rect.top));
+  colorPickerState.hue = Math.round((y / rect.height) * 360);
+  syncColorPickerUI();
+}
+
+function applyDraftColorToEditor() {
+  if (!colorPickerState.draftHex) {
+    return;
+  }
+
+  colorPickerState.activeHex = colorPickerState.draftHex;
+  applyColorFromSwatch(colorPickerState.activeHex);
+}
+
 function openColorWindow() {
   if (!colorWindowOverlay) {
     return;
   }
 
+  const selectionColor = quill.getFormat()?.color;
+  if (typeof selectionColor === 'string' && selectionColor.trim()) {
+    const rgb = hexToRgb(selectionColor.startsWith('#') ? selectionColor : selectionColor);
+    if (rgb) {
+      const hsv = rgbToHsv(rgb.red, rgb.green, rgb.blue);
+      colorPickerState.hue = hsv.hue;
+      colorPickerState.sat = hsv.sat;
+      colorPickerState.val = hsv.val;
+      colorPickerState.activeHex = rgbToHex(rgb.red, rgb.green, rgb.blue);
+    }
+  }
+
+  syncColorPickerUI();
   colorWindowOverlay.classList.remove('hidden');
   colorWindowOverlay.setAttribute('aria-hidden', 'false');
 }
@@ -1292,7 +1511,9 @@ borderBackgroundColorInput.addEventListener('input', () => {
 });
 
 borderToggle.addEventListener('change', () => {
-  updateBorderControlsState();
+  syncColorPickerUI();
+
+updateBorderControlsState();
   drawEditorToCanvas();
 });
 
@@ -1349,6 +1570,99 @@ if (colorWindowOverlay) {
   });
 }
 
+
+if (colorMap) {
+  colorMap.addEventListener('pointerdown', (event) => {
+    colorPickerState.dragTarget = 'map';
+    colorMap.setPointerCapture(event.pointerId);
+    updateMapFromPointer(event);
+  });
+
+  colorMap.addEventListener('pointermove', (event) => {
+    if (colorPickerState.dragTarget === 'map') {
+      updateMapFromPointer(event);
+    }
+  });
+
+  colorMap.addEventListener('pointerup', (event) => {
+    colorPickerState.dragTarget = null;
+    colorMap.releasePointerCapture(event.pointerId);
+  });
+}
+
+if (colorSlider) {
+  colorSlider.addEventListener('pointerdown', (event) => {
+    colorPickerState.dragTarget = 'slider';
+    colorSlider.setPointerCapture(event.pointerId);
+    updateHueFromPointer(event);
+  });
+
+  colorSlider.addEventListener('pointermove', (event) => {
+    if (colorPickerState.dragTarget === 'slider') {
+      updateHueFromPointer(event);
+    }
+  });
+
+  colorSlider.addEventListener('pointerup', (event) => {
+    colorPickerState.dragTarget = null;
+    colorSlider.releasePointerCapture(event.pointerId);
+  });
+}
+
+if (colorValueInputs.hue) {
+  colorValueInputs.hue.addEventListener('input', () => {
+    colorPickerState.hue = clampNumber(colorValueInputs.hue.value, 0, 360, colorPickerState.hue);
+    syncColorPickerUI();
+  });
+  colorValueInputs.sat.addEventListener('input', () => {
+    colorPickerState.sat = clampNumber(colorValueInputs.sat.value, 0, 255, colorPickerState.sat);
+    syncColorPickerUI();
+  });
+  colorValueInputs.val.addEventListener('input', () => {
+    colorPickerState.val = clampNumber(colorValueInputs.val.value, 0, 255, colorPickerState.val);
+    syncColorPickerUI();
+  });
+
+  ['red', 'green', 'blue'].forEach((key) => {
+    colorValueInputs[key].addEventListener('input', () => {
+      const red = clampNumber(colorValueInputs.red.value, 0, 255, 0);
+      const green = clampNumber(colorValueInputs.green.value, 0, 255, 0);
+      const blue = clampNumber(colorValueInputs.blue.value, 0, 255, 0);
+      const hsv = rgbToHsv(red, green, blue);
+      colorPickerState.hue = hsv.hue;
+      colorPickerState.sat = hsv.sat;
+      colorPickerState.val = hsv.val;
+      syncColorPickerUI();
+    });
+  });
+
+  colorValueInputs.hex.addEventListener('change', () => {
+    const rgb = hexToRgb(colorValueInputs.hex.value);
+    if (!rgb) {
+      syncColorPickerUI();
+      return;
+    }
+
+    const hsv = rgbToHsv(rgb.red, rgb.green, rgb.blue);
+    colorPickerState.hue = hsv.hue;
+    colorPickerState.sat = hsv.sat;
+    colorPickerState.val = hsv.val;
+    syncColorPickerUI();
+  });
+}
+
+if (colorWindowOkButton) {
+  colorWindowOkButton.addEventListener('click', () => {
+    applyDraftColorToEditor();
+  });
+}
+
+if (colorWindowCancelButton) {
+  colorWindowCancelButton.addEventListener('click', () => {
+    closeColorWindow();
+  });
+}
+
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     closeColorWindow();
@@ -1358,6 +1672,8 @@ window.addEventListener('keydown', (event) => {
 if (appVersionBadge) {
   appVersionBadge.textContent = APP_VERSION;
 }
+
+syncColorPickerUI();
 
 updateBorderControlsState();
 syncImageLockedPaddingValues();
