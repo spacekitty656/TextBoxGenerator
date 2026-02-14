@@ -74,6 +74,52 @@ const sidePaddingControls = {
 };
 
 const wrapTextInput = document.getElementById('wrap-text');
+const testWindowButton = document.getElementById('open-color-window');
+const colorWindowOverlay = document.getElementById('color-window-overlay');
+const closeColorWindowButton = document.getElementById('close-color-window');
+const basicColorsGrid = document.querySelector('.basic-colors-grid');
+const customColorsGrid = document.querySelector('.custom-colors-grid');
+
+const basicColorPalette = [
+  '#000000', '#800000', '#008000', '#808000', '#000080', '#800080', '#008080', '#c0c0c0',
+  '#808080', '#ff0000', '#00ff00', '#ffff00', '#0000ff', '#ff00ff', '#00ffff', '#ffffff',
+  '#400000', '#804000', '#408000', '#004000', '#004040', '#000040', '#400040', '#404040',
+  '#ff8080', '#ffc080', '#ffff80', '#80ff80', '#80ffff', '#8080ff', '#ff80ff', '#d0d0d0',
+  '#8000ff', '#ff0080', '#ff8000', '#80ff00', '#00ff80', '#0080ff', '#8000ff', '#ffe680',
+  '#660033', '#cc3300', '#cc6600', '#66cc00', '#00cc66', '#0066cc', '#3300cc', '#66ffff',
+];
+
+function populateColorGrid(gridElement, colors) {
+  if (!gridElement) {
+    return;
+  }
+
+  gridElement.innerHTML = '';
+  colors.forEach((color) => {
+    const swatch = document.createElement('span');
+    swatch.style.background = color;
+    gridElement.appendChild(swatch);
+  });
+}
+
+function openColorWindow() {
+  if (!colorWindowOverlay) {
+    return;
+  }
+
+  colorWindowOverlay.classList.remove('hidden');
+  colorWindowOverlay.setAttribute('aria-hidden', 'false');
+}
+
+function closeColorWindow() {
+  if (!colorWindowOverlay) {
+    return;
+  }
+
+  colorWindowOverlay.classList.add('hidden');
+  colorWindowOverlay.setAttribute('aria-hidden', 'true');
+}
+
 const imageCenterPaddingInput = document.getElementById('image-padding-center');
 const imageSidePaddingControls = {
   top: { input: document.getElementById('image-padding-top'), lock: document.getElementById('image-lock-top') },
@@ -156,7 +202,7 @@ function isTextWrapEnabled() {
 }
 
 function syncEditorWrapMode() {
-  editor.classList.toggle('editor-no-wrap', !isTextWrapEnabled());
+  editorElement.classList.toggle('editor-no-wrap', !isTextWrapEnabled());
 }
 
 function clampToPositiveNumber(value, fallback = 0) {
@@ -1265,6 +1311,31 @@ imageNameInput.addEventListener('keydown', (event) => {
 
   event.preventDefault();
   triggerSaveImage();
+});
+
+populateColorGrid(basicColorsGrid, basicColorPalette);
+populateColorGrid(customColorsGrid, Array.from({ length: 16 }, () => '#f3f4f6'));
+
+if (testWindowButton) {
+  testWindowButton.addEventListener('click', openColorWindow);
+}
+
+if (closeColorWindowButton) {
+  closeColorWindowButton.addEventListener('click', closeColorWindow);
+}
+
+if (colorWindowOverlay) {
+  colorWindowOverlay.addEventListener('click', (event) => {
+    if (event.target === colorWindowOverlay) {
+      closeColorWindow();
+    }
+  });
+}
+
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeColorWindow();
+  }
 });
 
 if (appVersionBadge) {

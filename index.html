@@ -48,6 +48,8 @@
             Wrap text
           </label>
 
+          <button type="button" id="open-color-window" class="test-window-button">Test</button>
+
           <section class="canvas-background-controls" aria-label="Canvas background options">
             <details class="option-accordion" aria-label="Canvas background color options">
               <summary class="control-title">Background color</summary>
@@ -275,6 +277,52 @@
     </main>
 
     <div id="app-version" class="app-version" aria-label="Application version"></div>
+
+    <div id="color-window-overlay" class="color-window-overlay hidden" aria-hidden="true">
+      <div class="color-window" role="dialog" aria-modal="true" aria-labelledby="color-window-title">
+        <div class="color-window-header">
+          <h2 id="color-window-title">Select Color</h2>
+          <button type="button" id="close-color-window" class="close-window-button" aria-label="Close color window">✕</button>
+        </div>
+
+        <div class="color-window-body">
+          <div class="color-left-panel">
+            <span class="panel-label">Basic colors</span>
+            <div class="basic-colors-grid" aria-hidden="true"></div>
+            <button type="button" class="window-secondary-button">Pick Screen Color</button>
+
+            <span class="panel-label custom-label">Custom colors</span>
+            <div class="custom-colors-grid" aria-hidden="true"></div>
+            <button type="button" class="window-secondary-button">Add to Custom Colors</button>
+          </div>
+
+          <div class="color-right-panel" aria-hidden="true">
+            <div class="color-map-row">
+              <div class="color-map"></div>
+              <div class="color-slider"></div>
+            </div>
+            <div class="color-values-row">
+              <div class="selected-color-preview"></div>
+              <div class="value-controls">
+                <div class="value-grid">
+                  <label>Hue: <input type="number" value="35" /></label>
+                  <label>Red: <input type="number" value="255" /></label>
+                  <label>Sat: <input type="number" value="232" /></label>
+                  <label>Green: <input type="number" value="158" /></label>
+                  <label>Val: <input type="number" value="255" /></label>
+                  <label>Blue: <input type="number" value="23" /></label>
+                </div>
+                <label class="html-value">HTML: <input type="text" value="#ff9e17" /></label>
+              </div>
+            </div>
+            <div class="dialog-action-row">
+              <button type="button" class="window-primary-button">OK</button>
+              <button type="button" class="window-secondary-button">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
     <script src="script.js"></script>
