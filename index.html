@@ -298,28 +298,32 @@
             <button type="button" class="window-secondary-button">Add to Custom Colors</button>
           </div>
 
-          <div class="color-right-panel" aria-hidden="true">
+          <div class="color-right-panel">
             <div class="color-map-row">
-              <div class="color-map"></div>
-              <div class="color-slider"></div>
+              <div class="color-map" id="color-map" role="slider" aria-label="Saturation and value" tabindex="0">
+                <div class="color-map-handle" id="color-map-handle" aria-hidden="true"></div>
+              </div>
+              <div class="color-slider" id="color-slider" role="slider" aria-label="Hue" tabindex="0">
+                <div class="color-slider-handle" id="color-slider-handle" aria-hidden="true"></div>
+              </div>
             </div>
             <div class="color-values-row">
-              <div class="selected-color-preview"></div>
+              <div class="selected-color-preview" id="selected-color-preview"></div>
               <div class="value-controls">
                 <div class="value-grid">
-                  <label>Hue: <input type="number" value="35" /></label>
-                  <label>Red: <input type="number" value="255" /></label>
-                  <label>Sat: <input type="number" value="232" /></label>
-                  <label>Green: <input type="number" value="158" /></label>
-                  <label>Val: <input type="number" value="255" /></label>
-                  <label>Blue: <input type="number" value="23" /></label>
+                  <label>Hue: <input type="number" id="color-value-hue" min="0" max="360" value="35" /></label>
+                  <label>Red: <input type="number" id="color-value-red" min="0" max="255" value="255" /></label>
+                  <label>Sat: <input type="number" id="color-value-sat" min="0" max="255" value="232" /></label>
+                  <label>Green: <input type="number" id="color-value-green" min="0" max="255" value="158" /></label>
+                  <label>Val: <input type="number" id="color-value-val" min="0" max="255" value="255" /></label>
+                  <label>Blue: <input type="number" id="color-value-blue" min="0" max="255" value="23" /></label>
                 </div>
-                <label class="html-value">HTML: <input type="text" value="#ff9e17" /></label>
+                <label class="html-value">HTML: <input type="text" id="color-value-hex" value="#ff9e17" /></label>
               </div>
             </div>
             <div class="dialog-action-row">
-              <button type="button" class="window-primary-button">OK</button>
-              <button type="button" class="window-secondary-button">Cancel</button>
+              <button type="button" class="window-primary-button" id="color-window-ok">OK</button>
+              <button type="button" class="window-secondary-button" id="color-window-cancel">Cancel</button>
             </div>
           </div>
         </div>
