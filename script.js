@@ -115,15 +115,25 @@ const basicColorPalette = [
   '#660033', '#cc3300', '#cc6600', '#66cc00', '#00cc66', '#0066cc', '#3300cc', '#66ffff',
 ];
 
-function applyColorFromSwatch(color) {
+function setColorPickerFromHex(color) {
   if (!color) {
-    return;
+    return false;
   }
 
-  quill.focus();
-  quill.format('color', color, 'user');
-  closeColorWindow();
-  drawEditorToCanvas();
+  const rgb = hexToRgb(color);
+
+  if (!rgb) {
+    return false;
+  }
+
+  const hsv = rgbToHsv(rgb.red, rgb.green, rgb.blue);
+  colorPickerState.hue = hsv.hue;
+  colorPickerState.sat = hsv.sat;
+  colorPickerState.val = hsv.val;
+  colorPickerState.draftHex = rgbToHex(rgb.red, rgb.green, rgb.blue);
+  syncColorPickerUI();
+
+  return true;
 }
 
 function populateColorGrid(gridElement, colors) {
@@ -139,7 +149,7 @@ function populateColorGrid(gridElement, colors) {
     swatch.style.background = color;
     swatch.setAttribute('aria-label', `Use text color ${color}`);
     swatch.addEventListener('click', () => {
-      applyColorFromSwatch(color);
+      setColorPickerFromHex(color);
     });
     gridElement.appendChild(swatch);
   });
@@ -322,7 +332,10 @@ function applyDraftColorToEditor() {
   }
 
   colorPickerState.activeHex = colorPickerState.draftHex;
-  applyColorFromSwatch(colorPickerState.activeHex);
+  quill.focus();
+  quill.format('color', colorPickerState.activeHex, 'user');
+  closeColorWindow();
+  drawEditorToCanvas();
 }
 
 function openColorWindow() {
@@ -332,13 +345,9 @@ function openColorWindow() {
 
   const selectionColor = quill.getFormat()?.color;
   if (typeof selectionColor === 'string' && selectionColor.trim()) {
-    const rgb = hexToRgb(selectionColor.startsWith('#') ? selectionColor : selectionColor);
-    if (rgb) {
-      const hsv = rgbToHsv(rgb.red, rgb.green, rgb.blue);
-      colorPickerState.hue = hsv.hue;
-      colorPickerState.sat = hsv.sat;
-      colorPickerState.val = hsv.val;
-      colorPickerState.activeHex = rgbToHex(rgb.red, rgb.green, rgb.blue);
+    const didUpdatePicker = setColorPickerFromHex(selectionColor.startsWith('#') ? selectionColor : selectionColor);
+    if (didUpdatePicker) {
+      colorPickerState.activeHex = colorPickerState.draftHex;
     }
   }
 
