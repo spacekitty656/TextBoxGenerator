@@ -4,7 +4,7 @@ const editorElement = document.getElementById('editor');
 const saveButton = document.getElementById('save-image');
 const imageNameInput = document.getElementById('image-name');
 const appVersionBadge = document.getElementById('app-version');
-const APP_VERSION = 'v1.1.2';
+const APP_VERSION = 'v1.1.3';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 
 const borderToggle = document.getElementById('enable-border');
@@ -89,6 +89,17 @@ const basicColorPalette = [
   '#660033', '#cc3300', '#cc6600', '#66cc00', '#00cc66', '#0066cc', '#3300cc', '#66ffff',
 ];
 
+function applyColorFromSwatch(color) {
+  if (!color) {
+    return;
+  }
+
+  quill.focus();
+  quill.format('color', color, 'user');
+  closeColorWindow();
+  drawEditorToCanvas();
+}
+
 function populateColorGrid(gridElement, colors) {
   if (!gridElement) {
     return;
@@ -96,8 +107,14 @@ function populateColorGrid(gridElement, colors) {
 
   gridElement.innerHTML = '';
   colors.forEach((color) => {
-    const swatch = document.createElement('span');
+    const swatch = document.createElement('button');
+    swatch.type = 'button';
+    swatch.className = 'color-swatch';
     swatch.style.background = color;
+    swatch.setAttribute('aria-label', `Use text color ${color}`);
+    swatch.addEventListener('click', () => {
+      applyColorFromSwatch(color);
+    });
     gridElement.appendChild(swatch);
   });
 }
