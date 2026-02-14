@@ -79,6 +79,7 @@ const colorWindowOverlay = document.getElementById('color-window-overlay');
 const closeColorWindowButton = document.getElementById('close-color-window');
 const basicColorsGrid = document.querySelector('.basic-colors-grid');
 const customColorsGrid = document.querySelector('.custom-colors-grid');
+const addCustomColorButton = document.getElementById('add-custom-color');
 
 const colorMap = document.getElementById('color-map');
 const colorMapHandle = document.getElementById('color-map-handle');
@@ -114,6 +115,14 @@ const basicColorPalette = [
   '#8000ff', '#ff0080', '#ff8000', '#80ff00', '#00ff80', '#0080ff', '#8000ff', '#ffe680',
   '#660033', '#cc3300', '#cc6600', '#66cc00', '#00cc66', '#0066cc', '#3300cc', '#66ffff',
 ];
+
+const customColorPalette = Array.from({ length: 16 }, () => '#f3f4f6');
+
+function handleAddCustomColor() {
+  customColorPalette.pop();
+  customColorPalette.unshift(colorPickerState.draftHex);
+  populateColorGrid(customColorsGrid, customColorPalette);
+}
 
 function setColorPickerFromHex(color) {
   if (!color) {
@@ -1561,7 +1570,11 @@ imageNameInput.addEventListener('keydown', (event) => {
 });
 
 populateColorGrid(basicColorsGrid, basicColorPalette);
-populateColorGrid(customColorsGrid, Array.from({ length: 16 }, () => '#f3f4f6'));
+populateColorGrid(customColorsGrid, customColorPalette);
+
+if (addCustomColorButton) {
+  addCustomColorButton.addEventListener('click', handleAddCustomColor);
+}
 
 if (testWindowButton) {
   testWindowButton.addEventListener('click', openColorWindow);
