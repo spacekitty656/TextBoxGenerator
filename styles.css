@@ -662,7 +662,9 @@ label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 34px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
 }
 
 .pick-screen-color-icon {
@@ -759,7 +761,7 @@ label {
 
 .value-controls {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 
 .value-grid {
@@ -776,6 +778,16 @@ label {
   gap: 8px;
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+.html-value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.html-value-row .html-value {
+  flex: 1;
 }
 
 .value-grid input,
