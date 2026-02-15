@@ -733,7 +733,7 @@ label {
   position: relative;
   border: 1px solid #2a2a2a;
   cursor: ns-resize;
-  background: linear-gradient(to bottom, #ff0000, #ff00ff, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000);
+  background: linear-gradient(to bottom, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
 }
 
 .color-slider-handle {
