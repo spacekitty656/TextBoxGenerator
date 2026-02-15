@@ -691,6 +691,11 @@ label {
   color: #ffffff;
 }
 
+.window-secondary-button.pick-screen-color-button {
+  background: #d1d5db;
+  color: #111827;
+}
+
 .window-primary-button {
   background: linear-gradient(#4b81b8, #356ca5);
   color: #ffffff;
