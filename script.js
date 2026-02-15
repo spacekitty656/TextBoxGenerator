@@ -452,12 +452,23 @@ const DEFAULT_STYLE = {
   size: 'normal',
 };
 
+const imageInsertInput = document.createElement('input');
+imageInsertInput.type = 'file';
+imageInsertInput.accept = 'image/*';
+imageInsertInput.hidden = true;
+document.body.appendChild(imageInsertInput);
+
+function handleEditorImageInsert() {
+  imageInsertInput.click();
+}
+
 const quill = new Quill('#editor', {
   theme: 'snow',
   modules: {
     toolbar: {
       container: '#editor-toolbar',
       handlers: {
+        image: handleEditorImageInsert,
         'open-color-window': openColorWindow,
       },
     },
@@ -480,6 +491,33 @@ quill.setContents([
     },
   },
 ]);
+
+imageInsertInput.addEventListener('change', () => {
+  const [selectedFile] = imageInsertInput.files || [];
+
+  if (!selectedFile || !selectedFile.type.startsWith('image/')) {
+    imageInsertInput.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    const imageSource = typeof reader.result === 'string' ? reader.result : '';
+    if (!imageSource) {
+      imageInsertInput.value = '';
+      return;
+    }
+
+    const selection = quill.getSelection(true);
+    const insertIndex = selection ? selection.index : quill.getLength();
+    quill.insertEmbed(insertIndex, 'image', imageSource, 'user');
+    quill.insertText(insertIndex + 1, '\n', 'user');
+    quill.setSelection(insertIndex + 2, 0, 'silent');
+    imageInsertInput.value = '';
+  };
+
+  reader.readAsDataURL(selectedFile);
+});
 
 function isTextWrapEnabled() {
   return !wrapTextInput || wrapTextInput.checked;
@@ -932,41 +970,91 @@ function tokenizeText(text) {
   return parts || [''];
 }
 
+const embeddedImageCache = new Map();
+
+function requestEmbeddedImage(source) {
+  if (!source) {
+    return null;
+  }
+
+  const existing = embeddedImageCache.get(source);
+  if (existing) {
+    return existing;
+  }
+
+  const imageRecord = {
+    status: 'loading',
+    image: null,
+  };
+
+  const imageElement = new Image();
+  imageElement.onload = () => {
+    imageRecord.status = 'ready';
+    imageRecord.image = imageElement;
+    drawEditorToCanvas();
+  };
+  imageElement.onerror = () => {
+    imageRecord.status = 'error';
+  };
+  imageElement.src = source;
+
+  embeddedImageCache.set(source, imageRecord);
+  return imageRecord;
+}
+
 function extractDocumentFromDelta(delta) {
   const lines = [];
   let currentRuns = [];
 
+  const pushTextLine = (align = 'left') => {
+    lines.push({
+      type: 'text',
+      runs: currentRuns.length > 0 ? currentRuns : [{ text: '', attributes: {} }],
+      align,
+    });
+    currentRuns = [];
+  };
+
   delta.ops.forEach((op) => {
-    if (typeof op.insert !== 'string') {
+    if (typeof op.insert === 'string') {
+      const chunks = op.insert.split('\n');
+
+      chunks.forEach((chunk, index) => {
+        if (chunk.length > 0) {
+          currentRuns.push({
+            text: chunk,
+            attributes: op.attributes || {},
+          });
+        }
+
+        if (index < chunks.length - 1) {
+          pushTextLine(op.attributes?.align || 'left');
+        }
+      });
+
       return;
     }
 
-    const chunks = op.insert.split('\n');
-
-    chunks.forEach((chunk, index) => {
-      if (chunk.length > 0) {
-        currentRuns.push({
-          text: chunk,
-          attributes: op.attributes || {},
-        });
+    const imageSource = op.insert?.image;
+    if (typeof imageSource === 'string' && imageSource.trim()) {
+      if (currentRuns.length > 0) {
+        pushTextLine('left');
       }
 
-      if (index < chunks.length - 1) {
-        lines.push({
-          runs: currentRuns,
-          align: op.attributes?.align || 'left',
-        });
-        currentRuns = [];
-      }
-    });
+      lines.push({
+        type: 'image',
+        align: op.attributes?.align || 'left',
+        source: imageSource,
+      });
+    }
   });
 
   if (currentRuns.length > 0) {
-    lines.push({ runs: currentRuns, align: 'left' });
+    pushTextLine('left');
   }
 
   if (lines.length === 0) {
-    lines.push({ runs: [{ text: '', attributes: {} }], align: 'left' });
+    lines.push({ type: 'text', runs: [{ text: '', attributes: {} }], align: 'left' });
   }
 
   return lines;
@@ -976,6 +1064,27 @@ function layoutDocumentForCanvas(lines, maxWidth, wrapEnabled) {
   const laidOutLines = [];
 
   lines.forEach((line) => {
+    if (line.type === 'image') {
+      const imageRecord = requestEmbeddedImage(line.source);
+      const sourceWidth = imageRecord?.image?.naturalWidth || imageRecord?.image?.width || 0;
+      const sourceHeight = imageRecord?.image?.naturalHeight || imageRecord?.image?.height || 0;
+      const safeWidth = Math.max(1, sourceWidth || maxWidth);
+      const safeHeight = Math.max(1, sourceHeight || Math.round(maxWidth * 0.5));
+      const scale = Math.min(1, maxWidth / safeWidth);
+      const drawWidth = Math.max(1, Math.round(safeWidth * scale));
+      const drawHeight = Math.max(1, Math.round(safeHeight * scale));
+
+      laidOutLines.push({
+        type: 'image',
+        align: line.align || 'left',
+        width: drawWidth,
+        lineHeight: drawHeight + 12,
+        imageHeight: drawHeight,
+        imageRecord,
+      });
+      return;
+    }
+
     let currentTokens = [];
     let currentWidth = 0;
     let maxFontSizeInLine = SIZE_MAP.normal;
@@ -986,6 +1095,7 @@ function layoutDocumentForCanvas(lines, maxWidth, wrapEnabled) {
       }
 
       laidOutLines.push({
+        type: 'text',
         align: line.align || 'left',
         tokens: [...currentTokens],
         width: currentWidth,
@@ -1026,6 +1136,7 @@ function layoutDocumentForCanvas(lines, maxWidth, wrapEnabled) {
 
     if (line.runs.length === 0) {
       laidOutLines.push({
+        type: 'text',
         align: line.align || 'left',
         tokens: [],
         width: 0,
@@ -1071,6 +1182,13 @@ function measureRenderedVerticalBounds(laidOutLines, textStartY) {
   let y = textStartY;
 
   laidOutLines.forEach((line) => {
+    if (line.type === 'image') {
+      renderedMinY = Math.min(renderedMinY, y);
+      renderedMaxY = Math.max(renderedMaxY, y + (line.imageHeight || 0));
+      y += line.lineHeight;
+      return;
+    }
+
     line.tokens.forEach((token) => {
       const metricsSource = token.text.trim() ? token.text : 'M';
       context.font = token.font;
@@ -1372,8 +1490,22 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
   let y = textStartY;
   laidOutLines.forEach((line, index) => {
     const startX = lineStartPositions[index];
-    let x = startX;
 
+    if (line.type === 'image') {
+      if (line.imageRecord?.status === 'ready' && line.imageRecord.image) {
+        context.drawImage(line.imageRecord.image, startX, y, line.width, line.imageHeight);
+      } else {
+        context.fillStyle = '#e5e7eb';
+        context.fillRect(startX, y, line.width, line.imageHeight);
+        context.strokeStyle = '#9ca3af';
+        context.strokeRect(startX, y, line.width, line.imageHeight);
+      }
+
+      y += line.lineHeight;
+      return;
+    }
+
+    let x = startX;
     line.tokens.forEach((token) => {
       context.font = token.font;
       context.fillStyle = token.style.color;
