@@ -74,7 +74,6 @@ const sidePaddingControls = {
 };
 
 const wrapTextInput = document.getElementById('wrap-text');
-const testWindowButton = document.getElementById('open-color-window');
 const colorWindowOverlay = document.getElementById('color-window-overlay');
 const closeColorWindowButton = document.getElementById('close-color-window');
 const basicColorsGrid = document.querySelector('.basic-colors-grid');
@@ -430,6 +429,9 @@ const quill = new Quill('#editor', {
   modules: {
     toolbar: {
       container: '#editor-toolbar',
+      handlers: {
+        'open-color-window': openColorWindow,
+      },
     },
   },
   placeholder: 'Type formatted text here...',
@@ -1576,9 +1578,6 @@ if (addCustomColorButton) {
   addCustomColorButton.addEventListener('click', handleAddCustomColor);
 }
 
-if (testWindowButton) {
-  testWindowButton.addEventListener('click', openColorWindow);
-}
 
 if (closeColorWindowButton) {
   closeColorWindowButton.addEventListener('click', closeColorWindow);
