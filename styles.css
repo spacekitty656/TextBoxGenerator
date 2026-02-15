@@ -80,6 +80,16 @@ label {
   background: #f9fafb;
 }
 
+
+.ql-snow .ql-toolbar button.ql-open-color-window,
+.ql-snow.ql-toolbar button.ql-open-color-window {
+  width: 28px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
+
 #editor {
   min-height: 260px;
   max-height: 33vh;
@@ -550,18 +560,6 @@ label {
   background: #1e40af;
 }
 
-
-
-.test-window-button {
-  align-self: flex-start;
-  padding: 0.45rem 0.9rem;
-  border: 1px solid #9ca3af;
-  border-radius: 6px;
-  background: linear-gradient(#f3f4f6, #d1d5db);
-  color: #111827;
-  font-weight: 600;
-  cursor: pointer;
-}
 
 .color-window-overlay.hidden {
   display: none;
