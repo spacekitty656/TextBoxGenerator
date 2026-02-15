@@ -4,7 +4,7 @@ const editorElement = document.getElementById('editor');
 const saveButton = document.getElementById('save-image');
 const imageNameInput = document.getElementById('image-name');
 const appVersionBadge = document.getElementById('app-version');
-const APP_VERSION = 'v1.1.3';
+const APP_VERSION = 'v1.1.4';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 
 const borderToggle = document.getElementById('enable-border');
@@ -79,6 +79,7 @@ const closeColorWindowButton = document.getElementById('close-color-window');
 const basicColorsGrid = document.querySelector('.basic-colors-grid');
 const customColorsGrid = document.querySelector('.custom-colors-grid');
 const addCustomColorButton = document.getElementById('add-custom-color');
+const pickScreenColorButton = document.getElementById('pick-screen-color');
 
 const colorMap = document.getElementById('color-map');
 const colorMapHandle = document.getElementById('color-map-handle');
@@ -104,6 +105,7 @@ const colorPickerState = {
   draftHex: '#ff9e17',
   activeHex: '#ff9e17',
   dragTarget: null,
+  isPickingFromScreen: false,
 };
 
 const basicColorPalette = [
@@ -332,6 +334,32 @@ function updateHueFromPointer(event) {
   const y = Math.min(rect.height, Math.max(0, event.clientY - rect.top));
   colorPickerState.hue = Math.round((y / rect.height) * 360);
   syncColorPickerUI();
+}
+
+
+async function pickColorFromScreen() {
+  if (!window.EyeDropper) {
+    return;
+  }
+
+  try {
+    colorPickerState.isPickingFromScreen = true;
+    const eyeDropper = new window.EyeDropper();
+    const result = await eyeDropper.open();
+
+    if (result?.sRGBHex) {
+      setColorPickerFromHex(result.sRGBHex);
+    }
+  } catch (error) {
+    if (error?.name !== 'AbortError') {
+      console.error('Unable to pick a color from screen.', error);
+    }
+  } finally {
+    colorPickerState.isPickingFromScreen = false;
+    if (pickScreenColorButton) {
+      pickScreenColorButton.disabled = false;
+    }
+  }
 }
 
 function applyDraftColorToEditor() {
@@ -1576,6 +1604,23 @@ populateColorGrid(customColorsGrid, customColorPalette);
 
 if (addCustomColorButton) {
   addCustomColorButton.addEventListener('click', handleAddCustomColor);
+}
+
+
+if (pickScreenColorButton) {
+  pickScreenColorButton.addEventListener('click', async () => {
+    if (!window.EyeDropper || colorPickerState.isPickingFromScreen) {
+      return;
+    }
+
+    pickScreenColorButton.disabled = true;
+    await pickColorFromScreen();
+  });
+
+  if (!window.EyeDropper) {
+    pickScreenColorButton.disabled = true;
+    pickScreenColorButton.title = 'Your browser does not support screen color picking.';
+  }
 }
 
 
