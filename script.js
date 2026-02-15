@@ -429,6 +429,10 @@ const QuillFont = Quill.import('formats/font');
 QuillFont.whitelist = FONT_WHITELIST;
 Quill.register(QuillFont, true);
 
+if (window.ImageResize) {
+  Quill.register('modules/imageResize', window.ImageResize);
+}
+
 const FONT_MAP = {
   sansserif: 'Arial, Helvetica, sans-serif',
   serif: 'Georgia, "Times New Roman", serif',
@@ -461,6 +465,7 @@ const quill = new Quill('#editor', {
         'open-color-window': openColorWindow,
       },
     },
+    imageResize: {},
   },
   placeholder: 'Type formatted text here...',
 });
