@@ -662,7 +662,10 @@ label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 34px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: #d1d5db;
 }
 
 .pick-screen-color-icon {
@@ -686,6 +689,11 @@ label {
 .window-secondary-button {
   background: linear-gradient(#494d53, #3a3d42);
   color: #ffffff;
+}
+
+.window-secondary-button.pick-screen-color-button {
+  background: #d1d5db;
+  color: #111827;
 }
 
 .window-primary-button {
@@ -759,7 +767,7 @@ label {
 
 .value-controls {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 
 .value-grid {
@@ -776,6 +784,16 @@ label {
   gap: 8px;
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+.html-value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.html-value-row .html-value {
+  flex: 1;
 }
 
 .value-grid input,

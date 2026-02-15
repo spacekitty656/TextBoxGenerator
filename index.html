@@ -288,9 +288,6 @@
           <div class="color-left-panel">
             <span class="panel-label">Basic colors</span>
             <div class="basic-colors-grid" aria-hidden="true"></div>
-            <button type="button" id="pick-screen-color" class="window-secondary-button pick-screen-color-button" aria-label="Pick Screen Color">
-              <img src="assets/icons/eye-dropper.png" alt="Pick Screen Color" class="pick-screen-color-icon" />
-            </button>
 
             <span class="panel-label custom-label">Custom colors</span>
             <div class="custom-colors-grid" aria-hidden="true"></div>
@@ -317,7 +314,12 @@
                   <label>Val: <input type="number" id="color-value-val" min="0" max="255" value="255" /></label>
                   <label>Blue: <input type="number" id="color-value-blue" min="0" max="255" value="23" /></label>
                 </div>
-                <label class="html-value">HTML: <input type="text" id="color-value-hex" value="#ff9e17" /></label>
+                <div class="html-value-row">
+                  <button type="button" id="pick-screen-color" class="window-secondary-button pick-screen-color-button" aria-label="Pick Screen Color">
+                    <img src="assets/icons/eye-dropper.png" alt="Pick Screen Color" class="pick-screen-color-icon" />
+                  </button>
+                  <label class="html-value">HTML: <input type="text" id="color-value-hex" value="#ff9e17" /></label>
+                </div>
               </div>
             </div>
             <div class="dialog-action-row">
