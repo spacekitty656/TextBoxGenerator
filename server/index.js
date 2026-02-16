@@ -15,9 +15,6 @@ fastify.register(fastifyStatic, {
 
 fastify.get('/health', async () => ({ status: 'ok' }));
 
-fastify.get('/', async (_request, reply) => {
-  reply.sendFile('index.html');
-});
 
 const start = async () => {
   try {
