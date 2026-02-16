@@ -860,6 +860,26 @@ label {
   font-family: "Press Start 2P", "Courier New", monospace;
 }
 
+.ql-snow .ql-picker.ql-font {
+  width: 10rem;
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-label,
+.ql-snow .ql-picker.ql-font .ql-picker-item {
+  overflow: hidden;
+}
+
+.ql-snow .ql-picker.ql-font .ql-picker-label::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item::before {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(0.7rem, 1.2vw, 1rem);
+  line-height: 1.25;
+}
+
 .ql-font-pressstart2p {
   font-family: "Press Start 2P", "Courier New", monospace;
 }
