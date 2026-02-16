@@ -88,6 +88,10 @@ export function rgbToHex(red, green, blue) {
 }
 
 export function hexToRgb(hex) {
+  if (typeof hex !== 'string') {
+    return null;
+  }
+
   const normalized = hex.trim().replace(/^#/, '');
 
   if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
