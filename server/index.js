@@ -10,10 +10,11 @@ const staticRoot = existsSync(publicDir) ? publicDir : projectRoot;
 fastify.register(fastifyStatic, {
   root: staticRoot,
   prefix: '/',
-  wildcard: false,
+  wildcard: true,
 });
 
 fastify.get('/health', async () => ({ status: 'ok' }));
+fastify.get('/favicon.ico', async (_request, reply) => reply.code(204).send());
 
 
 const start = async () => {
