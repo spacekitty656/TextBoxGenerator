@@ -1293,6 +1293,7 @@ function drawImageBorder(borderConfig, borderX, borderY, borderRectWidth, border
 
 function calculateCanvasDimensions(laidOutLines, borderConfig, canvasSizePaddingConfig, maxContentWidth) {
   const borderWidth = borderConfig.enabled ? borderConfig.width : 0;
+  const borderStrokeOverflow = borderConfig.enabled ? borderWidth / 2 : 0;
   const textPadding = borderConfig.enabled
     ? borderConfig.padding
     : { top: 0, right: 0, bottom: 0, left: 0 };
@@ -1310,8 +1311,8 @@ function calculateCanvasDimensions(laidOutLines, borderConfig, canvasSizePadding
     const borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderWidth;
 
     return {
-      width: Math.max(1, Math.ceil(borderX + borderRectWidth + canvasSizePaddingConfig.right)),
-      height: Math.max(1, Math.ceil(borderY + borderRectHeight + canvasSizePaddingConfig.bottom)),
+      width: Math.max(1, Math.ceil(borderX + borderRectWidth + borderStrokeOverflow + canvasSizePaddingConfig.right)),
+      height: Math.max(1, Math.ceil(borderY + borderRectHeight + borderStrokeOverflow + canvasSizePaddingConfig.bottom)),
     };
   }
 
