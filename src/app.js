@@ -1,3 +1,7 @@
+import { clampNumber, hsvToRgb, rgbToHsv, rgbToHex, hexToRgb } from './color.js';
+import { tokenizeText, layoutDocumentForCanvas, getAlignedStartX, calculateCanvasDimensions } from './layout.js';
+import { getBorderConfig, getCanvasBackgroundConfig, getCanvasSizePaddingConfig } from './config.js';
+
 const canvas = document.getElementById('preview-canvas');
 const context = canvas.getContext('2d');
 const editorElement = document.getElementById('editor');
@@ -166,108 +170,15 @@ function populateColorGrid(gridElement, colors) {
 }
 
 
-function clampNumber(value, min, max, fallback) {
-  const parsed = Number.parseInt(value, 10);
 
-  if (!Number.isFinite(parsed)) {
-    return fallback;
-  }
 
-  return Math.min(max, Math.max(min, parsed));
-}
 
-function hsvToRgb(hue, satByte, valByte) {
-  const saturation = Math.min(1, Math.max(0, satByte / 255));
-  const value = Math.min(1, Math.max(0, valByte / 255));
-  const wrappedHue = ((hue % 360) + 360) % 360;
-  const chroma = value * saturation;
-  const hueSection = wrappedHue / 60;
-  const second = chroma * (1 - Math.abs((hueSection % 2) - 1));
 
-  let redPrime = 0;
-  let greenPrime = 0;
-  let bluePrime = 0;
 
-  if (hueSection >= 0 && hueSection < 1) {
-    redPrime = chroma;
-    greenPrime = second;
-  } else if (hueSection < 2) {
-    redPrime = second;
-    greenPrime = chroma;
-  } else if (hueSection < 3) {
-    greenPrime = chroma;
-    bluePrime = second;
-  } else if (hueSection < 4) {
-    greenPrime = second;
-    bluePrime = chroma;
-  } else if (hueSection < 5) {
-    redPrime = second;
-    bluePrime = chroma;
-  } else {
-    redPrime = chroma;
-    bluePrime = second;
-  }
 
-  const match = value - chroma;
 
-  return {
-    red: Math.round((redPrime + match) * 255),
-    green: Math.round((greenPrime + match) * 255),
-    blue: Math.round((bluePrime + match) * 255),
-  };
-}
 
-function rgbToHsv(red, green, blue) {
-  const r = Math.min(1, Math.max(0, red / 255));
-  const g = Math.min(1, Math.max(0, green / 255));
-  const b = Math.min(1, Math.max(0, blue / 255));
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const delta = max - min;
 
-  let hue = 0;
-
-  if (delta !== 0) {
-    if (max === r) {
-      hue = 60 * (((g - b) / delta) % 6);
-    } else if (max === g) {
-      hue = 60 * (((b - r) / delta) + 2);
-    } else {
-      hue = 60 * (((r - g) / delta) + 4);
-    }
-  }
-
-  if (hue < 0) {
-    hue += 360;
-  }
-
-  const saturation = max === 0 ? 0 : delta / max;
-
-  return {
-    hue: Math.round(hue),
-    sat: Math.round(saturation * 255),
-    val: Math.round(max * 255),
-  };
-}
-
-function rgbToHex(red, green, blue) {
-  const toHex = (value) => value.toString(16).padStart(2, '0');
-  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
-}
-
-function hexToRgb(hex) {
-  const normalized = hex.trim().replace(/^#/, '');
-
-  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
-    return null;
-  }
-
-  return {
-    red: Number.parseInt(normalized.slice(0, 2), 16),
-    green: Number.parseInt(normalized.slice(2, 4), 16),
-    blue: Number.parseInt(normalized.slice(4, 6), 16),
-  };
-}
 
 function syncColorPickerUI() {
   const hue = clampNumber(colorPickerState.hue, 0, 360, 0);
@@ -746,55 +657,9 @@ function resolveBorderColorMode() {
   return 'solid';
 }
 
-function getBorderConfig() {
-  const enabled = borderToggle.checked;
-  const width = clampToPositiveNumber(borderWidthInput.value, 2);
-  const radius = clampToPositiveNumber(borderRadiusInput.value, 16);
-  const colorMode = resolveBorderColorMode();
-  const color = borderColorInput.value;
-  const insideOutColors = insideOutColorInputs.map((input) => input.value);
-  const backgroundMode = borderBackgroundColorSolidRadio.checked ? 'solid' : 'transparent';
-  const backgroundColor = borderBackgroundColorInput.value;
-  const centerPadding = clampToPositiveNumber(centerPaddingInput.value, 24);
 
-  const padding = {
-    top: lockState.top ? centerPadding : clampToPositiveNumber(sidePaddingControls.top.input.value, centerPadding),
-    right: lockState.right
-      ? centerPadding
-      : clampToPositiveNumber(sidePaddingControls.right.input.value, centerPadding),
-    bottom: lockState.bottom
-      ? centerPadding
-      : clampToPositiveNumber(sidePaddingControls.bottom.input.value, centerPadding),
-    left: lockState.left ? centerPadding : clampToPositiveNumber(sidePaddingControls.left.input.value, centerPadding),
-  };
 
-  return {
-    enabled,
-    width,
-    radius,
-    colorMode,
-    color,
-    insideOutColors,
-    imageBorder: {
-      corners: imageBorderState.corners,
-      sides: imageBorderState.sides,
-      sizingStrategy: imageBorderSizingModeInput?.value || 'auto',
-      sideMode: imageBorderRepeatModeInput?.value || 'stretch',
-    },
-    backgroundMode,
-    backgroundColor,
-    padding,
-  };
-}
 
-function getCanvasBackgroundConfig() {
-  const mode = backgroundColorSolidRadio.checked ? 'solid' : 'transparent';
-
-  return {
-    mode,
-    color: backgroundColorInput.value,
-  };
-}
 
 function resolveEditorBackgroundColor(borderConfig, canvasBackgroundConfig) {
   if (borderConfig.backgroundMode === 'solid' && borderConfig.backgroundColor) {
@@ -816,24 +681,7 @@ function updateEditorBackgroundColor(borderConfig, canvasBackgroundConfig) {
   editorElement.style.backgroundColor = resolveEditorBackgroundColor(borderConfig, canvasBackgroundConfig);
 }
 
-function getCanvasSizePaddingConfig() {
-  const centerPadding = clampToPositiveNumber(imageCenterPaddingInput.value, 50);
 
-  return {
-    top: imageLockState.top
-      ? centerPadding
-      : clampToPositiveNumber(imageSidePaddingControls.top.input.value, centerPadding),
-    right: imageLockState.right
-      ? centerPadding
-      : clampToPositiveNumber(imageSidePaddingControls.right.input.value, centerPadding),
-    bottom: imageLockState.bottom
-      ? centerPadding
-      : clampToPositiveNumber(imageSidePaddingControls.bottom.input.value, centerPadding),
-    left: imageLockState.left
-      ? centerPadding
-      : clampToPositiveNumber(imageSidePaddingControls.left.input.value, centerPadding),
-  };
-}
 
 function updateBorderControlsState() {
   const enabled = borderToggle.checked;
@@ -927,10 +775,7 @@ function buildCanvasFont(style) {
   return segments.join(' ');
 }
 
-function tokenizeText(text) {
-  const parts = text.match(/\S+|\s+/g);
-  return parts || [''];
-}
+
 
 function extractDocumentFromDelta(delta) {
   const lines = [];
@@ -972,82 +817,9 @@ function extractDocumentFromDelta(delta) {
   return lines;
 }
 
-function layoutDocumentForCanvas(lines, maxWidth, wrapEnabled) {
-  const laidOutLines = [];
 
-  lines.forEach((line) => {
-    let currentTokens = [];
-    let currentWidth = 0;
-    let maxFontSizeInLine = SIZE_MAP.normal;
 
-    const pushCurrentLine = () => {
-      if (currentTokens.length === 0) {
-        return;
-      }
 
-      laidOutLines.push({
-        align: line.align || 'left',
-        tokens: [...currentTokens],
-        width: currentWidth,
-        lineHeight: Math.round(maxFontSizeInLine * 1.35),
-      });
-
-      currentTokens = [];
-      currentWidth = 0;
-      maxFontSizeInLine = SIZE_MAP.normal;
-    };
-
-    line.runs.forEach((run) => {
-      const style = getCanvasStyle(run.attributes);
-      const font = buildCanvasFont(style);
-      const tokens = tokenizeText(run.text);
-
-      tokens.forEach((tokenText) => {
-        context.font = font;
-        const tokenWidth = context.measureText(tokenText).width;
-
-        if (wrapEnabled && currentWidth + tokenWidth > maxWidth && currentTokens.length > 0 && tokenText.trim()) {
-          pushCurrentLine();
-        }
-
-        currentTokens.push({
-          text: tokenText,
-          style,
-          font,
-          width: tokenWidth,
-        });
-
-        currentWidth += tokenWidth;
-        maxFontSizeInLine = Math.max(maxFontSizeInLine, style.fontSize);
-      });
-    });
-
-    pushCurrentLine();
-
-    if (line.runs.length === 0) {
-      laidOutLines.push({
-        align: line.align || 'left',
-        tokens: [],
-        width: 0,
-        lineHeight: Math.round(SIZE_MAP.normal * 1.35),
-      });
-    }
-  });
-
-  return laidOutLines;
-}
-
-function getAlignedStartX(align, startX, maxWidth, lineWidth) {
-  if (align === 'center') {
-    return startX + (maxWidth - lineWidth) / 2;
-  }
-
-  if (align === 'right') {
-    return startX + (maxWidth - lineWidth);
-  }
-
-  return startX;
-}
 
 function drawRoundedRectPath(x, y, width, height, radius) {
   const cappedRadius = Math.min(radius, width / 2, height / 2);
@@ -1291,36 +1063,7 @@ function drawImageBorder(borderConfig, borderX, borderY, borderRectWidth, border
   }
 }
 
-function calculateCanvasDimensions(laidOutLines, borderConfig, canvasSizePaddingConfig, maxContentWidth) {
-  const borderWidth = borderConfig.enabled ? borderConfig.width : 0;
-  const borderStrokeOverflow = borderConfig.enabled ? borderWidth / 2 : 0;
-  const textPadding = borderConfig.enabled
-    ? borderConfig.padding
-    : { top: 0, right: 0, bottom: 0, left: 0 };
-  const textStartX = canvasSizePaddingConfig.left + borderWidth + textPadding.left;
-  const textStartY = canvasSizePaddingConfig.top + borderWidth + textPadding.top;
-  const lineStartPositions = laidOutLines.map((line) => getAlignedStartX(line.align, textStartX, maxContentWidth, line.width));
-  const renderedMinX = lineStartPositions.length ? Math.min(...lineStartPositions) : textStartX;
-  const renderedMaxX = laidOutLines.reduce((maxX, line, index) => Math.max(maxX, lineStartPositions[index] + line.width), renderedMinX);
-  const verticalBounds = measureRenderedVerticalBounds(laidOutLines, textStartY);
 
-  if (borderConfig.enabled) {
-    const borderX = renderedMinX - textPadding.left - borderWidth / 2;
-    const borderY = verticalBounds.minY - textPadding.top - borderWidth / 2;
-    const borderRectWidth = renderedMaxX - renderedMinX + textPadding.left + textPadding.right + borderWidth;
-    const borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderWidth;
-
-    return {
-      width: Math.max(1, Math.ceil(borderX + borderRectWidth + borderStrokeOverflow + canvasSizePaddingConfig.right)),
-      height: Math.max(1, Math.ceil(borderY + borderRectHeight + borderStrokeOverflow + canvasSizePaddingConfig.bottom)),
-    };
-  }
-
-  return {
-    width: Math.max(1, Math.ceil(renderedMaxX + canvasSizePaddingConfig.right)),
-    height: Math.max(1, Math.ceil(verticalBounds.maxY + canvasSizePaddingConfig.bottom)),
-  };
-}
 
 function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConfig, canvasSizePaddingConfig, maxContentWidth) {
   context.clearRect(0, 0, canvas.width, canvas.height);
@@ -1437,10 +1180,53 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
 }
 
 function drawEditorToCanvas() {
-  const borderConfig = getBorderConfig();
-  const canvasBackgroundConfig = getCanvasBackgroundConfig();
+  const borderConfig = getBorderConfig(
+    {
+      borderEnabled: borderToggle.checked,
+      borderWidth: borderWidthInput.value,
+      borderRadius: borderRadiusInput.value,
+      borderColorSolidChecked: borderColorSolidRadio.checked,
+      borderColorInsideOutChecked: borderColorInsideOutRadio.checked,
+      borderColorImagesChecked: borderColorImagesRadio.checked,
+      borderColor: borderColorInput.value,
+      insideOutColors: insideOutColorInputs.map((input) => input.value),
+      borderBackgroundColorSolidChecked: borderBackgroundColorSolidRadio.checked,
+      borderBackgroundColor: borderBackgroundColorInput.value,
+      centerPadding: centerPaddingInput.value,
+      sidePaddings: {
+        top: sidePaddingControls.top.input.value,
+        right: sidePaddingControls.right.input.value,
+        bottom: sidePaddingControls.bottom.input.value,
+        left: sidePaddingControls.left.input.value,
+      },
+      lockState,
+      imageBorder: {
+        corners: imageBorderState.corners,
+        sides: imageBorderState.sides,
+        sizingStrategy: imageBorderSizingModeInput?.value || 'auto',
+        sideMode: imageBorderRepeatModeInput?.value || 'stretch',
+      },
+    },
+    { clampToPositiveNumber },
+  );
+  const canvasBackgroundConfig = getCanvasBackgroundConfig({
+    backgroundColorSolidChecked: backgroundColorSolidRadio.checked,
+    backgroundColor: backgroundColorInput.value,
+  });
   updateEditorBackgroundColor(borderConfig, canvasBackgroundConfig);
-  const canvasSizePaddingConfig = getCanvasSizePaddingConfig();
+  const canvasSizePaddingConfig = getCanvasSizePaddingConfig(
+    {
+      centerPadding: imageCenterPaddingInput.value,
+      sidePaddings: {
+        top: imageSidePaddingControls.top.input.value,
+        right: imageSidePaddingControls.right.input.value,
+        bottom: imageSidePaddingControls.bottom.input.value,
+        left: imageSidePaddingControls.left.input.value,
+      },
+      lockState: imageLockState,
+    },
+    { clampToPositiveNumber },
+  );
   const maxContentWidth = Math.max(
     50,
     BASE_CANVAS_CONTENT_WIDTH
@@ -1451,12 +1237,20 @@ function drawEditorToCanvas() {
 
   const delta = quill.getContents();
   const lines = extractDocumentFromDelta(delta);
-  const laidOutLines = layoutDocumentForCanvas(lines, maxContentWidth, isTextWrapEnabled());
+  const laidOutLines = layoutDocumentForCanvas(lines, maxContentWidth, isTextWrapEnabled(), {
+    context,
+    getCanvasStyle,
+    buildCanvasFont,
+    defaultLineFontSize: SIZE_MAP.normal,
+  });
   const measuredCanvasDimensions = calculateCanvasDimensions(
     laidOutLines,
     borderConfig,
     canvasSizePaddingConfig,
     maxContentWidth,
+    {
+      measureRenderedVerticalBounds,
+    },
   );
 
   canvas.width = measuredCanvasDimensions.width;
