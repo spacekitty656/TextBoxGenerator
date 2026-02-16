@@ -1,6 +1,15 @@
 # Text Box Generator
 
-This project now includes a lightweight test setup for both unit and end-to-end checks.
+This project includes local development startup commands and a lightweight test setup for both unit and end-to-end checks.
+
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+The Fastify server runs on `http://localhost:3000` by default and serves the static app files.
 
 ## Test commands
 
@@ -11,12 +20,7 @@ This project now includes a lightweight test setup for both unit and end-to-end 
 ## Run all tests in one step
 
 ```bash
-npm install
 npm test
 ```
 
-Playwright uses a local static server configured via `playwright.config.js` with:
-
-```bash
-npx serve . -l 4173
-```
+Playwright uses a local static server configured via `playwright.config.js`.
