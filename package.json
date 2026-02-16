@@ -1,0 +1,16 @@
+{
+  "name": "textbox-generator",
+  "version": "1.1.4",
+  "private": true,
+  "scripts": {
+    "test:unit": "vitest --environment jsdom --passWithNoTests",
+    "test:e2e": "playwright test --pass-with-no-tests",
+    "test": "npm run test:unit && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.1",
+    "jsdom": "^26.0.0",
+    "serve": "^14.2.4",
+    "vitest": "^3.2.4"
+  }
+}
