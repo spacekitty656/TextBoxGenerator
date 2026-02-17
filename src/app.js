@@ -379,14 +379,18 @@ const quill = new Quill('#editor', {
 
 
 function updateTransparentBackgroundSwatchAccessibility() {
-  const transparentBackgroundTargets = document.querySelectorAll(
-    '.ql-snow .ql-picker.ql-background .ql-picker-item:not([data-value]), .ql-snow .ql-picker.ql-background .ql-picker-label:not([data-value])',
-  );
+  const transparentBackgroundItem = document.querySelector('.ql-snow .ql-picker.ql-background .ql-picker-item:not([data-value])');
 
-  transparentBackgroundTargets.forEach((element) => {
-    element.setAttribute('title', 'Transparent');
-    element.setAttribute('aria-label', 'Transparent');
-  });
+  if (transparentBackgroundItem) {
+    transparentBackgroundItem.setAttribute('title', 'Transparent');
+    transparentBackgroundItem.setAttribute('aria-label', 'Transparent');
+  }
+
+  const transparentBackgroundLabel = document.querySelector('.ql-snow .ql-picker.ql-background .ql-picker-label');
+
+  if (transparentBackgroundLabel) {
+    transparentBackgroundLabel.removeAttribute('title');
+  }
 }
 
 updateTransparentBackgroundSwatchAccessibility();
