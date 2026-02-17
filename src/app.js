@@ -2,6 +2,7 @@ import { clampNumber, hexToRgb, hsvToRgb, rgbToHex, rgbToHsv } from './color.js'
 import {
   calculateCanvasDimensions as calculateCanvasDimensionsFromModule,
   getAlignedStartX,
+  getAlignmentWidth,
   layoutDocumentForCanvas as layoutDocumentForCanvasFromModule,
 } from './layout.js';
 import {
@@ -1191,7 +1192,8 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
   const textStartX = canvasSizePaddingConfig.left + borderWidth + textPadding.left;
   const textStartY = canvasSizePaddingConfig.top + borderWidth + textPadding.top;
 
-  const lineStartPositions = laidOutLines.map((line) => getAlignedStartX(line.align, textStartX, maxContentWidth, line.width));
+  const alignmentWidth = getAlignmentWidth(laidOutLines, maxContentWidth);
+  const lineStartPositions = laidOutLines.map((line) => getAlignedStartX(line.align, textStartX, alignmentWidth, line.width));
   const renderedMinX = lineStartPositions.length ? Math.min(...lineStartPositions) : textStartX;
   const renderedMaxX = laidOutLines.reduce((maxX, line, index) => Math.max(maxX, lineStartPositions[index] + line.width), renderedMinX);
   const verticalBounds = measureRenderedVerticalBounds(laidOutLines, textStartY);
