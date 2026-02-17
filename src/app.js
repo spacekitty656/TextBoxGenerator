@@ -1262,17 +1262,62 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
   let y = textStartY;
   laidOutLines.forEach((line, index) => {
     const startX = lineStartPositions[index];
+
+    let backgroundX = startX;
+    let activeBackgroundColor = null;
+    let activeBackgroundFont = null;
+    let activeBackgroundStartX = 0;
+    let activeBackgroundWidth = 0;
+    let activeBackgroundHeight = 0;
+
+    const flushActiveBackground = () => {
+      if (!activeBackgroundColor || activeBackgroundWidth <= 0) {
+        return;
+      }
+
+      const rectStartX = Math.floor(activeBackgroundStartX);
+      const rectEndX = Math.ceil(activeBackgroundStartX + activeBackgroundWidth);
+      const rectWidth = Math.max(1, rectEndX - rectStartX);
+
+      context.fillStyle = activeBackgroundColor;
+      context.fillRect(rectStartX, y, rectWidth, activeBackgroundHeight);
+    };
+
+    line.tokens.forEach((token) => {
+      const hasBackground = Boolean(token.style.background && token.text.length > 0);
+
+      if (hasBackground) {
+        const tokenBackgroundHeight = getBackgroundRectHeightForFont(token.font, token.style.fontSize);
+
+        if (activeBackgroundColor === token.style.background && activeBackgroundFont === token.font) {
+          activeBackgroundWidth += token.width;
+          activeBackgroundHeight = Math.max(activeBackgroundHeight, tokenBackgroundHeight);
+        } else {
+          flushActiveBackground();
+          activeBackgroundColor = token.style.background;
+          activeBackgroundFont = token.font;
+          activeBackgroundStartX = backgroundX;
+          activeBackgroundWidth = token.width;
+          activeBackgroundHeight = tokenBackgroundHeight;
+        }
+      } else {
+        flushActiveBackground();
+        activeBackgroundColor = null;
+        activeBackgroundFont = null;
+        activeBackgroundStartX = 0;
+        activeBackgroundWidth = 0;
+        activeBackgroundHeight = 0;
+      }
+
+      backgroundX += token.width;
+    });
+
+    flushActiveBackground();
+
     let x = startX;
 
     line.tokens.forEach((token) => {
       context.font = token.font;
-
-      if (token.style.background && token.text.length > 0) {
-        const backgroundRectHeight = getBackgroundRectHeightForFont(token.font, token.style.fontSize);
-        context.fillStyle = token.style.background;
-        context.fillRect(x, y, token.width, backgroundRectHeight);
-      }
-
       context.fillStyle = token.style.color;
       context.fillText(token.text, x, y);
 
