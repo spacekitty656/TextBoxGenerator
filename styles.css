@@ -582,7 +582,7 @@ label {
 }
 
 .color-window {
-  width: min(96vw, 540px);
+  width: min(96vw, 620px);
   border-radius: 12px;
   border: 1px solid #4b5563;
   background: #2b2d30;
@@ -621,7 +621,7 @@ label {
 
 .color-window-body {
   display: grid;
-  grid-template-columns: 225px minmax(0, 1fr);
+  grid-template-columns: 225px minmax(320px, 1fr);
   gap: 14px;
   padding: 14px;
 }

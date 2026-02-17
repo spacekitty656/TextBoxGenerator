@@ -19,7 +19,7 @@ const editorElement = document.getElementById('editor');
 const saveButton = document.getElementById('save-image');
 const imageNameInput = document.getElementById('image-name');
 const appVersionBadge = document.getElementById('app-version');
-const APP_VERSION = 'v1.1.5';
+const APP_VERSION = 'v1.1.6';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 
 const borderToggle = document.getElementById('enable-border');
@@ -154,7 +154,6 @@ function setColorPickerFromHex(color) {
 
   if (color === TRANSPARENT_COLOR_VALUE) {
     colorPickerState.alpha = 0;
-    colorPickerState.draftHex = TRANSPARENT_COLOR_VALUE;
     syncColorPickerUI();
     return true;
   }
@@ -170,9 +169,7 @@ function setColorPickerFromHex(color) {
   colorPickerState.sat = hsv.sat;
   colorPickerState.val = hsv.val;
   colorPickerState.alpha = rgb.alpha ?? 255;
-  colorPickerState.draftHex = color === TRANSPARENT_COLOR_VALUE
-    ? TRANSPARENT_COLOR_VALUE
-    : rgbToHex(rgb.red, rgb.green, rgb.blue, colorPickerState.alpha);
+  colorPickerState.draftHex = rgbToHex(rgb.red, rgb.green, rgb.blue, colorPickerState.alpha);
   syncColorPickerUI();
 
   return true;
@@ -216,11 +213,7 @@ function syncColorPickerUI() {
   const alpha = clampNumber(colorPickerState.alpha, 0, 255, 255);
   colorPickerState.alpha = alpha;
 
-  if (alpha === 0) {
-    colorPickerState.draftHex = TRANSPARENT_COLOR_VALUE;
-  } else {
-    colorPickerState.draftHex = rgbToHex(rgb.red, rgb.green, rgb.blue, alpha);
-  }
+  colorPickerState.draftHex = rgbToHex(rgb.red, rgb.green, rgb.blue, alpha);
 
   if (selectedColorPreview) {
     selectedColorPreview.style.backgroundColor = alpha === 0
@@ -252,7 +245,7 @@ function syncColorPickerUI() {
     colorValueInputs.green.value = String(rgb.green);
     colorValueInputs.blue.value = String(rgb.blue);
     colorValueInputs.alpha.value = String(alpha);
-    colorValueInputs.hex.value = colorPickerState.draftHex;
+    colorValueInputs.hex.value = rgbToHex(rgb.red, rgb.green, rgb.blue, alpha);
   }
 }
 
@@ -314,7 +307,7 @@ function applyDraftColorToEditor() {
   colorPickerState.activeHex = colorPickerState.draftHex;
   quill.focus();
 
-  const formatValue = colorPickerState.draftHex === TRANSPARENT_COLOR_VALUE
+  const formatValue = colorPickerState.alpha === 0
     ? false
     : colorPickerState.activeHex;
 
@@ -428,22 +421,6 @@ const quill = new Quill('#editor', {
 });
 
 
-function updateTransparentBackgroundSwatchAccessibility() {
-  const transparentBackgroundItem = document.querySelector('.ql-snow .ql-picker.ql-background .ql-picker-item:not([data-value])');
-
-  if (transparentBackgroundItem) {
-    transparentBackgroundItem.setAttribute('title', 'Transparent');
-    transparentBackgroundItem.setAttribute('aria-label', 'Transparent');
-  }
-
-  const transparentBackgroundLabel = document.querySelector('.ql-snow .ql-picker.ql-background .ql-picker-label');
-
-  if (transparentBackgroundLabel) {
-    transparentBackgroundLabel.removeAttribute('title');
-  }
-}
-
-updateTransparentBackgroundSwatchAccessibility();
 
 quill.setContents([
   {
