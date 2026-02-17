@@ -359,6 +359,7 @@ const DEFAULT_STYLE = {
   italic: false,
   underline: false,
   color: '#111827',
+  background: null,
   font: 'sansserif',
   size: 'normal',
 };
@@ -809,6 +810,7 @@ function getCanvasStyle(attributes = {}) {
     italic: Boolean(merged.italic),
     underline: Boolean(merged.underline),
     color: merged.color || DEFAULT_STYLE.color,
+    background: typeof merged.background === 'string' && merged.background.trim() ? merged.background : null,
     fontSize,
     fontFamily,
   };
@@ -1191,6 +1193,16 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
 
     line.tokens.forEach((token) => {
       context.font = token.font;
+
+      if (token.style.background && token.text.length > 0) {
+        const metricsSource = token.text.trim() ? token.text : 'M';
+        const textMetrics = context.measureText(metricsSource);
+        const actualAscent = textMetrics.actualBoundingBoxAscent ?? token.style.fontSize * 0.8;
+        const actualDescent = textMetrics.actualBoundingBoxDescent ?? token.style.fontSize * 0.2;
+        context.fillStyle = token.style.background;
+        context.fillRect(x, y, token.width, actualAscent + actualDescent);
+      }
+
       context.fillStyle = token.style.color;
       context.fillText(token.text, x, y);
 
