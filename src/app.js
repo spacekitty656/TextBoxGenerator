@@ -102,6 +102,7 @@ const colorMapHandle = document.getElementById('color-map-handle');
 const colorSlider = document.getElementById('color-slider');
 const colorSliderHandle = document.getElementById('color-slider-handle');
 const selectedColorPreview = document.getElementById('selected-color-preview');
+const colorWindowTitle = document.getElementById('color-window-title');
 const colorValueInputs = {
   hue: document.getElementById('color-value-hue'),
   sat: document.getElementById('color-value-sat'),
@@ -328,6 +329,10 @@ function openColorWindowForFormat(targetFormat = 'color') {
   }
 
   colorPickerState.targetFormat = targetFormat;
+
+  if (colorWindowTitle) {
+    colorWindowTitle.textContent = targetFormat === 'background' ? 'Highlight Color' : 'Text Color';
+  }
   const selectionColor = quill.getFormat()?.[targetFormat];
   if (typeof selectionColor === 'string' && selectionColor.trim()) {
     const didUpdatePicker = setColorPickerFromHex(selectionColor.startsWith('#') ? selectionColor : selectionColor);
