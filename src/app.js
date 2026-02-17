@@ -1195,6 +1195,8 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
   const renderedMinX = lineStartPositions.length ? Math.min(...lineStartPositions) : textStartX;
   const renderedMaxX = laidOutLines.reduce((maxX, line, index) => Math.max(maxX, lineStartPositions[index] + line.width), renderedMinX);
   const verticalBounds = measureRenderedVerticalBounds(laidOutLines, textStartY);
+  const contentAreaMinX = textStartX;
+  const contentAreaMaxX = textStartX + maxContentWidth;
 
   let borderX = 0;
   let borderY = 0;
@@ -1202,9 +1204,9 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
   let borderRectHeight = 0;
 
   if (borderConfig.enabled) {
-    borderX = renderedMinX - textPadding.left - borderWidth / 2;
+    borderX = contentAreaMinX - textPadding.left - borderWidth / 2;
     borderY = verticalBounds.minY - textPadding.top - borderWidth / 2;
-    borderRectWidth = renderedMaxX - renderedMinX + textPadding.left + textPadding.right + borderWidth;
+    borderRectWidth = contentAreaMaxX - contentAreaMinX + textPadding.left + textPadding.right + borderWidth;
     borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderWidth;
 
     if (borderConfig.backgroundMode === 'solid') {
