@@ -216,9 +216,15 @@ function syncColorPickerUI() {
   colorPickerState.draftHex = rgbToHex(rgb.red, rgb.green, rgb.blue, alpha);
 
   if (selectedColorPreview) {
-    selectedColorPreview.style.backgroundColor = alpha === 0
-      ? 'transparent'
-      : `rgb(${rgb.red} ${rgb.green} ${rgb.blue} / ${(alpha / 255).toFixed(3)})`;
+    if (alpha === 0) {
+      selectedColorPreview.style.backgroundColor = '#d1d5db';
+      selectedColorPreview.style.backgroundImage = 'conic-gradient(#e5e7eb 0deg 90deg, #d1d5db 90deg 180deg, #e5e7eb 180deg 270deg, #d1d5db 270deg 360deg)';
+      selectedColorPreview.style.backgroundSize = '8px 8px';
+    } else {
+      selectedColorPreview.style.backgroundColor = `rgb(${rgb.red} ${rgb.green} ${rgb.blue} / ${(alpha / 255).toFixed(3)})`;
+      selectedColorPreview.style.backgroundImage = 'none';
+      selectedColorPreview.style.backgroundSize = 'auto';
+    }
   }
 
   if (colorMap) {

@@ -666,8 +666,7 @@ label {
 }
 
 
-.color-swatch.transparent-swatch,
-.selected-color-preview {
+.color-swatch.transparent-swatch {
   background-color: #d1d5db;
   background-image: conic-gradient(
     #e5e7eb 0deg 90deg,
@@ -782,6 +781,7 @@ label {
 .selected-color-preview {
   border: 1px solid #2f2f2f;
   min-height: 120px;
+  background: transparent;
 }
 
 .value-controls {
