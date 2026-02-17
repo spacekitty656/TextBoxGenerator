@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { calculateCanvasDimensions } from '../../src/layout.js';
 
 describe('calculateCanvasDimensions', () => {
-  it('keeps border width anchored to configured content width for centered text', () => {
+  it('sizes border to rendered centered content width plus padding', () => {
     const laidOutLines = [
       {
         align: 'center',
@@ -39,9 +39,9 @@ describe('calculateCanvasDimensions', () => {
     );
 
     // Expected canvas width:
-    // left canvas padding + border width + left text padding + content width + right text padding + border width + right canvas padding
-    // 50 + 4 + 20 + 300 + 20 + 4 + 50 = 448
-    expect(dimensions.width).toBe(448);
+    // left canvas padding + border width + left text padding + rendered content width + right text padding + border width + right canvas padding
+    // 50 + 4 + 20 + 100 + 20 + 4 + 50 = 248
+    expect(dimensions.width).toBe(248);
   });
 
   it('still expands to rendered text width when border is disabled', () => {

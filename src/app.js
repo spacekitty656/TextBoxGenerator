@@ -2,6 +2,7 @@ import { clampNumber, hexToRgb, hsvToRgb, rgbToHex, rgbToHsv } from './color.js'
 import {
   calculateCanvasDimensions as calculateCanvasDimensionsFromModule,
   getAlignedStartX,
+  getAlignmentWidth,
   layoutDocumentForCanvas as layoutDocumentForCanvasFromModule,
 } from './layout.js';
 import {
@@ -1191,12 +1192,11 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
   const textStartX = canvasSizePaddingConfig.left + borderWidth + textPadding.left;
   const textStartY = canvasSizePaddingConfig.top + borderWidth + textPadding.top;
 
-  const lineStartPositions = laidOutLines.map((line) => getAlignedStartX(line.align, textStartX, maxContentWidth, line.width));
+  const alignmentWidth = getAlignmentWidth(laidOutLines, maxContentWidth);
+  const lineStartPositions = laidOutLines.map((line) => getAlignedStartX(line.align, textStartX, alignmentWidth, line.width));
   const renderedMinX = lineStartPositions.length ? Math.min(...lineStartPositions) : textStartX;
   const renderedMaxX = laidOutLines.reduce((maxX, line, index) => Math.max(maxX, lineStartPositions[index] + line.width), renderedMinX);
   const verticalBounds = measureRenderedVerticalBounds(laidOutLines, textStartY);
-  const contentAreaMinX = textStartX;
-  const contentAreaMaxX = textStartX + maxContentWidth;
 
   let borderX = 0;
   let borderY = 0;
@@ -1204,9 +1204,9 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
   let borderRectHeight = 0;
 
   if (borderConfig.enabled) {
-    borderX = contentAreaMinX - textPadding.left - borderWidth / 2;
+    borderX = renderedMinX - textPadding.left - borderWidth / 2;
     borderY = verticalBounds.minY - textPadding.top - borderWidth / 2;
-    borderRectWidth = contentAreaMaxX - contentAreaMinX + textPadding.left + textPadding.right + borderWidth;
+    borderRectWidth = renderedMaxX - renderedMinX + textPadding.left + textPadding.right + borderWidth;
     borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderWidth;
 
     if (borderConfig.backgroundMode === 'solid') {

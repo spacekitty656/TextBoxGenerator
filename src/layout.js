@@ -85,6 +85,11 @@ export function getAlignedStartX(align, startX, maxWidth, lineWidth) {
   return startX;
 }
 
+export function getAlignmentWidth(laidOutLines, maxContentWidth) {
+  const widestLine = laidOutLines.reduce((maxWidth, line) => Math.max(maxWidth, line.width || 0), 0);
+  return Math.min(maxContentWidth, widestLine);
+}
+
 export function calculateCanvasDimensions(
   laidOutLines,
   borderConfig,
@@ -102,17 +107,16 @@ export function calculateCanvasDimensions(
     : { top: 0, right: 0, bottom: 0, left: 0 };
   const textStartX = canvasSizePaddingConfig.left + borderWidth + textPadding.left;
   const textStartY = canvasSizePaddingConfig.top + borderWidth + textPadding.top;
-  const lineStartPositions = laidOutLines.map((line) => getAlignedStartX(line.align, textStartX, maxContentWidth, line.width));
+  const alignmentWidth = getAlignmentWidth(laidOutLines, maxContentWidth);
+  const lineStartPositions = laidOutLines.map((line) => getAlignedStartX(line.align, textStartX, alignmentWidth, line.width));
   const renderedMinX = lineStartPositions.length ? Math.min(...lineStartPositions) : textStartX;
   const renderedMaxX = laidOutLines.reduce((maxX, line, index) => Math.max(maxX, lineStartPositions[index] + line.width), renderedMinX);
   const verticalBounds = measureRenderedVerticalBounds(laidOutLines, textStartY);
-  const contentAreaMinX = textStartX;
-  const contentAreaMaxX = textStartX + maxContentWidth;
 
   if (borderConfig.enabled) {
-    const borderX = contentAreaMinX - textPadding.left - borderWidth / 2;
+    const borderX = renderedMinX - textPadding.left - borderWidth / 2;
     const borderY = verticalBounds.minY - textPadding.top - borderWidth / 2;
-    const borderRectWidth = contentAreaMaxX - contentAreaMinX + textPadding.left + textPadding.right + borderWidth;
+    const borderRectWidth = renderedMaxX - renderedMinX + textPadding.left + textPadding.right + borderWidth;
     const borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderWidth;
 
     return {
@@ -122,7 +126,7 @@ export function calculateCanvasDimensions(
   }
 
   return {
-    width: Math.max(1, Math.ceil(Math.max(renderedMaxX, contentAreaMaxX) + canvasSizePaddingConfig.right)),
+    width: Math.max(1, Math.ceil(renderedMaxX + canvasSizePaddingConfig.right)),
     height: Math.max(1, Math.ceil(verticalBounds.maxY + canvasSizePaddingConfig.bottom)),
   };
 }
