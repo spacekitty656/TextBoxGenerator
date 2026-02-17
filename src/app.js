@@ -18,7 +18,7 @@ const editorElement = document.getElementById('editor');
 const saveButton = document.getElementById('save-image');
 const imageNameInput = document.getElementById('image-name');
 const appVersionBadge = document.getElementById('app-version');
-const APP_VERSION = 'v1.1.4';
+const APP_VERSION = 'v1.1.5';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 
 const borderToggle = document.getElementById('enable-border');
@@ -354,11 +354,14 @@ const SIZE_MAP = {
   huge: 32,
 };
 
+const backgroundMetricsHeightCache = new Map();
+
 const DEFAULT_STYLE = {
   bold: false,
   italic: false,
   underline: false,
   color: '#111827',
+  background: null,
   font: 'sansserif',
   size: 'normal',
 };
@@ -375,6 +378,24 @@ const quill = new Quill('#editor', {
   },
   placeholder: 'Type formatted text here...',
 });
+
+
+function updateTransparentBackgroundSwatchAccessibility() {
+  const transparentBackgroundItem = document.querySelector('.ql-snow .ql-picker.ql-background .ql-picker-item:not([data-value])');
+
+  if (transparentBackgroundItem) {
+    transparentBackgroundItem.setAttribute('title', 'Transparent');
+    transparentBackgroundItem.setAttribute('aria-label', 'Transparent');
+  }
+
+  const transparentBackgroundLabel = document.querySelector('.ql-snow .ql-picker.ql-background .ql-picker-label');
+
+  if (transparentBackgroundLabel) {
+    transparentBackgroundLabel.removeAttribute('title');
+  }
+}
+
+updateTransparentBackgroundSwatchAccessibility();
 
 quill.setContents([
   {
@@ -809,9 +830,25 @@ function getCanvasStyle(attributes = {}) {
     italic: Boolean(merged.italic),
     underline: Boolean(merged.underline),
     color: merged.color || DEFAULT_STYLE.color,
+    background: typeof merged.background === 'string' && merged.background.trim() ? merged.background : null,
     fontSize,
     fontFamily,
   };
+}
+
+
+function getBackgroundRectHeightForFont(font, fallbackFontSize) {
+  if (backgroundMetricsHeightCache.has(font)) {
+    return backgroundMetricsHeightCache.get(font);
+  }
+
+  context.font = font;
+  const metrics = context.measureText('Mg');
+  const actualAscent = metrics.actualBoundingBoxAscent ?? fallbackFontSize * 0.8;
+  const actualDescent = metrics.actualBoundingBoxDescent ?? fallbackFontSize * 0.2;
+  const height = Math.max(1, actualAscent + actualDescent);
+  backgroundMetricsHeightCache.set(font, height);
+  return height;
 }
 
 function buildCanvasFont(style) {
@@ -1184,33 +1221,6 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
     }
   }
 
-  let y = textStartY;
-  laidOutLines.forEach((line, index) => {
-    const startX = lineStartPositions[index];
-    let x = startX;
-
-    line.tokens.forEach((token) => {
-      context.font = token.font;
-      context.fillStyle = token.style.color;
-      context.fillText(token.text, x, y);
-
-      if (token.style.underline && token.text.trim()) {
-        const underlineY = y + token.style.fontSize + 2;
-        const underlineWidth = Math.max(1, token.style.fontSize / 14);
-        context.strokeStyle = token.style.color;
-        context.lineWidth = underlineWidth;
-        context.beginPath();
-        context.moveTo(x, underlineY);
-        context.lineTo(x + token.width, underlineY);
-        context.stroke();
-      }
-
-      x += token.width;
-    });
-
-    y += line.lineHeight;
-  });
-
   if (borderConfig.enabled && borderWidth > 0) {
     switch (borderConfig.colorMode) {
       case 'inside-out': {
@@ -1248,6 +1258,86 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
         break;
     }
   }
+
+  let y = textStartY;
+  laidOutLines.forEach((line, index) => {
+    const startX = lineStartPositions[index];
+
+    let backgroundX = startX;
+    let activeBackgroundColor = null;
+    let activeBackgroundFont = null;
+    let activeBackgroundStartX = 0;
+    let activeBackgroundWidth = 0;
+    let activeBackgroundHeight = 0;
+
+    const flushActiveBackground = () => {
+      if (!activeBackgroundColor || activeBackgroundWidth <= 0) {
+        return;
+      }
+
+      const rectStartX = Math.floor(activeBackgroundStartX);
+      const rectEndX = Math.ceil(activeBackgroundStartX + activeBackgroundWidth);
+      const rectWidth = Math.max(1, rectEndX - rectStartX);
+
+      context.fillStyle = activeBackgroundColor;
+      context.fillRect(rectStartX, y, rectWidth, activeBackgroundHeight);
+    };
+
+    line.tokens.forEach((token) => {
+      const hasBackground = Boolean(token.style.background && token.text.length > 0);
+
+      if (hasBackground) {
+        const tokenBackgroundHeight = getBackgroundRectHeightForFont(token.font, token.style.fontSize);
+
+        if (activeBackgroundColor === token.style.background && activeBackgroundFont === token.font) {
+          activeBackgroundWidth += token.width;
+          activeBackgroundHeight = Math.max(activeBackgroundHeight, tokenBackgroundHeight);
+        } else {
+          flushActiveBackground();
+          activeBackgroundColor = token.style.background;
+          activeBackgroundFont = token.font;
+          activeBackgroundStartX = backgroundX;
+          activeBackgroundWidth = token.width;
+          activeBackgroundHeight = tokenBackgroundHeight;
+        }
+      } else {
+        flushActiveBackground();
+        activeBackgroundColor = null;
+        activeBackgroundFont = null;
+        activeBackgroundStartX = 0;
+        activeBackgroundWidth = 0;
+        activeBackgroundHeight = 0;
+      }
+
+      backgroundX += token.width;
+    });
+
+    flushActiveBackground();
+
+    let x = startX;
+
+    line.tokens.forEach((token) => {
+      context.font = token.font;
+      context.fillStyle = token.style.color;
+      context.fillText(token.text, x, y);
+
+      if (token.style.underline && token.text.trim()) {
+        const underlineY = y + token.style.fontSize + 2;
+        const underlineWidth = Math.max(1, token.style.fontSize / 14);
+        context.strokeStyle = token.style.color;
+        context.lineWidth = underlineWidth;
+        context.beginPath();
+        context.moveTo(x, underlineY);
+        context.lineTo(x + token.width, underlineY);
+        context.stroke();
+      }
+
+      x += token.width;
+    });
+
+    y += line.lineHeight;
+  });
+
 }
 
 function drawEditorToCanvas() {
