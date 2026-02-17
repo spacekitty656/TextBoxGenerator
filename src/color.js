@@ -82,8 +82,14 @@ export function rgbToHsv(red, green, blue) {
   };
 }
 
-export function rgbToHex(red, green, blue) {
+export function rgbToHex(red, green, blue, alpha = 255) {
   const toHex = (value) => value.toString(16).padStart(2, '0');
+  const normalizedAlpha = Math.min(255, Math.max(0, Number.parseInt(alpha, 10)));
+
+  if (normalizedAlpha < 255) {
+    return `#${toHex(red)}${toHex(green)}${toHex(blue)}${toHex(normalizedAlpha)}`;
+  }
+
   return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
 }
 
@@ -94,7 +100,7 @@ export function hexToRgb(hex) {
 
   const normalized = hex.trim().replace(/^#/, '');
 
-  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+  if (!/^[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(normalized)) {
     return null;
   }
 
@@ -102,5 +108,6 @@ export function hexToRgb(hex) {
     red: Number.parseInt(normalized.slice(0, 2), 16),
     green: Number.parseInt(normalized.slice(2, 4), 16),
     blue: Number.parseInt(normalized.slice(4, 6), 16),
+    alpha: normalized.length === 8 ? Number.parseInt(normalized.slice(6, 8), 16) : 255,
   };
 }
