@@ -410,6 +410,16 @@ function clampToPositiveNumber(value, fallback = 0) {
   return parsed;
 }
 
+function parsePaddingNumber(value, fallback = 0) {
+  const parsed = Number.parseFloat(value);
+
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return parsed;
+}
+
 async function loadImageFromFile(file) {
   if (!file || !file.type || !file.type.startsWith('image/')) {
     throw new Error('Please choose a valid image file.');
@@ -622,7 +632,7 @@ function triggerSaveImage() {
 }
 
 function syncPaddingValues(centerInput, controls, lockStates, fallback) {
-  const centerValue = clampToPositiveNumber(centerInput.value, fallback);
+  const centerValue = parsePaddingNumber(centerInput.value, fallback);
 
   Object.entries(controls).forEach(([side, control]) => {
     const isLocked = lockStates[side];
@@ -682,6 +692,7 @@ function getBorderConfig() {
       sideMode: imageBorderRepeatModeInput?.value || 'stretch',
     },
     clampToPositiveNumber,
+    parsePaddingNumber,
   });
 }
 
@@ -703,6 +714,7 @@ function getCanvasSizePaddingConfig() {
       left: imageSidePaddingControls.left.input.value,
     },
     clampToPositiveNumber,
+    parsePaddingNumber,
   });
 }
 

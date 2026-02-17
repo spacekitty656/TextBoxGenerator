@@ -13,14 +13,16 @@ export function getBorderConfig(inputs) {
     sidePaddingValues,
     imageBorder,
     clampToPositiveNumber,
+    parsePaddingNumber,
   } = inputs;
 
-  const centerPadding = clampToPositiveNumber(centerPaddingValue, 24);
+  const parsePadding = parsePaddingNumber || clampToPositiveNumber;
+  const centerPadding = parsePadding(centerPaddingValue, 24);
   const padding = {
-    top: lockState.top ? centerPadding : clampToPositiveNumber(sidePaddingValues.top, centerPadding),
-    right: lockState.right ? centerPadding : clampToPositiveNumber(sidePaddingValues.right, centerPadding),
-    bottom: lockState.bottom ? centerPadding : clampToPositiveNumber(sidePaddingValues.bottom, centerPadding),
-    left: lockState.left ? centerPadding : clampToPositiveNumber(sidePaddingValues.left, centerPadding),
+    top: lockState.top ? centerPadding : parsePadding(sidePaddingValues.top, centerPadding),
+    right: lockState.right ? centerPadding : parsePadding(sidePaddingValues.right, centerPadding),
+    bottom: lockState.bottom ? centerPadding : parsePadding(sidePaddingValues.bottom, centerPadding),
+    left: lockState.left ? centerPadding : parsePadding(sidePaddingValues.left, centerPadding),
   };
 
   return {
@@ -50,13 +52,15 @@ export function getCanvasSizePaddingConfig(inputs) {
     lockState,
     sidePaddingValues,
     clampToPositiveNumber,
+    parsePaddingNumber,
   } = inputs;
-  const centerPadding = clampToPositiveNumber(centerPaddingValue, 50);
+  const parsePadding = parsePaddingNumber || clampToPositiveNumber;
+  const centerPadding = parsePadding(centerPaddingValue, 50);
 
   return {
-    top: lockState.top ? centerPadding : clampToPositiveNumber(sidePaddingValues.top, centerPadding),
-    right: lockState.right ? centerPadding : clampToPositiveNumber(sidePaddingValues.right, centerPadding),
-    bottom: lockState.bottom ? centerPadding : clampToPositiveNumber(sidePaddingValues.bottom, centerPadding),
-    left: lockState.left ? centerPadding : clampToPositiveNumber(sidePaddingValues.left, centerPadding),
+    top: lockState.top ? centerPadding : parsePadding(sidePaddingValues.top, centerPadding),
+    right: lockState.right ? centerPadding : parsePadding(sidePaddingValues.right, centerPadding),
+    bottom: lockState.bottom ? centerPadding : parsePadding(sidePaddingValues.bottom, centerPadding),
+    left: lockState.left ? centerPadding : parsePadding(sidePaddingValues.left, centerPadding),
   };
 }
