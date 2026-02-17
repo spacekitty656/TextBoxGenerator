@@ -24,7 +24,7 @@ body {
 
 .app-layout {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(30rem, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(36rem, 1fr);
   height: 100vh;
 }
 
