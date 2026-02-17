@@ -1186,43 +1186,6 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
     }
   }
 
-  let y = textStartY;
-  laidOutLines.forEach((line, index) => {
-    const startX = lineStartPositions[index];
-    let x = startX;
-
-    line.tokens.forEach((token) => {
-      context.font = token.font;
-
-      if (token.style.background && token.text.length > 0) {
-        const metricsSource = token.text.trim() ? token.text : 'M';
-        const textMetrics = context.measureText(metricsSource);
-        const actualAscent = textMetrics.actualBoundingBoxAscent ?? token.style.fontSize * 0.8;
-        const actualDescent = textMetrics.actualBoundingBoxDescent ?? token.style.fontSize * 0.2;
-        context.fillStyle = token.style.background;
-        context.fillRect(x, y, token.width, actualAscent + actualDescent);
-      }
-
-      context.fillStyle = token.style.color;
-      context.fillText(token.text, x, y);
-
-      if (token.style.underline && token.text.trim()) {
-        const underlineY = y + token.style.fontSize + 2;
-        const underlineWidth = Math.max(1, token.style.fontSize / 14);
-        context.strokeStyle = token.style.color;
-        context.lineWidth = underlineWidth;
-        context.beginPath();
-        context.moveTo(x, underlineY);
-        context.lineTo(x + token.width, underlineY);
-        context.stroke();
-      }
-
-      x += token.width;
-    });
-
-    y += line.lineHeight;
-  });
-
   if (borderConfig.enabled && borderWidth > 0) {
     switch (borderConfig.colorMode) {
       case 'inside-out': {
@@ -1260,6 +1223,44 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
         break;
     }
   }
+
+  let y = textStartY;
+  laidOutLines.forEach((line, index) => {
+    const startX = lineStartPositions[index];
+    let x = startX;
+
+    line.tokens.forEach((token) => {
+      context.font = token.font;
+
+      if (token.style.background && token.text.length > 0) {
+        const metricsSource = token.text.trim() ? token.text : 'M';
+        const textMetrics = context.measureText(metricsSource);
+        const actualAscent = textMetrics.actualBoundingBoxAscent ?? token.style.fontSize * 0.8;
+        const actualDescent = textMetrics.actualBoundingBoxDescent ?? token.style.fontSize * 0.2;
+        context.fillStyle = token.style.background;
+        context.fillRect(x, y, token.width, actualAscent + actualDescent);
+      }
+
+      context.fillStyle = token.style.color;
+      context.fillText(token.text, x, y);
+
+      if (token.style.underline && token.text.trim()) {
+        const underlineY = y + token.style.fontSize + 2;
+        const underlineWidth = Math.max(1, token.style.fontSize / 14);
+        context.strokeStyle = token.style.color;
+        context.lineWidth = underlineWidth;
+        context.beginPath();
+        context.moveTo(x, underlineY);
+        context.lineTo(x + token.width, underlineY);
+        context.stroke();
+      }
+
+      x += token.width;
+    });
+
+    y += line.lineHeight;
+  });
+
 }
 
 function drawEditorToCanvas() {
