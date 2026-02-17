@@ -18,7 +18,7 @@ const editorElement = document.getElementById('editor');
 const saveButton = document.getElementById('save-image');
 const imageNameInput = document.getElementById('image-name');
 const appVersionBadge = document.getElementById('app-version');
-const APP_VERSION = 'v1.1.4';
+const APP_VERSION = 'v1.1.5';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 
 const borderToggle = document.getElementById('enable-border');
@@ -353,6 +353,8 @@ const SIZE_MAP = {
   large: 24,
   huge: 32,
 };
+
+const backgroundMetricsHeightCache = new Map();
 
 const DEFAULT_STYLE = {
   bold: false,
@@ -834,6 +836,21 @@ function getCanvasStyle(attributes = {}) {
   };
 }
 
+
+function getBackgroundRectHeightForFont(font, fallbackFontSize) {
+  if (backgroundMetricsHeightCache.has(font)) {
+    return backgroundMetricsHeightCache.get(font);
+  }
+
+  context.font = font;
+  const metrics = context.measureText('Mg');
+  const actualAscent = metrics.actualBoundingBoxAscent ?? fallbackFontSize * 0.8;
+  const actualDescent = metrics.actualBoundingBoxDescent ?? fallbackFontSize * 0.2;
+  const height = Math.max(1, actualAscent + actualDescent);
+  backgroundMetricsHeightCache.set(font, height);
+  return height;
+}
+
 function buildCanvasFont(style) {
   const segments = [];
 
@@ -1251,12 +1268,9 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
       context.font = token.font;
 
       if (token.style.background && token.text.length > 0) {
-        const metricsSource = token.text.trim() ? token.text : 'M';
-        const textMetrics = context.measureText(metricsSource);
-        const actualAscent = textMetrics.actualBoundingBoxAscent ?? token.style.fontSize * 0.8;
-        const actualDescent = textMetrics.actualBoundingBoxDescent ?? token.style.fontSize * 0.2;
+        const backgroundRectHeight = getBackgroundRectHeightForFont(token.font, token.style.fontSize);
         context.fillStyle = token.style.background;
-        context.fillRect(x, y, token.width, actualAscent + actualDescent);
+        context.fillRect(x, y, token.width, backgroundRectHeight);
       }
 
       context.fillStyle = token.style.color;
