@@ -87,7 +87,9 @@ label {
 
 
 .ql-snow .ql-toolbar button.ql-open-color-window,
-.ql-snow.ql-toolbar button.ql-open-color-window {
+.ql-snow.ql-toolbar button.ql-open-color-window,
+.ql-snow .ql-toolbar button.ql-open-background-color-window,
+.ql-snow.ql-toolbar button.ql-open-background-color-window {
   width: 28px;
   padding: 0;
   font-size: 16px;
@@ -663,6 +665,19 @@ label {
   outline-offset: 1px;
 }
 
+
+.color-swatch.transparent-swatch,
+.selected-color-preview {
+  background-color: #d1d5db;
+  background-image: conic-gradient(
+    #e5e7eb 0deg 90deg,
+    #d1d5db 90deg 180deg,
+    #e5e7eb 180deg 270deg,
+    #d1d5db 270deg 360deg
+  );
+  background-size: 8px 8px;
+}
+
 .pick-screen-color-button {
   display: inline-flex;
   align-items: center;
@@ -696,7 +711,7 @@ label {
   color: #ffffff;
 }
 
-.window-secondary-button.pick-screen-color-button {
+.pick-screen-color-button {
   background: #d1d5db;
   color: #111827;
 }
@@ -766,7 +781,6 @@ label {
 
 .selected-color-preview {
   border: 1px solid #2f2f2f;
-  background: #ff9e17;
   min-height: 120px;
 }
 

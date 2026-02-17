@@ -95,6 +95,7 @@ const basicColorsGrid = document.querySelector('.basic-colors-grid');
 const customColorsGrid = document.querySelector('.custom-colors-grid');
 const addCustomColorButton = document.getElementById('add-custom-color');
 const pickScreenColorButton = document.getElementById('pick-screen-color');
+const openBackgroundColorWindowButton = document.querySelector('.ql-open-background-color-window');
 
 const colorMap = document.getElementById('color-map');
 const colorMapHandle = document.getElementById('color-map-handle');
@@ -108,6 +109,7 @@ const colorValueInputs = {
   red: document.getElementById('color-value-red'),
   green: document.getElementById('color-value-green'),
   blue: document.getElementById('color-value-blue'),
+  alpha: document.getElementById('color-value-alpha'),
   hex: document.getElementById('color-value-hex'),
 };
 const colorWindowOkButton = document.getElementById('color-window-ok');
@@ -117,13 +119,18 @@ const colorPickerState = {
   hue: 35,
   sat: 232,
   val: 255,
+  alpha: 255,
   draftHex: '#ff9e17',
   activeHex: '#ff9e17',
+  targetFormat: 'color',
   dragTarget: null,
   isPickingFromScreen: false,
 };
 
+const TRANSPARENT_COLOR_VALUE = 'transparent';
+
 const basicColorPalette = [
+  TRANSPARENT_COLOR_VALUE,
   '#000000', '#800000', '#008000', '#808000', '#000080', '#800080', '#008080', '#c0c0c0',
   '#808080', '#ff0000', '#00ff00', '#ffff00', '#0000ff', '#ff00ff', '#00ffff', '#ffffff',
   '#400000', '#804000', '#408000', '#004000', '#004040', '#000040', '#400040', '#404040',
@@ -145,6 +152,13 @@ function setColorPickerFromHex(color) {
     return false;
   }
 
+  if (color === TRANSPARENT_COLOR_VALUE) {
+    colorPickerState.alpha = 0;
+    colorPickerState.draftHex = TRANSPARENT_COLOR_VALUE;
+    syncColorPickerUI();
+    return true;
+  }
+
   const rgb = hexToRgb(color);
 
   if (!rgb) {
@@ -155,7 +169,10 @@ function setColorPickerFromHex(color) {
   colorPickerState.hue = hsv.hue;
   colorPickerState.sat = hsv.sat;
   colorPickerState.val = hsv.val;
-  colorPickerState.draftHex = rgbToHex(rgb.red, rgb.green, rgb.blue);
+  colorPickerState.alpha = rgb.alpha ?? 255;
+  colorPickerState.draftHex = color === TRANSPARENT_COLOR_VALUE
+    ? TRANSPARENT_COLOR_VALUE
+    : rgbToHex(rgb.red, rgb.green, rgb.blue, colorPickerState.alpha);
   syncColorPickerUI();
 
   return true;
@@ -171,8 +188,14 @@ function populateColorGrid(gridElement, colors) {
     const swatch = document.createElement('button');
     swatch.type = 'button';
     swatch.className = 'color-swatch';
-    swatch.style.background = color;
-    swatch.setAttribute('aria-label', `Use text color ${color}`);
+    if (color === TRANSPARENT_COLOR_VALUE) {
+      swatch.classList.add('transparent-swatch');
+      swatch.title = 'Transparent';
+      swatch.setAttribute('aria-label', 'Use transparent color');
+    } else {
+      swatch.style.background = color;
+      swatch.setAttribute('aria-label', `Use color ${color}`);
+    }
     swatch.addEventListener('click', () => {
       setColorPickerFromHex(color);
     });
@@ -190,11 +213,19 @@ function syncColorPickerUI() {
   colorPickerState.val = val;
 
   const rgb = hsvToRgb(hue === 360 ? 0 : hue, sat, val);
-  const hex = rgbToHex(rgb.red, rgb.green, rgb.blue);
-  colorPickerState.draftHex = hex;
+  const alpha = clampNumber(colorPickerState.alpha, 0, 255, 255);
+  colorPickerState.alpha = alpha;
+
+  if (alpha === 0) {
+    colorPickerState.draftHex = TRANSPARENT_COLOR_VALUE;
+  } else {
+    colorPickerState.draftHex = rgbToHex(rgb.red, rgb.green, rgb.blue, alpha);
+  }
 
   if (selectedColorPreview) {
-    selectedColorPreview.style.backgroundColor = hex;
+    selectedColorPreview.style.backgroundColor = alpha === 0
+      ? 'transparent'
+      : `rgb(${rgb.red} ${rgb.green} ${rgb.blue} / ${(alpha / 255).toFixed(3)})`;
   }
 
   if (colorMap) {
@@ -220,7 +251,8 @@ function syncColorPickerUI() {
     colorValueInputs.red.value = String(rgb.red);
     colorValueInputs.green.value = String(rgb.green);
     colorValueInputs.blue.value = String(rgb.blue);
-    colorValueInputs.hex.value = hex;
+    colorValueInputs.alpha.value = String(alpha);
+    colorValueInputs.hex.value = colorPickerState.draftHex;
   }
 }
 
@@ -281,17 +313,23 @@ function applyDraftColorToEditor() {
 
   colorPickerState.activeHex = colorPickerState.draftHex;
   quill.focus();
-  quill.format('color', colorPickerState.activeHex, 'user');
+
+  const formatValue = colorPickerState.draftHex === TRANSPARENT_COLOR_VALUE
+    ? false
+    : colorPickerState.activeHex;
+
+  quill.format(colorPickerState.targetFormat, formatValue, 'user');
   closeColorWindow();
   drawEditorToCanvas();
 }
 
-function openColorWindow() {
+function openColorWindowForFormat(targetFormat = 'color') {
   if (!colorWindowOverlay) {
     return;
   }
 
-  const selectionColor = quill.getFormat()?.color;
+  colorPickerState.targetFormat = targetFormat;
+  const selectionColor = quill.getFormat()?.[targetFormat];
   if (typeof selectionColor === 'string' && selectionColor.trim()) {
     const didUpdatePicker = setColorPickerFromHex(selectionColor.startsWith('#') ? selectionColor : selectionColor);
     if (didUpdatePicker) {
@@ -302,6 +340,14 @@ function openColorWindow() {
   syncColorPickerUI();
   colorWindowOverlay.classList.remove('hidden');
   colorWindowOverlay.setAttribute('aria-hidden', 'false');
+}
+
+function openColorWindow() {
+  openColorWindowForFormat('color');
+}
+
+function openBackgroundColorWindow() {
+  openColorWindowForFormat('background');
 }
 
 function closeColorWindow() {
@@ -374,6 +420,7 @@ const quill = new Quill('#editor', {
       container: '#editor-toolbar',
       handlers: {
         'open-color-window': openColorWindow,
+        'open-background-color-window': openBackgroundColorWindow,
       },
     },
   },
@@ -1531,6 +1578,11 @@ if (pickScreenColorButton) {
 }
 
 
+
+if (openBackgroundColorWindowButton) {
+  openBackgroundColorWindowButton.addEventListener('click', openBackgroundColorWindow);
+}
+
 if (closeColorWindowButton) {
   closeColorWindowButton.addEventListener('click', closeColorWindow);
 }
@@ -1596,7 +1648,7 @@ if (colorValueInputs.hue) {
     syncColorPickerUI();
   });
 
-  ['red', 'green', 'blue'].forEach((key) => {
+  ['red', 'green', 'blue', 'alpha'].forEach((key) => {
     colorValueInputs[key].addEventListener('input', () => {
       const red = clampNumber(colorValueInputs.red.value, 0, 255, 0);
       const green = clampNumber(colorValueInputs.green.value, 0, 255, 0);
@@ -1605,6 +1657,7 @@ if (colorValueInputs.hue) {
       colorPickerState.hue = hsv.hue;
       colorPickerState.sat = hsv.sat;
       colorPickerState.val = hsv.val;
+      colorPickerState.alpha = clampNumber(colorValueInputs.alpha.value, 0, 255, colorPickerState.alpha);
       syncColorPickerUI();
     });
   });
@@ -1620,6 +1673,7 @@ if (colorValueInputs.hue) {
     colorPickerState.hue = hsv.hue;
     colorPickerState.sat = hsv.sat;
     colorPickerState.val = hsv.val;
+    colorPickerState.alpha = rgb.alpha ?? 255;
     syncColorPickerUI();
   });
 }
