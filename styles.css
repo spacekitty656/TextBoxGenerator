@@ -883,3 +883,15 @@ label {
 .ql-font-pressstart2p {
   font-family: "Press Start 2P", "Courier New", monospace;
 }
+
+.ql-snow .ql-picker.ql-background .ql-picker-item:not([data-value]),
+.ql-snow .ql-picker.ql-background .ql-picker-label:not([data-value]) {
+  background-color: #d1d5db;
+  background-image: conic-gradient(
+    #e5e7eb 0deg 90deg,
+    #d1d5db 90deg 180deg,
+    #e5e7eb 180deg 270deg,
+    #d1d5db 270deg 360deg
+  );
+  background-size: 8px 8px;
+}

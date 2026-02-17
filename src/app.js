@@ -377,6 +377,20 @@ const quill = new Quill('#editor', {
   placeholder: 'Type formatted text here...',
 });
 
+
+function updateTransparentBackgroundSwatchAccessibility() {
+  const transparentBackgroundTargets = document.querySelectorAll(
+    '.ql-snow .ql-picker.ql-background .ql-picker-item:not([data-value]), .ql-snow .ql-picker.ql-background .ql-picker-label:not([data-value])',
+  );
+
+  transparentBackgroundTargets.forEach((element) => {
+    element.setAttribute('title', 'Transparent');
+    element.setAttribute('aria-label', 'Transparent');
+  });
+}
+
+updateTransparentBackgroundSwatchAccessibility();
+
 quill.setContents([
   {
     insert: 'Hello, world!',
