@@ -428,9 +428,11 @@ label {
   margin-left: auto;
   width: 84px;
   height: 34px;
-  border: 1px solid #9ca3af;
-  border-radius: 8px;
-  padding: 0;
+  border: 1px solid #8f8f9d;
+  border-radius: 3px;
+  padding: 4px;
+  background-clip: content-box;
+  background-color: #ffffff;
   cursor: pointer;
 }
 
