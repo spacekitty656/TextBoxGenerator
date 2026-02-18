@@ -382,12 +382,12 @@ function openColorWindowForInput(targetInput, title) {
 
 function syncColorPreviewButtons() {
   if (backgroundColorWindowButton) {
-    backgroundColorWindowButton.style.backgroundColor = backgroundColorInput.value;
+    backgroundColorWindowButton.style.setProperty('--preview-swatch-color', backgroundColorInput.value);
     backgroundColorWindowButton.disabled = backgroundColorInput.disabled;
   }
 
   if (borderColorWindowButton) {
-    borderColorWindowButton.style.backgroundColor = borderColorInput.value;
+    borderColorWindowButton.style.setProperty('--preview-swatch-color', borderColorInput.value);
     borderColorWindowButton.disabled = borderColorInput.disabled;
   }
 }
