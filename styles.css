@@ -91,9 +91,19 @@ label {
 .ql-snow .ql-toolbar button.ql-open-background-color-window,
 .ql-snow.ql-toolbar button.ql-open-background-color-window {
   width: 28px;
+  height: 24px;
   padding: 0;
-  font-size: 16px;
   line-height: 1;
+}
+
+.ql-snow .ql-toolbar button.ql-open-color-window,
+.ql-snow.ql-toolbar button.ql-open-color-window {
+  font-size: 20px;
+}
+
+.ql-snow .ql-toolbar button.ql-open-background-color-window,
+.ql-snow.ql-toolbar button.ql-open-background-color-window {
+  font-size: 17px;
 }
 
 
@@ -351,16 +361,7 @@ label {
 }
 
 .border-color-solid-row #border-color-input {
-  margin-left: auto;
-  width: 84px;
-  height: 34px;
-  padding: 0.15rem;
-}
-
-.border-color-solid-row #border-color-input:disabled {
-  opacity: 0.45;
-  filter: grayscale(100%);
-  cursor: not-allowed;
+  display: none;
 }
 
 .inside-out-colors {
@@ -419,17 +420,39 @@ label {
 }
 
 .background-color-solid-row input[type='color'] {
+  display: none;
+}
+
+
+.color-preview-button {
+  --preview-swatch-color: #ffffff;
   margin-left: auto;
   width: 84px;
   height: 34px;
-  padding: 0.15rem;
+  border: 2px solid #7f8389;
+  border-radius: 9px;
+  padding: 5px;
+  background: #d9d9dd;
+  position: relative;
+  cursor: pointer;
 }
 
-.background-color-solid-row input[type='color']:disabled {
+.color-preview-button::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid #9aa0a6;
+  border-radius: 6px;
+  background: var(--preview-swatch-color);
+  pointer-events: none;
+}
+
+.color-preview-button:disabled {
   opacity: 0.45;
   filter: grayscale(100%);
   cursor: not-allowed;
 }
+
 
 
 #inside-out-color-list {
