@@ -98,6 +98,7 @@ const pickScreenColorButton = document.getElementById('pick-screen-color');
 const openBackgroundColorWindowButton = document.querySelector('.ql-open-background-color-window');
 const backgroundColorWindowButton = document.getElementById('background-color-window-button');
 const borderColorWindowButton = document.getElementById('border-color-window-button');
+const borderBackgroundColorWindowButton = document.getElementById('border-background-color-window-button');
 
 const colorMap = document.getElementById('color-map');
 const colorMapHandle = document.getElementById('color-map-handle');
@@ -389,6 +390,11 @@ function syncColorPreviewButtons() {
   if (borderColorWindowButton) {
     borderColorWindowButton.style.setProperty('--preview-swatch-color', borderColorInput.value);
     borderColorWindowButton.disabled = borderColorInput.disabled;
+  }
+
+  if (borderBackgroundColorWindowButton) {
+    borderBackgroundColorWindowButton.style.setProperty('--preview-swatch-color', borderBackgroundColorInput.value);
+    borderBackgroundColorWindowButton.disabled = borderBackgroundColorInput.disabled;
   }
 }
 
@@ -1547,6 +1553,7 @@ backgroundColorInput.addEventListener('input', () => {
 });
 
 borderBackgroundColorInput.addEventListener('input', () => {
+  syncColorPreviewButtons();
   drawEditorToCanvas();
 });
 
@@ -1631,6 +1638,12 @@ if (backgroundColorWindowButton) {
 if (borderColorWindowButton) {
   borderColorWindowButton.addEventListener('click', () => {
     openColorWindowForInput(borderColorInput, 'Border Color');
+  });
+}
+
+if (borderBackgroundColorWindowButton) {
+  borderBackgroundColorWindowButton.addEventListener('click', () => {
+    openColorWindowForInput(borderBackgroundColorInput, 'Border Background Color');
   });
 }
 
