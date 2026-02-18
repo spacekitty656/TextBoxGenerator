@@ -428,11 +428,12 @@ label {
   margin-left: auto;
   width: 84px;
   height: 34px;
-  border: 1px solid #8f8f9d;
+  border: 1.5px solid #cfd1d6;
   border-radius: 3px;
   padding: 4px;
   background-clip: content-box;
   background-color: #ffffff;
+  box-shadow: inset 0 0 0 1px #5f6368;
   cursor: pointer;
 }
 
