@@ -96,6 +96,8 @@ const customColorsGrid = document.querySelector('.custom-colors-grid');
 const addCustomColorButton = document.getElementById('add-custom-color');
 const pickScreenColorButton = document.getElementById('pick-screen-color');
 const openBackgroundColorWindowButton = document.querySelector('.ql-open-background-color-window');
+const backgroundColorWindowButton = document.getElementById('background-color-window-button');
+const borderColorWindowButton = document.getElementById('border-color-window-button');
 
 const colorMap = document.getElementById('color-map');
 const colorMapHandle = document.getElementById('color-map-handle');
@@ -124,6 +126,7 @@ const colorPickerState = {
   draftHex: '#ff9e17',
   activeHex: '#ff9e17',
   targetFormat: 'color',
+  targetInput: null,
   dragTarget: null,
   isPickingFromScreen: false,
 };
@@ -306,12 +309,20 @@ async function pickColorFromScreen() {
   }
 }
 
-function applyDraftColorToEditor() {
+function applyDraftColorFromWindow() {
   if (!colorPickerState.draftHex) {
     return;
   }
 
   colorPickerState.activeHex = colorPickerState.draftHex;
+
+  if (colorPickerState.targetInput) {
+    colorPickerState.targetInput.value = colorPickerState.activeHex;
+    colorPickerState.targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+    closeColorWindow();
+    return;
+  }
+
   quill.focus();
 
   const formatValue = colorPickerState.alpha === 0
@@ -320,6 +331,7 @@ function applyDraftColorToEditor() {
 
   quill.format(colorPickerState.targetFormat, formatValue, 'user');
   closeColorWindow();
+  syncColorPreviewButtons();
   drawEditorToCanvas();
 }
 
@@ -329,6 +341,7 @@ function openColorWindowForFormat(targetFormat = 'color') {
   }
 
   colorPickerState.targetFormat = targetFormat;
+  colorPickerState.targetInput = null;
 
   if (colorWindowTitle) {
     colorWindowTitle.textContent = targetFormat === 'background' ? 'Highlight Color' : 'Text Color';
@@ -344,6 +357,39 @@ function openColorWindowForFormat(targetFormat = 'color') {
   syncColorPickerUI();
   colorWindowOverlay.classList.remove('hidden');
   colorWindowOverlay.setAttribute('aria-hidden', 'false');
+}
+
+
+function openColorWindowForInput(targetInput, title) {
+  if (!colorWindowOverlay || !targetInput) {
+    return;
+  }
+
+  colorPickerState.targetInput = targetInput;
+
+  if (colorWindowTitle) {
+    colorWindowTitle.textContent = title;
+  }
+
+  if (typeof targetInput.value === 'string' && targetInput.value.trim()) {
+    setColorPickerFromHex(targetInput.value);
+  }
+
+  syncColorPickerUI();
+  colorWindowOverlay.classList.remove('hidden');
+  colorWindowOverlay.setAttribute('aria-hidden', 'false');
+}
+
+function syncColorPreviewButtons() {
+  if (backgroundColorWindowButton) {
+    backgroundColorWindowButton.style.backgroundColor = backgroundColorInput.value;
+    backgroundColorWindowButton.disabled = backgroundColorInput.disabled;
+  }
+
+  if (borderColorWindowButton) {
+    borderColorWindowButton.style.backgroundColor = borderColorInput.value;
+    borderColorWindowButton.disabled = borderColorInput.disabled;
+  }
 }
 
 function openColorWindow() {
@@ -835,6 +881,7 @@ function updateBorderColorModeUI() {
   const showImageControls = selectedMode === 'images' && isBorderEnabled;
 
   borderColorInput.disabled = !solidModeActive;
+  syncColorPreviewButtons();
   borderBackgroundColorInput.disabled = !(borderBackgroundColorSolidRadio.checked && isBorderEnabled);
   insideOutAddColorButton.disabled = !showInsideOutColors;
   insideOutColors.classList.toggle('hidden', !showInsideOutColors);
@@ -854,6 +901,7 @@ function updateBorderColorModeUI() {
 
 function updateCanvasBackgroundControlsState() {
   backgroundColorInput.disabled = !backgroundColorSolidRadio.checked;
+  syncColorPreviewButtons();
 }
 
 function getCanvasStyle(attributes = {}) {
@@ -1476,6 +1524,7 @@ insideOutAddColorButton.addEventListener('click', () => {
 });
 
 borderColorInput.addEventListener('input', () => {
+  syncColorPreviewButtons();
   drawEditorToCanvas();
 });
 
@@ -1486,6 +1535,7 @@ borderColorInput.addEventListener('input', () => {
 });
 
 backgroundColorInput.addEventListener('input', () => {
+  syncColorPreviewButtons();
   drawEditorToCanvas();
 });
 
@@ -1502,8 +1552,9 @@ borderBackgroundColorInput.addEventListener('input', () => {
 
 borderToggle.addEventListener('change', () => {
   syncColorPickerUI();
+  syncColorPreviewButtons();
 
-updateBorderControlsState();
+  updateBorderControlsState();
   drawEditorToCanvas();
 });
 
@@ -1569,6 +1620,18 @@ if (pickScreenColorButton) {
 
 if (openBackgroundColorWindowButton) {
   openBackgroundColorWindowButton.addEventListener('click', openBackgroundColorWindow);
+}
+
+if (backgroundColorWindowButton) {
+  backgroundColorWindowButton.addEventListener('click', () => {
+    openColorWindowForInput(backgroundColorInput, 'Image Background Color');
+  });
+}
+
+if (borderColorWindowButton) {
+  borderColorWindowButton.addEventListener('click', () => {
+    openColorWindowForInput(borderColorInput, 'Border Color');
+  });
 }
 
 if (closeColorWindowButton) {
@@ -1668,7 +1731,7 @@ if (colorValueInputs.hue) {
 
 if (colorWindowOkButton) {
   colorWindowOkButton.addEventListener('click', () => {
-    applyDraftColorToEditor();
+    applyDraftColorFromWindow();
   });
 }
 
@@ -1689,6 +1752,7 @@ if (appVersionBadge) {
 }
 
 syncColorPickerUI();
+syncColorPreviewButtons();
 
 updateBorderControlsState();
 syncImageLockedPaddingValues();

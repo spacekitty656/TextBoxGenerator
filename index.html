@@ -30,8 +30,8 @@
             <button class="ql-bold" type="button" aria-label="Bold"></button>
             <button class="ql-italic" type="button" aria-label="Italic"></button>
             <button class="ql-underline" type="button" aria-label="Underline"></button>
-            <button class="ql-open-background-color-window" type="button" aria-label="Open background color picker" title="Background color">🖌️</button>
-            <button class="ql-open-color-window" type="button" aria-label="Open color picker" title="Text color">🎨</button>
+            <button class="ql-open-background-color-window" type="button" aria-label="Open background color picker" title="Background color">⬜️</button>
+            <button class="ql-open-color-window" type="button" aria-label="Open color picker" title="Text color">🇦</button>
             <button class="ql-image"></button>
             <button class="ql-align" value="" type="button" aria-label="Align left"></button>
             <button class="ql-align" value="center" type="button" aria-label="Align center"></button>
@@ -74,7 +74,8 @@
                   value="solid"
                 />
                 Solid color
-                <input type="color" id="background-color-input" value="#ffffff" disabled />
+                  <input type="color" id="background-color-input" value="#ffffff" disabled />
+                  <button type="button" id="background-color-window-button" class="color-preview-button" aria-label="Open image background color picker" title="Image background color"></button>
               </label>
             </details>
 
@@ -146,6 +147,7 @@
                   />
                   Solid Color
                   <input type="color" id="border-color-input" value="#1f2937" />
+                  <button type="button" id="border-color-window-button" class="color-preview-button" aria-label="Open border color picker" title="Border color"></button>
                 </label>
 
                 <label class="inline-radio" for="border-color-inside-out">
