@@ -887,8 +887,8 @@ function updateBorderColorModeUI() {
   const showImageControls = selectedMode === 'images' && isBorderEnabled;
 
   borderColorInput.disabled = !solidModeActive;
-  syncColorPreviewButtons();
   borderBackgroundColorInput.disabled = !(borderBackgroundColorSolidRadio.checked && isBorderEnabled);
+  syncColorPreviewButtons();
   insideOutAddColorButton.disabled = !showInsideOutColors;
   insideOutColors.classList.toggle('hidden', !showInsideOutColors);
   imageBorderControls?.classList.toggle('hidden', !showImageControls);
