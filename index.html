@@ -18,7 +18,10 @@
 
       <section class="form-panel" aria-label="Text editor controls">
         <form id="text-form">
-          <h1>Text Box Generator</h1>
+          <div class="form-header">
+            <h1>Text Box Generator</h1>
+            <button type="button" id="settings-button" class="settings-button" aria-label="Open settings" title="Settings">⚙️</button>
+          </div>
           <div id="editor-toolbar" aria-label="Text formatting toolbar">
             <select class="ql-font" aria-label="Font family">
               <option value="sansserif">Sans Serif</option>
@@ -31,7 +34,7 @@
             <button class="ql-italic" type="button" aria-label="Italic"></button>
             <button class="ql-underline" type="button" aria-label="Underline"></button>
             <button class="ql-open-background-color-window" type="button" aria-label="Open background color picker" title="Background color">⬜️</button>
-            <button class="ql-open-color-window" type="button" aria-label="Open color picker" title="Text color">🇦</button>
+            <button class="ql-open-color-window" type="button" aria-label="Open color picker" title="Text color">A</button>
             <button class="ql-image"></button>
             <button class="ql-align" value="" type="button" aria-label="Align left"></button>
             <button class="ql-align" value="center" type="button" aria-label="Align center"></button>
@@ -288,6 +291,21 @@
     </main>
 
     <div id="app-version" class="app-version" aria-label="Application version"></div>
+
+    <div id="settings-overlay" class="settings-overlay hidden" aria-hidden="true">
+      <div class="settings-window" role="dialog" aria-modal="true" aria-labelledby="settings-window-title">
+        <div class="settings-window-header">
+          <h2 id="settings-window-title">Settings</h2>
+          <button type="button" id="close-settings-window" class="close-window-button" aria-label="Close settings window">✕</button>
+        </div>
+        <div class="settings-window-body">
+          <label class="inline-checkbox" for="dark-mode-toggle">
+            <input type="checkbox" id="dark-mode-toggle" />
+            Dark mode
+          </label>
+        </div>
+      </div>
+    </div>
 
     <div id="color-window-overlay" class="color-window-overlay hidden" aria-hidden="true">
       <div class="color-window" role="dialog" aria-modal="true" aria-labelledby="color-window-title">

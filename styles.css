@@ -22,6 +22,11 @@ body {
   color: #1f2937;
 }
 
+body.dark-mode {
+  background: #111827;
+  color: #e5e7eb;
+}
+
 .app-layout {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(36rem, 1fr);
@@ -56,6 +61,15 @@ body {
   overflow-y: scroll;
 }
 
+body.dark-mode .form-panel {
+  background: #1f2937;
+  border-left-color: #374151;
+}
+
+body.dark-mode .canvas-panel {
+  background: #111827;
+}
+
 @supports (scrollbar-gutter: stable) {
   .form-panel {
     overflow-y: auto;
@@ -68,6 +82,13 @@ body {
   flex-direction: column;
   min-height: 100%;
   gap: 1rem;
+}
+
+.form-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 h1 {
@@ -83,6 +104,33 @@ label {
   border: 1px solid #d1d5db;
   border-radius: 8px 8px 0 0;
   background: #f9fafb;
+}
+
+body.dark-mode #editor-toolbar {
+  background: #111827;
+  border-color: #4b5563;
+}
+
+
+body.dark-mode .ql-snow .ql-toolbar button,
+body.dark-mode .ql-snow.ql-toolbar button,
+body.dark-mode .ql-snow .ql-picker,
+body.dark-mode .ql-snow .ql-picker-label,
+body.dark-mode .ql-snow .ql-picker-options .ql-picker-item {
+  color: #e5e7eb;
+}
+
+body.dark-mode .ql-snow .ql-stroke {
+  stroke: #e5e7eb;
+}
+
+body.dark-mode .ql-snow .ql-fill {
+  fill: #e5e7eb;
+}
+
+body.dark-mode .ql-snow .ql-picker-options {
+  background: #1f2937;
+  border-color: #4b5563;
 }
 
 
@@ -118,6 +166,12 @@ label {
   overflow-y: hidden;
 }
 
+body.dark-mode #editor {
+  background: #111827;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
 #editor .ql-editor {
   min-height: 260px;
   max-height: 33vh;
@@ -142,6 +196,12 @@ label {
   border: 1px solid #d1d5db;
   border-radius: 10px;
   padding: 0.9rem;
+}
+
+body.dark-mode .canvas-background-controls,
+body.dark-mode .border-options {
+  border-color: #4b5563;
+  background: #111827;
 }
 
 .canvas-background-controls .option-accordion {
@@ -253,6 +313,10 @@ label {
   padding-top: 0.25rem;
 }
 
+body.dark-mode .option-accordion {
+  border-top-color: #374151;
+}
+
 .option-accordion summary {
   cursor: pointer;
   list-style: none;
@@ -303,6 +367,16 @@ label {
   border-radius: 8px;
 }
 
+body.dark-mode .pad-input,
+body.dark-mode .border-input-row input,
+body.dark-mode #image-name,
+body.dark-mode .value-grid input,
+body.dark-mode .html-value input {
+  background: #111827;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
 .pad-input:disabled {
   background: #f3f4f6;
   color: #6b7280;
@@ -334,6 +408,12 @@ label {
   background: #e5e7eb;
   cursor: pointer;
   height: 2rem;
+}
+
+body.dark-mode .lock-button {
+  background: #374151;
+  border-color: #6b7280;
+  color: #f3f4f6;
 }
 
 .lock-button[aria-pressed='true'] {
@@ -405,6 +485,18 @@ label {
   line-height: 1.35;
 }
 
+body.dark-mode .image-border-help,
+body.dark-mode .image-border-slot-group label,
+body.dark-mode .info-tooltip,
+body.dark-mode .control-title,
+body.dark-mode .inline-checkbox,
+body.dark-mode .inline-radio,
+body.dark-mode .inline-input,
+body.dark-mode label,
+body.dark-mode h1 {
+  color: #e5e7eb;
+}
+
 .image-border-input-groups {
   display: grid;
   gap: 0.65rem;
@@ -418,6 +510,15 @@ label {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0.35rem;
+}
+
+body.dark-mode .image-border-slot-group {
+  border-color: #4b5563;
+  background: #1f2937;
+}
+
+body.dark-mode .image-border-slot-group legend {
+  color: #f3f4f6;
 }
 
 .image-border-slot-group legend {
@@ -542,6 +643,14 @@ label {
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+}
+
+body.dark-mode .inside-out-row-button,
+body.dark-mode #inside-out-add-color,
+body.dark-mode .compact-input input {
+  background: #374151;
+  border-color: #6b7280;
+  color: #f9fafb;
 }
 
 #inside-out-add-color:disabled {
@@ -890,6 +999,81 @@ label {
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+.settings-button {
+  width: 2.3rem;
+  height: 2.3rem;
+  margin-right: 0.65rem;
+  border: 1px solid #9ca3af;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 1.15rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+body.dark-mode .settings-button {
+  background: #111827;
+  border-color: #6b7280;
+  color: #f9fafb;
+}
+
+.settings-overlay.hidden {
+  display: none;
+}
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 32%);
+  z-index: 45;
+  display: grid;
+  place-items: center;
+}
+
+.settings-window {
+  width: min(92vw, 360px);
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  box-shadow: 0 20px 50px rgb(0 0 0 / 20%);
+  overflow: hidden;
+}
+
+.settings-window-header {
+  height: 44px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  border-bottom: 1px solid #d1d5db;
+}
+
+.settings-window-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.settings-window-body {
+  padding: 1rem;
+}
+
+body.dark-mode .settings-window {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+body.dark-mode .settings-window-header {
+  background: #111827;
+  border-bottom-color: #374151;
 }
 
 @media (max-width: 900px) {
