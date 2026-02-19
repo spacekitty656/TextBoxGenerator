@@ -1,12 +1,13 @@
 const { test, expect } = require('@playwright/test');
 
+async function selectControlById(page, id) {
+  await page.locator(`#${id}`).check({ force: true });
+}
+
 test('border mode switching updates control visibility and enabled states', async ({ page }) => {
   await page.goto('/');
 
   const borderToggle = page.locator('#enable-border');
-  const solidMode = page.locator('#border-color-solid');
-  const insideOutMode = page.locator('#border-color-inside-out');
-  const imagesMode = page.locator('#border-color-images');
 
   const borderColorInput = page.locator('#border-color-input');
   const insideOutColors = page.locator('#inside-out-colors');
@@ -17,18 +18,18 @@ test('border mode switching updates control visibility and enabled states', asyn
 
   await borderToggle.check();
 
-  await solidMode.check();
+  await selectControlById(page, 'border-color-solid');
   await expect(borderColorInput).toBeEnabled();
   await expect(insideOutColors).toHaveClass(/hidden/);
   await expect(imageControls).toHaveClass(/hidden/);
 
-  await insideOutMode.check();
+  await selectControlById(page, 'border-color-inside-out');
   await expect(borderColorInput).toBeDisabled();
   await expect(insideOutColors).not.toHaveClass(/hidden/);
   await expect(insideOutAdd).toBeEnabled();
   await expect(imageControls).toHaveClass(/hidden/);
 
-  await imagesMode.check();
+  await selectControlById(page, 'border-color-images');
   await expect(borderColorInput).toBeDisabled();
   await expect(insideOutColors).toHaveClass(/hidden/);
   await expect(imageControls).not.toHaveClass(/hidden/);

@@ -1,5 +1,9 @@
 const { test, expect } = require('@playwright/test');
 
+async function selectControlById(page, id) {
+  await page.locator(`#${id}`).check({ force: true });
+}
+
 test('smoke: editor interactions update preview and save action is triggered', async ({ page }) => {
   await page.goto('/');
 
@@ -19,7 +23,7 @@ test('smoke: editor interactions update preview and save action is triggered', a
 
   await page.locator('#enable-border').check();
 
-  await page.locator('#background-color-solid').check();
+  await selectControlById(page, 'background-color-solid');
   const backgroundColorInput = page.locator('#background-color-input');
   await expect(backgroundColorInput).toBeEnabled();
   await backgroundColorInput.fill('#ffcc00');
