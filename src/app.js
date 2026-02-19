@@ -94,8 +94,8 @@ const colorWindowOverlay = document.getElementById('color-window-overlay');
 const closeColorWindowButton = document.getElementById('close-color-window');
 const basicColorsGrid = document.querySelector('.basic-colors-grid');
 const customColorsGrid = document.querySelector('.custom-colors-grid');
-const colorLeftPanel = document.querySelector('.color-left-panel');
-const colorRightPanel = document.querySelector('.color-right-panel');
+const canvasPanel = document.querySelector('.canvas-panel');
+const formPanel = document.querySelector('.form-panel');
 const addCustomColorButton = document.getElementById('add-custom-color');
 const pickScreenColorButton = document.getElementById('pick-screen-color');
 const openBackgroundColorWindowButton = document.querySelector('.ql-open-background-color-window');
@@ -426,12 +426,12 @@ function panelHasVerticalScrollbar(panelElement) {
   return panelElement.scrollHeight > panelElement.clientHeight;
 }
 
-function forwardLeftPanelScrollToRightPanel(event) {
-  if (!colorRightPanel || panelHasVerticalScrollbar(colorLeftPanel)) {
+function forwardCanvasPanelScrollToFormPanel(event) {
+  if (!formPanel || panelHasVerticalScrollbar(canvasPanel)) {
     return;
   }
 
-  colorRightPanel.scrollTop += event.deltaY;
+  formPanel.scrollTop += event.deltaY;
   event.preventDefault();
 }
 
@@ -1691,8 +1691,8 @@ if (colorWindowOverlay) {
   });
 }
 
-if (colorLeftPanel) {
-  colorLeftPanel.addEventListener('wheel', forwardLeftPanelScrollToRightPanel, { passive: false });
+if (canvasPanel) {
+  canvasPanel.addEventListener('wheel', forwardCanvasPanelScrollToFormPanel, { passive: false });
 }
 
 
