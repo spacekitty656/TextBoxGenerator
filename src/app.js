@@ -19,6 +19,10 @@ const editorElement = document.getElementById('editor');
 const saveButton = document.getElementById('save-image');
 const imageNameInput = document.getElementById('image-name');
 const appVersionBadge = document.getElementById('app-version');
+const settingsButton = document.getElementById('settings-button');
+const settingsOverlay = document.getElementById('settings-overlay');
+const closeSettingsWindowButton = document.getElementById('close-settings-window');
+const darkModeToggle = document.getElementById('dark-mode-toggle');
 const APP_VERSION = 'v1.1.6';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 
@@ -416,6 +420,28 @@ function closeColorWindow() {
 
   colorWindowOverlay.classList.add('hidden');
   colorWindowOverlay.setAttribute('aria-hidden', 'true');
+}
+
+function openSettingsWindow() {
+  if (!settingsOverlay) {
+    return;
+  }
+
+  settingsOverlay.classList.remove('hidden');
+  settingsOverlay.setAttribute('aria-hidden', 'false');
+}
+
+function closeSettingsWindow() {
+  if (!settingsOverlay) {
+    return;
+  }
+
+  settingsOverlay.classList.add('hidden');
+  settingsOverlay.setAttribute('aria-hidden', 'true');
+}
+
+function applyDarkMode(enabled) {
+  document.body.classList.toggle('dark-mode', enabled);
 }
 
 function panelHasVerticalScrollbar(panelElement) {
@@ -1790,9 +1816,32 @@ if (colorWindowCancelButton) {
   });
 }
 
+if (settingsButton) {
+  settingsButton.addEventListener('click', openSettingsWindow);
+}
+
+if (closeSettingsWindowButton) {
+  closeSettingsWindowButton.addEventListener('click', closeSettingsWindow);
+}
+
+if (settingsOverlay) {
+  settingsOverlay.addEventListener('click', (event) => {
+    if (event.target === settingsOverlay) {
+      closeSettingsWindow();
+    }
+  });
+}
+
+if (darkModeToggle) {
+  darkModeToggle.addEventListener('change', () => {
+    applyDarkMode(darkModeToggle.checked);
+  });
+}
+
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     closeColorWindow();
+    closeSettingsWindow();
   }
 });
 
@@ -1802,6 +1851,7 @@ if (appVersionBadge) {
 
 syncColorPickerUI();
 syncColorPreviewButtons();
+applyDarkMode(Boolean(darkModeToggle?.checked));
 
 updateBorderControlsState();
 syncImageLockedPaddingValues();

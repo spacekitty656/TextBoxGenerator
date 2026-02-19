@@ -287,7 +287,24 @@
       </section>
     </main>
 
+    <button type="button" id="settings-button" class="settings-button" aria-label="Open settings" title="Settings">⚙️</button>
+
     <div id="app-version" class="app-version" aria-label="Application version"></div>
+
+    <div id="settings-overlay" class="settings-overlay hidden" aria-hidden="true">
+      <div class="settings-window" role="dialog" aria-modal="true" aria-labelledby="settings-window-title">
+        <div class="settings-window-header">
+          <h2 id="settings-window-title">Settings</h2>
+          <button type="button" id="close-settings-window" class="close-window-button" aria-label="Close settings window">✕</button>
+        </div>
+        <div class="settings-window-body">
+          <label class="inline-checkbox" for="dark-mode-toggle">
+            <input type="checkbox" id="dark-mode-toggle" />
+            Dark mode
+          </label>
+        </div>
+      </div>
+    </div>
 
     <div id="color-window-overlay" class="color-window-overlay hidden" aria-hidden="true">
       <div class="color-window" role="dialog" aria-modal="true" aria-labelledby="color-window-title">
