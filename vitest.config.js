@@ -2,6 +2,8 @@ const { defineConfig } = require('vitest/config');
 
 module.exports = defineConfig({
   test: {
-    environment: 'jsdom'
+    environment: 'jsdom',
+    include: ['tests/unit/**/*.test.js'],
+    exclude: ['tests/e2e/**'],
   }
 });
