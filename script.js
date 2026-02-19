@@ -467,7 +467,7 @@ const quill = new Quill('#editor', {
 
 quill.setContents([
   {
-    insert: 'Hello, world!',
+    insert: 'It all starts here...',
     attributes: {
       size: 'large',
       color: '#111827',
