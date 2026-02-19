@@ -89,6 +89,7 @@ const sidePaddingControls = {
 };
 
 const wrapTextInput = document.getElementById('wrap-text');
+const maxImageWidthInput = document.getElementById('max-image-width');
 const colorWindowOverlay = document.getElementById('color-window-overlay');
 const closeColorWindowButton = document.getElementById('close-color-window');
 const basicColorsGrid = document.querySelector('.basic-colors-grid');
@@ -506,7 +507,12 @@ function isTextWrapEnabled() {
 }
 
 function syncEditorWrapMode() {
-  editorElement.classList.toggle('editor-no-wrap', !isTextWrapEnabled());
+  const wrapEnabled = isTextWrapEnabled();
+  editorElement.classList.toggle('editor-no-wrap', !wrapEnabled);
+
+  if (maxImageWidthInput) {
+    maxImageWidthInput.disabled = !wrapEnabled;
+  }
 }
 
 function clampToPositiveNumber(value, fallback = 0) {
@@ -1436,9 +1442,10 @@ function drawEditorToCanvas() {
   const canvasBackgroundConfig = getCanvasBackgroundConfig();
   updateEditorBackgroundColor(borderConfig, canvasBackgroundConfig);
   const canvasSizePaddingConfig = getCanvasSizePaddingConfig();
+  const configuredBaseWidth = clampToPositiveNumber(maxImageWidthInput?.value, BASE_CANVAS_CONTENT_WIDTH);
   const maxContentWidth = Math.max(
     50,
-    BASE_CANVAS_CONTENT_WIDTH
+    configuredBaseWidth
       - canvasSizePaddingConfig.left
       - canvasSizePaddingConfig.right
       - (borderConfig.enabled ? borderConfig.width * 2 + borderConfig.padding.left + borderConfig.padding.right : 0),
@@ -1572,6 +1579,12 @@ quill.on('text-change', () => {
 if (wrapTextInput) {
   wrapTextInput.addEventListener('change', () => {
     syncEditorWrapMode();
+    drawEditorToCanvas();
+  });
+}
+
+if (maxImageWidthInput) {
+  maxImageWidthInput.addEventListener('input', () => {
     drawEditorToCanvas();
   });
 }
