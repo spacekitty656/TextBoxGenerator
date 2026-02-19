@@ -112,6 +112,28 @@ body.dark-mode #editor-toolbar {
 }
 
 
+body.dark-mode .ql-snow .ql-toolbar button,
+body.dark-mode .ql-snow.ql-toolbar button,
+body.dark-mode .ql-snow .ql-picker,
+body.dark-mode .ql-snow .ql-picker-label,
+body.dark-mode .ql-snow .ql-picker-options .ql-picker-item {
+  color: #e5e7eb;
+}
+
+body.dark-mode .ql-snow .ql-stroke {
+  stroke: #e5e7eb;
+}
+
+body.dark-mode .ql-snow .ql-fill {
+  fill: #e5e7eb;
+}
+
+body.dark-mode .ql-snow .ql-picker-options {
+  background: #1f2937;
+  border-color: #4b5563;
+}
+
+
 .ql-snow .ql-toolbar button.ql-open-color-window,
 .ql-snow.ql-toolbar button.ql-open-color-window,
 .ql-snow .ql-toolbar button.ql-open-background-color-window,
