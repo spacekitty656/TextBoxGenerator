@@ -94,6 +94,8 @@ const colorWindowOverlay = document.getElementById('color-window-overlay');
 const closeColorWindowButton = document.getElementById('close-color-window');
 const basicColorsGrid = document.querySelector('.basic-colors-grid');
 const customColorsGrid = document.querySelector('.custom-colors-grid');
+const colorLeftPanel = document.querySelector('.color-left-panel');
+const colorRightPanel = document.querySelector('.color-right-panel');
 const addCustomColorButton = document.getElementById('add-custom-color');
 const pickScreenColorButton = document.getElementById('pick-screen-color');
 const openBackgroundColorWindowButton = document.querySelector('.ql-open-background-color-window');
@@ -414,6 +416,23 @@ function closeColorWindow() {
 
   colorWindowOverlay.classList.add('hidden');
   colorWindowOverlay.setAttribute('aria-hidden', 'true');
+}
+
+function panelHasVerticalScrollbar(panelElement) {
+  if (!panelElement) {
+    return false;
+  }
+
+  return panelElement.scrollHeight > panelElement.clientHeight;
+}
+
+function forwardLeftPanelScrollToRightPanel(event) {
+  if (!colorRightPanel || panelHasVerticalScrollbar(colorLeftPanel)) {
+    return;
+  }
+
+  colorRightPanel.scrollTop += event.deltaY;
+  event.preventDefault();
 }
 
 const imageCenterPaddingInput = document.getElementById('image-padding-center');
@@ -1670,6 +1689,10 @@ if (colorWindowOverlay) {
       closeColorWindow();
     }
   });
+}
+
+if (colorLeftPanel) {
+  colorLeftPanel.addEventListener('wheel', forwardLeftPanelScrollToRightPanel, { passive: false });
 }
 
 
