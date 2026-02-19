@@ -45,10 +45,17 @@
             aria-label="Rich text editor"
           ></div>
 
-          <label class="inline-checkbox" for="wrap-text">
-            <input type="checkbox" id="wrap-text" checked />
-            Wrap text
-          </label>
+          <div class="wrap-text-controls">
+            <label class="inline-checkbox" for="wrap-text">
+              <input type="checkbox" id="wrap-text" checked />
+              Wrap text
+            </label>
+
+            <label class="inline-input compact-input" for="max-image-width">
+              Max image width
+              <input type="number" id="max-image-width" min="50" step="1" value="900" />
+            </label>
+          </div>
 
 
           <section class="canvas-background-controls" aria-label="Canvas background options">

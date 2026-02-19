@@ -156,6 +156,26 @@ label {
   font-weight: 600;
 }
 
+
+.wrap-text-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.inline-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.compact-input input {
+  width: 7rem;
+  padding: 0.35rem 0.5rem;
+}
+
 .inline-radio {
   display: flex;
   align-items: center;
