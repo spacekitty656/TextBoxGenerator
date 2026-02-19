@@ -1,7 +1,13 @@
 const { test, expect } = require('@playwright/test');
 
 async function selectControlById(page, id) {
-  await page.locator(`#${id}`).check({ force: true });
+  const input = page.locator(`#${id}`);
+  if (await input.isChecked()) {
+    return;
+  }
+
+  await page.locator(`label[for="${id}"]`).click();
+  await expect(input).toBeChecked();
 }
 
 test('smoke: editor interactions update preview and save action is triggered', async ({ page }) => {
