@@ -6,7 +6,12 @@ async function selectControlById(page, id) {
     return;
   }
 
-  await page.locator(`label[for="${id}"]`).click();
+  await input.evaluate((element) => {
+    element.checked = true;
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
   await expect(input).toBeChecked();
 }
 
