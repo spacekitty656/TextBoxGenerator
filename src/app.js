@@ -23,7 +23,7 @@ const settingsButton = document.getElementById('settings-button');
 const settingsOverlay = document.getElementById('settings-overlay');
 const closeSettingsWindowButton = document.getElementById('close-settings-window');
 const darkModeToggle = document.getElementById('dark-mode-toggle');
-const APP_VERSION = 'v1.1.6';
+const APP_VERSION = 'v1.1.7';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 
 const borderToggle = document.getElementById('enable-border');

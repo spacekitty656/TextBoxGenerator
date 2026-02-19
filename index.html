@@ -18,7 +18,10 @@
 
       <section class="form-panel" aria-label="Text editor controls">
         <form id="text-form">
-          <h1>Text Box Generator</h1>
+          <div class="form-header">
+            <h1>Text Box Generator</h1>
+            <button type="button" id="settings-button" class="settings-button" aria-label="Open settings" title="Settings">⚙️</button>
+          </div>
           <div id="editor-toolbar" aria-label="Text formatting toolbar">
             <select class="ql-font" aria-label="Font family">
               <option value="sansserif">Sans Serif</option>
@@ -286,8 +289,6 @@
         </form>
       </section>
     </main>
-
-    <button type="button" id="settings-button" class="settings-button" aria-label="Open settings" title="Settings">⚙️</button>
 
     <div id="app-version" class="app-version" aria-label="Application version"></div>
 
