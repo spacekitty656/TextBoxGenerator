@@ -7,7 +7,6 @@ This project includes local development startup commands and a lightweight test 
 - The browser runtime entrypoint is `index.html` loading `<script type="module" src="src/app.js"></script>`.
 - `src/app.js` is the canonical app bootstrap and wiring layer.
 - Reusable logic has been split into focused modules under `src/` (for example `src/color.js`, `src/config.js`, `src/render/`, `src/ui/`, and `src/border/`).
-- Legacy root `script.js` has been removed; do not recreate or edit dead duplicate runtime files.
 
 If you are making behavior changes, update files in `src/` (and related tests).
 
