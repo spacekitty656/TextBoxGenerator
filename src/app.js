@@ -23,8 +23,9 @@ const settingsButton = document.getElementById('settings-button');
 const settingsOverlay = document.getElementById('settings-overlay');
 const closeSettingsWindowButton = document.getElementById('close-settings-window');
 const darkModeToggle = document.getElementById('dark-mode-toggle');
-const APP_VERSION = 'v1.1.7';
+const APP_VERSION = 'v1.1.8';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
+const SETTINGS_STORAGE_KEY = 'text-box-generator-settings';
 
 const borderToggle = document.getElementById('enable-border');
 const borderOptions = document.getElementById('border-options');
@@ -443,6 +444,51 @@ function closeSettingsWindow() {
 function applyDarkMode(enabled) {
   document.body.classList.toggle('dark-mode', enabled);
 }
+
+function getSavedSettings() {
+  try {
+    const rawSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!rawSettings) {
+      return {};
+    }
+
+    const parsedSettings = JSON.parse(rawSettings);
+    if (!parsedSettings || typeof parsedSettings !== 'object') {
+      return {};
+    }
+
+    return parsedSettings;
+  } catch {
+    return {};
+  }
+}
+
+function persistSettings() {
+  if (!darkModeToggle) {
+    return;
+  }
+
+  const settingsPayload = {
+    darkMode: Boolean(darkModeToggle.checked),
+  };
+
+  try {
+    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settingsPayload));
+  } catch {
+    // Ignore storage failures and continue with in-memory state.
+  }
+}
+
+function applySavedSettings() {
+  if (!darkModeToggle) {
+    return;
+  }
+
+  const savedSettings = getSavedSettings();
+  darkModeToggle.checked = Boolean(savedSettings.darkMode);
+  applyDarkMode(darkModeToggle.checked);
+}
+
 
 function panelHasVerticalScrollbar(panelElement) {
   if (!panelElement) {
@@ -1835,6 +1881,7 @@ if (settingsOverlay) {
 if (darkModeToggle) {
   darkModeToggle.addEventListener('change', () => {
     applyDarkMode(darkModeToggle.checked);
+    persistSettings();
   });
 }
 
@@ -1851,7 +1898,7 @@ if (appVersionBadge) {
 
 syncColorPickerUI();
 syncColorPreviewButtons();
-applyDarkMode(Boolean(darkModeToggle?.checked));
+applySavedSettings();
 
 updateBorderControlsState();
 syncImageLockedPaddingValues();
