@@ -15,6 +15,19 @@ async function selectControlById(page, id) {
   await expect(input).toBeChecked();
 }
 
+async function setHiddenColorInputValue(page, id, hexColor) {
+  const input = page.locator(`#${id}`);
+  await expect(input).toBeEnabled();
+
+  await input.evaluate((element, value) => {
+    element.value = value;
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  }, hexColor);
+
+  await expect(input).toHaveValue(hexColor);
+}
+
 test('smoke: editor interactions update preview and save action is triggered', async ({ page }) => {
   await page.goto('/');
 
@@ -35,9 +48,7 @@ test('smoke: editor interactions update preview and save action is triggered', a
   await page.locator('#enable-border').check();
 
   await selectControlById(page, 'background-color-solid');
-  const backgroundColorInput = page.locator('#background-color-input');
-  await expect(backgroundColorInput).toBeEnabled();
-  await backgroundColorInput.fill('#ffcc00');
+  await setHiddenColorInputValue(page, 'background-color-input', '#ffcc00');
 
   await expect
     .poll(async () => canvas.evaluate((node) => node.toDataURL('image/png')), {
