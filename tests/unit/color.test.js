@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { clampNumber, hexToRgb, hsvToRgb, rgbToHsv } from '../../src/color.js';
+import { clampNumber, hexToRgb, hsvToRgb, rgbToHex, rgbToHsv } from '../../src/color.js';
 
 describe('color conversion utilities', () => {
   it.each([
@@ -75,6 +75,86 @@ describe('hexToRgb', () => {
     { name: 'invalid characters', input: '#12GG55', expected: null },
   ])('returns null for $name', ({ input, expected }) => {
     expect(hexToRgb(input)).toBe(expected);
+  });
+
+  it.each([
+    {
+      name: 'lowercase six-digit with hash',
+      input: '#12ab34',
+      expected: { red: 18, green: 171, blue: 52, alpha: 255 },
+    },
+    {
+      name: 'uppercase six-digit with hash',
+      input: '#12AB34',
+      expected: { red: 18, green: 171, blue: 52, alpha: 255 },
+    },
+    {
+      name: 'eight-digit with alpha',
+      input: '#3366CC80',
+      expected: { red: 51, green: 102, blue: 204, alpha: 128 },
+    },
+    {
+      name: 'leading and trailing spaces are trimmed',
+      input: '  #00ff7f  ',
+      expected: { red: 0, green: 255, blue: 127, alpha: 255 },
+    },
+    {
+      name: 'hash prefix is optional',
+      input: 'FF8800',
+      expected: { red: 255, green: 136, blue: 0, alpha: 255 },
+    },
+  ])('parses $name', ({ input, expected }) => {
+    expect(hexToRgb(input)).toEqual(expected);
+  });
+});
+
+describe('rgbToHex', () => {
+  it('returns #RRGGBB for opaque alpha', () => {
+    expect(rgbToHex(12, 34, 56, 255)).toBe('#0c2238');
+  });
+
+  it('returns #RRGGBBAA for non-opaque alpha', () => {
+    expect(rgbToHex(12, 34, 56, 128)).toBe('#0c223880');
+  });
+
+  it.each([
+    { name: 'alpha over max clamps to opaque', inputAlpha: 999, expected: '#0c2238' },
+    { name: 'alpha below min clamps to zero', inputAlpha: -4, expected: '#0c223800' },
+    { name: 'string alpha is parsed as base-10 integer', inputAlpha: '42', expected: '#0c22382a' },
+    {
+      name: 'non-numeric alpha parses to NaN and defaults to opaque output format',
+      inputAlpha: 'abc',
+      expected: '#0c2238',
+    },
+  ])('handles $name', ({ inputAlpha, expected }) => {
+    expect(rgbToHex(12, 34, 56, inputAlpha)).toBe(expected);
+  });
+});
+
+describe('rgb/hex round trips', () => {
+  it.each([
+    {
+      name: 'fully opaque color',
+      input: { red: 255, green: 165, blue: 0, alpha: 255 },
+      expectedHex: '#ffa500',
+      expectedRgb: { red: 255, green: 165, blue: 0, alpha: 255 },
+    },
+    {
+      name: 'semi-transparent color',
+      input: { red: 51, green: 102, blue: 204, alpha: 128 },
+      expectedHex: '#3366cc80',
+      expectedRgb: { red: 51, green: 102, blue: 204, alpha: 128 },
+    },
+    {
+      name: 'fully transparent black',
+      input: { red: 0, green: 0, blue: 0, alpha: 0 },
+      expectedHex: '#00000000',
+      expectedRgb: { red: 0, green: 0, blue: 0, alpha: 0 },
+    },
+  ])('round-trips $name through hex', ({ input, expectedHex, expectedRgb }) => {
+    const hex = rgbToHex(input.red, input.green, input.blue, input.alpha);
+    expect(hex).toBe(expectedHex);
+    expect(hexToRgb(hex)).toEqual(expectedRgb);
   });
 });
 
