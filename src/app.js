@@ -1,15 +1,33 @@
-import { clampNumber, hexToRgb, hsvToRgb, rgbToHex, rgbToHsv } from './color.js';
-import {
-  calculateCanvasDimensions as calculateCanvasDimensionsFromModule,
-  getAlignedStartX,
-  getAlignmentWidth,
-  layoutDocumentForCanvas as layoutDocumentForCanvasFromModule,
-} from './layout.js';
+import { clampNumber, hexToRgb, rgbToHsv } from './color.js';
+import { getAlignedStartX, getAlignmentWidth } from './layout.js';
 import {
   getBorderConfig as getBorderConfigFromModule,
   getCanvasBackgroundConfig as getCanvasBackgroundConfigFromModule,
   getCanvasSizePaddingConfig as getCanvasSizePaddingConfigFromModule,
 } from './config.js';
+import {
+  TRANSPARENT_COLOR_VALUE,
+  openColorWindowForFormat as openColorWindowForFormatModule,
+  setColorPickerFromHex as setColorPickerFromHexModule,
+  syncColorPickerUI as syncColorPickerUIModule,
+} from './ui/colorPicker.js';
+import {
+  DEFAULT_SETTINGS_STORAGE_KEY,
+  applySavedSettings as applySavedSettingsModule,
+  closeSettingsWindow as closeSettingsWindowModule,
+  openSettingsWindow as openSettingsWindowModule,
+  persistSettings as persistSettingsModule,
+} from './ui/settings.js';
+import {
+  drawImageBorder as drawImageBorderModule,
+  drawSideImage as drawSideImageModule,
+  getImageBorderSlotState as getImageBorderSlotStateModule,
+} from './border/imageBorder.js';
+import { createQuillEditor, extractDocumentFromDelta as extractDocumentFromDeltaModule } from './editor/quillAdapter.js';
+import {
+  layoutDocumentForCanvas as layoutDocumentForCanvasFromRenderer,
+  calculateCanvasDimensions as calculateCanvasDimensionsFromRenderer,
+} from './render/canvasRenderer.js';
 
 const Quill = window.Quill;
 
@@ -25,7 +43,7 @@ const closeSettingsWindowButton = document.getElementById('close-settings-window
 const darkModeToggle = document.getElementById('dark-mode-toggle');
 const APP_VERSION = 'v1.1.8';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
-const SETTINGS_STORAGE_KEY = 'text-box-generator-settings';
+const SETTINGS_STORAGE_KEY = DEFAULT_SETTINGS_STORAGE_KEY;
 
 const borderToggle = document.getElementById('enable-border');
 const borderOptions = document.getElementById('border-options');
@@ -140,8 +158,6 @@ const colorPickerState = {
   isPickingFromScreen: false,
 };
 
-const TRANSPARENT_COLOR_VALUE = 'transparent';
-
 const basicColorPalette = [
   TRANSPARENT_COLOR_VALUE,
   '#000000', '#800000', '#008000', '#808000', '#000080', '#800080', '#008080', '#c0c0c0',
@@ -161,31 +177,12 @@ function handleAddCustomColor() {
 }
 
 function setColorPickerFromHex(color) {
-  if (!color) {
-    return false;
-  }
-
-  if (color === TRANSPARENT_COLOR_VALUE) {
-    colorPickerState.alpha = 0;
+  const didSet = setColorPickerFromHexModule(colorPickerState, color);
+  if (didSet) {
     syncColorPickerUI();
-    return true;
   }
 
-  const rgb = hexToRgb(color);
-
-  if (!rgb) {
-    return false;
-  }
-
-  const hsv = rgbToHsv(rgb.red, rgb.green, rgb.blue);
-  colorPickerState.hue = hsv.hue;
-  colorPickerState.sat = hsv.sat;
-  colorPickerState.val = hsv.val;
-  colorPickerState.alpha = rgb.alpha ?? 255;
-  colorPickerState.draftHex = rgbToHex(rgb.red, rgb.green, rgb.blue, colorPickerState.alpha);
-  syncColorPickerUI();
-
-  return true;
+  return didSet;
 }
 
 function populateColorGrid(gridElement, colors) {
@@ -215,57 +212,13 @@ function populateColorGrid(gridElement, colors) {
 
 
 function syncColorPickerUI() {
-  const hue = clampNumber(colorPickerState.hue, 0, 360, 0);
-  const sat = clampNumber(colorPickerState.sat, 0, 255, 0);
-  const val = clampNumber(colorPickerState.val, 0, 255, 0);
-  colorPickerState.hue = hue;
-  colorPickerState.sat = sat;
-  colorPickerState.val = val;
-
-  const rgb = hsvToRgb(hue === 360 ? 0 : hue, sat, val);
-  const alpha = clampNumber(colorPickerState.alpha, 0, 255, 255);
-  colorPickerState.alpha = alpha;
-
-  colorPickerState.draftHex = rgbToHex(rgb.red, rgb.green, rgb.blue, alpha);
-
-  if (selectedColorPreview) {
-    if (alpha === 0) {
-      selectedColorPreview.style.backgroundColor = '#d1d5db';
-      selectedColorPreview.style.backgroundImage = 'conic-gradient(#e5e7eb 0deg 90deg, #d1d5db 90deg 180deg, #e5e7eb 180deg 270deg, #d1d5db 270deg 360deg)';
-      selectedColorPreview.style.backgroundSize = '8px 8px';
-    } else {
-      selectedColorPreview.style.backgroundColor = `rgb(${rgb.red} ${rgb.green} ${rgb.blue} / ${(alpha / 255).toFixed(3)})`;
-      selectedColorPreview.style.backgroundImage = 'none';
-      selectedColorPreview.style.backgroundSize = 'auto';
-    }
-  }
-
-  if (colorMap) {
-    colorMap.style.background = `linear-gradient(to top, #000000, rgb(0 0 0 / 0%)), linear-gradient(to right, #ffffff, hsl(${hue}, 100%, 50%))`;
-  }
-
-  if (colorMapHandle && colorMap) {
-    const xPercent = (sat / 255) * 100;
-    const yPercent = 100 - ((val / 255) * 100);
-    colorMapHandle.style.left = `${xPercent}%`;
-    colorMapHandle.style.top = `${yPercent}%`;
-  }
-
-  if (colorSliderHandle) {
-    const yPercent = (hue / 360) * 100;
-    colorSliderHandle.style.top = `${yPercent}%`;
-  }
-
-  if (colorValueInputs.hue) {
-    colorValueInputs.hue.value = String(hue);
-    colorValueInputs.sat.value = String(sat);
-    colorValueInputs.val.value = String(val);
-    colorValueInputs.red.value = String(rgb.red);
-    colorValueInputs.green.value = String(rgb.green);
-    colorValueInputs.blue.value = String(rgb.blue);
-    colorValueInputs.alpha.value = String(alpha);
-    colorValueInputs.hex.value = rgbToHex(rgb.red, rgb.green, rgb.blue, alpha);
-  }
+  syncColorPickerUIModule(colorPickerState, {
+    selectedColorPreview,
+    colorMap,
+    colorMapHandle,
+    colorSliderHandle,
+    colorValueInputs,
+  });
 }
 
 function updateMapFromPointer(event) {
@@ -345,27 +298,14 @@ function applyDraftColorFromWindow() {
 }
 
 function openColorWindowForFormat(targetFormat = 'color') {
-  if (!colorWindowOverlay) {
-    return;
-  }
-
-  colorPickerState.targetFormat = targetFormat;
-  colorPickerState.targetInput = null;
-
-  if (colorWindowTitle) {
-    colorWindowTitle.textContent = targetFormat === 'background' ? 'Highlight Color' : 'Text Color';
-  }
-  const selectionColor = quill.getFormat()?.[targetFormat];
-  if (typeof selectionColor === 'string' && selectionColor.trim()) {
-    const didUpdatePicker = setColorPickerFromHex(selectionColor.startsWith('#') ? selectionColor : selectionColor);
-    if (didUpdatePicker) {
-      colorPickerState.activeHex = colorPickerState.draftHex;
-    }
-  }
-
+  openColorWindowForFormatModule({
+    colorWindowOverlay,
+    colorWindowTitle,
+    state: colorPickerState,
+    targetFormat,
+    getSelectionColor: (format) => quill.getFormat()?.[format],
+  });
   syncColorPickerUI();
-  colorWindowOverlay.classList.remove('hidden');
-  colorWindowOverlay.setAttribute('aria-hidden', 'false');
 }
 
 
@@ -424,43 +364,15 @@ function closeColorWindow() {
 }
 
 function openSettingsWindow() {
-  if (!settingsOverlay) {
-    return;
-  }
-
-  settingsOverlay.classList.remove('hidden');
-  settingsOverlay.setAttribute('aria-hidden', 'false');
+  openSettingsWindowModule(settingsOverlay);
 }
 
 function closeSettingsWindow() {
-  if (!settingsOverlay) {
-    return;
-  }
-
-  settingsOverlay.classList.add('hidden');
-  settingsOverlay.setAttribute('aria-hidden', 'true');
+  closeSettingsWindowModule(settingsOverlay);
 }
 
 function applyDarkMode(enabled) {
   document.body.classList.toggle('dark-mode', enabled);
-}
-
-function getSavedSettings() {
-  try {
-    const rawSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (!rawSettings) {
-      return {};
-    }
-
-    const parsedSettings = JSON.parse(rawSettings);
-    if (!parsedSettings || typeof parsedSettings !== 'object') {
-      return {};
-    }
-
-    return parsedSettings;
-  } catch {
-    return {};
-  }
 }
 
 function persistSettings() {
@@ -468,25 +380,16 @@ function persistSettings() {
     return;
   }
 
-  const settingsPayload = {
-    darkMode: Boolean(darkModeToggle.checked),
-  };
-
-  try {
-    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settingsPayload));
-  } catch {
-    // Ignore storage failures and continue with in-memory state.
-  }
+  persistSettingsModule(window.localStorage, { darkMode: Boolean(darkModeToggle.checked) }, SETTINGS_STORAGE_KEY);
 }
 
 function applySavedSettings() {
-  if (!darkModeToggle) {
-    return;
-  }
-
-  const savedSettings = getSavedSettings();
-  darkModeToggle.checked = Boolean(savedSettings.darkMode);
-  applyDarkMode(darkModeToggle.checked);
+  applySavedSettingsModule({
+    storage: window.localStorage,
+    darkModeToggle,
+    applyDarkMode,
+    storageKey: SETTINGS_STORAGE_KEY,
+  });
 }
 
 
@@ -561,18 +464,9 @@ const DEFAULT_STYLE = {
   size: 'normal',
 };
 
-const quill = new Quill('#editor', {
-  theme: 'snow',
-  modules: {
-    toolbar: {
-      container: '#editor-toolbar',
-      handlers: {
-        'open-color-window': openColorWindow,
-        'open-background-color-window': openBackgroundColorWindow,
-      },
-    },
-  },
-  placeholder: 'Type formatted text here...',
+const quill = createQuillEditor(Quill, {
+  'open-color-window': openColorWindow,
+  'open-background-color-window': openBackgroundColorWindow,
 });
 
 
@@ -644,8 +538,7 @@ async function loadImageFromFile(file) {
 }
 
 function getImageBorderSlotState(slotType, slotName) {
-  const group = imageBorderState[slotType];
-  return group ? group[slotName] : null;
+  return getImageBorderSlotStateModule(imageBorderState, slotType, slotName);
 }
 
 function clearImageBorderSlot(slotState) {
@@ -1056,7 +949,7 @@ function buildCanvasFont(style) {
 }
 
 function layoutDocumentForCanvas(lines, maxWidth, wrapEnabled) {
-  return layoutDocumentForCanvasFromModule(lines, maxWidth, wrapEnabled, {
+  return layoutDocumentForCanvasFromRenderer(lines, maxWidth, wrapEnabled, {
     getCanvasStyle,
     buildCanvasFont,
     defaultFontSize: SIZE_MAP.normal,
@@ -1067,8 +960,9 @@ function layoutDocumentForCanvas(lines, maxWidth, wrapEnabled) {
   });
 }
 
+
 function calculateCanvasDimensions(laidOutLines, borderConfig, canvasSizePaddingConfig, maxContentWidth) {
-  return calculateCanvasDimensionsFromModule(
+  return calculateCanvasDimensionsFromRenderer(
     laidOutLines,
     borderConfig,
     canvasSizePaddingConfig,
@@ -1078,44 +972,9 @@ function calculateCanvasDimensions(laidOutLines, borderConfig, canvasSizePadding
 }
 
 
+
 function extractDocumentFromDelta(delta) {
-  const lines = [];
-  let currentRuns = [];
-
-  delta.ops.forEach((op) => {
-    if (typeof op.insert !== 'string') {
-      return;
-    }
-
-    const chunks = op.insert.split('\n');
-
-    chunks.forEach((chunk, index) => {
-      if (chunk.length > 0) {
-        currentRuns.push({
-          text: chunk,
-          attributes: op.attributes || {},
-        });
-      }
-
-      if (index < chunks.length - 1) {
-        lines.push({
-          runs: currentRuns,
-          align: op.attributes?.align || 'left',
-        });
-        currentRuns = [];
-      }
-    });
-  });
-
-  if (currentRuns.length > 0) {
-    lines.push({ runs: currentRuns, align: 'left' });
-  }
-
-  if (lines.length === 0) {
-    lines.push({ runs: [{ text: '', attributes: {} }], align: 'left' });
-  }
-
-  return lines;
+  return extractDocumentFromDeltaModule(delta);
 }
 
 function drawRoundedRectPath(x, y, width, height, radius) {
@@ -1190,175 +1049,22 @@ function getSlotImageSize(slot) {
 }
 
 function drawSideImage(slot, x, y, width, height, orientation, sideMode) {
-  if (!hasReadyImage(slot) || width <= 0 || height <= 0) {
-    return false;
-  }
-
-  const sourceImage = slot.image;
-
-  if (sideMode === 'repeat') {
-    const sourceSize = getSlotImageSize(slot);
-    const tileLength = orientation === 'horizontal'
-      ? Math.max(1, sourceSize.width || sourceSize.height || width)
-      : Math.max(1, sourceSize.height || sourceSize.width || height);
-
-    if (orientation === 'horizontal') {
-      let drawX = x;
-      const maxX = x + width;
-      while (drawX < maxX) {
-        const drawWidth = Math.min(tileLength, maxX - drawX);
-        context.drawImage(sourceImage, drawX, y, drawWidth, height);
-        drawX += tileLength;
-      }
-    } else {
-      let drawY = y;
-      const maxY = y + height;
-      while (drawY < maxY) {
-        const drawHeight = Math.min(tileLength, maxY - drawY);
-        context.drawImage(sourceImage, x, drawY, width, drawHeight);
-        drawY += tileLength;
-      }
-    }
-
-    return true;
-  }
-
-  context.drawImage(sourceImage, x, y, width, height);
-  return true;
+  return drawSideImageModule({ context, slot, x, y, width, height, orientation, sideMode });
 }
+
 
 function drawImageBorder(borderConfig, borderX, borderY, borderRectWidth, borderRectHeight) {
-  const fallbackColor = borderConfig.color;
-  const { sizingStrategy, sideMode, corners, sides } = borderConfig.imageBorder;
-
-  context.save();
-  drawRoundedRectPath(borderX, borderY, borderRectWidth, borderRectHeight, borderConfig.radius);
-  context.clip();
-
-  const defaultCornerSize = Math.max(1, borderConfig.width);
-  const topLeftCorner = corners?.topLeft;
-  const topRightCorner = corners?.topRight;
-  const bottomRightCorner = corners?.bottomRight;
-  const bottomLeftCorner = corners?.bottomLeft;
-
-  const topLeftSize = getSlotImageSize(topLeftCorner);
-  const topRightSize = getSlotImageSize(topRightCorner);
-  const bottomRightSize = getSlotImageSize(bottomRightCorner);
-  const bottomLeftSize = getSlotImageSize(bottomLeftCorner);
-
-  const resolveCornerDrawSize = (slot, slotSize) => {
-    if (!hasReadyImage(slot)) {
-      return { width: defaultCornerSize, height: defaultCornerSize };
-    }
-
-    if (sizingStrategy === 'fixed') {
-      return { width: defaultCornerSize, height: defaultCornerSize };
-    }
-
-    const targetHeight = Math.max(1, borderConfig.width);
-    const safeSourceHeight = Math.max(1, slotSize.height || targetHeight);
-    const scaledWidth = Math.max(1, Math.round((slotSize.width || targetHeight) * (targetHeight / safeSourceHeight)));
-    return {
-      width: scaledWidth,
-      height: targetHeight,
-    };
-  };
-
-  const topLeftDrawSize = resolveCornerDrawSize(topLeftCorner, topLeftSize);
-  const topRightDrawSize = resolveCornerDrawSize(topRightCorner, topRightSize);
-  const bottomRightDrawSize = resolveCornerDrawSize(bottomRightCorner, bottomRightSize);
-  const bottomLeftDrawSize = resolveCornerDrawSize(bottomLeftCorner, bottomLeftSize);
-
-  const topLeftWidth = topLeftDrawSize.width;
-  const topLeftHeight = topLeftDrawSize.height;
-  const topRightWidth = topRightDrawSize.width;
-  const topRightHeight = topRightDrawSize.height;
-  const bottomRightWidth = bottomRightDrawSize.width;
-  const bottomRightHeight = bottomRightDrawSize.height;
-  const bottomLeftWidth = bottomLeftDrawSize.width;
-  const bottomLeftHeight = bottomLeftDrawSize.height;
-
-  if (hasReadyImage(topLeftCorner)) {
-    context.drawImage(topLeftCorner.image, borderX, borderY, topLeftWidth, topLeftHeight);
-  }
-
-  if (hasReadyImage(topRightCorner)) {
-    context.drawImage(topRightCorner.image, borderX + borderRectWidth - topRightWidth, borderY, topRightWidth, topRightHeight);
-  }
-
-  if (hasReadyImage(bottomRightCorner)) {
-    context.drawImage(
-      bottomRightCorner.image,
-      borderX + borderRectWidth - bottomRightWidth,
-      borderY + borderRectHeight - bottomRightHeight,
-      bottomRightWidth,
-      bottomRightHeight,
-    );
-  }
-
-  if (hasReadyImage(bottomLeftCorner)) {
-    context.drawImage(bottomLeftCorner.image, borderX, borderY + borderRectHeight - bottomLeftHeight, bottomLeftWidth, bottomLeftHeight);
-  }
-
-  const topSideX = borderX + topLeftWidth;
-  const topSideWidth = Math.max(0, borderRectWidth - topLeftWidth - topRightWidth);
-  const topSideHeight = Math.max(1, Math.max(topLeftHeight, topRightHeight, borderConfig.width));
-
-  const bottomSideX = borderX + bottomLeftWidth;
-  const bottomSideWidth = Math.max(0, borderRectWidth - bottomLeftWidth - bottomRightWidth);
-  const bottomSideHeight = Math.max(1, Math.max(bottomLeftHeight, bottomRightHeight, borderConfig.width));
-
-  const leftSideY = borderY + topLeftHeight;
-  const leftSideHeight = Math.max(0, borderRectHeight - topLeftHeight - bottomLeftHeight);
-  const leftSideWidth = Math.max(1, Math.max(topLeftWidth, bottomLeftWidth, borderConfig.width));
-
-  const rightSideY = borderY + topRightHeight;
-  const rightSideHeight = Math.max(0, borderRectHeight - topRightHeight - bottomRightHeight);
-  const rightSideWidth = Math.max(1, Math.max(topRightWidth, bottomRightWidth, borderConfig.width));
-
-  drawSideImage(sides?.top, topSideX, borderY, topSideWidth, topSideHeight, 'horizontal', sideMode);
-  drawSideImage(
-    sides?.bottom,
-    bottomSideX,
-    borderY + borderRectHeight - bottomSideHeight,
-    bottomSideWidth,
-    bottomSideHeight,
-    'horizontal',
-    sideMode,
-  );
-  drawSideImage(sides?.left, borderX, leftSideY, leftSideWidth, leftSideHeight, 'vertical', sideMode);
-  drawSideImage(
-    sides?.right,
-    borderX + borderRectWidth - rightSideWidth,
-    rightSideY,
-    rightSideWidth,
-    rightSideHeight,
-    'vertical',
-    sideMode,
-  );
-
-  context.restore();
-
-  const hasAnyImage = [
-    corners?.topLeft,
-    corners?.topRight,
-    corners?.bottomRight,
-    corners?.bottomLeft,
-    sides?.top,
-    sides?.right,
-    sides?.bottom,
-    sides?.left,
-  ].some(hasReadyImage);
-
-  if (!hasAnyImage) {
-    context.save();
-    context.lineWidth = borderConfig.width;
-    context.strokeStyle = fallbackColor;
-    drawRoundedRectPath(borderX, borderY, borderRectWidth, borderRectHeight, borderConfig.radius);
-    context.stroke();
-    context.restore();
-  }
+  return drawImageBorderModule({
+    context,
+    borderConfig,
+    borderX,
+    borderY,
+    borderRectWidth,
+    borderRectHeight,
+    drawRoundedRectPath,
+  });
 }
+
 
 function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConfig, canvasSizePaddingConfig, maxContentWidth) {
   context.clearRect(0, 0, canvas.width, canvas.height);
