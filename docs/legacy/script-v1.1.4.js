@@ -1,3 +1,9 @@
+/*
+ * Legacy archive: historical non-runtime code retained for reference only.
+ * This file is NOT loaded by index.html; runtime entrypoint is src/app.js.
+ * Archived from repository root script.js.
+ */
+
 const canvas = document.getElementById('preview-canvas');
 const context = canvas.getContext('2d');
 const editorElement = document.getElementById('editor');

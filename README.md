@@ -2,6 +2,15 @@
 
 This project includes local development startup commands and a lightweight test setup for both unit and end-to-end checks.
 
+## Runtime entrypoint and source layout
+
+- The browser runtime entrypoint is `index.html` loading `<script type="module" src="src/app.js"></script>`.
+- `src/app.js` is the canonical app bootstrap and wiring layer.
+- Reusable logic has been split into focused modules under `src/` (for example `src/color.js`, `src/config.js`, `src/render/`, `src/ui/`, and `src/border/`).
+- Historical pre-modular code is archived at `docs/legacy/script-v1.1.4.js` and is **non-runtime reference only**.
+
+If you are making behavior changes, update files in `src/` (and related tests), not the archived legacy script.
+
 ## Local development
 
 ```bash
