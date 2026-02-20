@@ -29,14 +29,7 @@ import {
   resolveRenderableImageBorderGroup,
 } from './border/imageBorderState.js';
 import { createImageLibraryStore } from './images/libraryStore.js';
-import {
-  IMAGE_LIBRARY_STORAGE_KEY,
-} from './images/libraryPersistence.js';
-import {
-  migrateLegacyImageLibraryToIndexedDb,
-  persistImageLibraryToIndexedDb,
-  restoreImageLibraryFromIndexedDb,
-} from './images/libraryPersistenceIndexedDb.js';
+import { createImageLibraryService } from './images/imageLibraryService.js';
 import { createQuillEditor, extractDocumentFromDelta as extractDocumentFromDeltaModule } from './editor/quillAdapter.js';
 import { createManageImagesWindowController } from './ui/manageImagesWindow.js';
 import {
@@ -418,32 +411,7 @@ function setStorageStatusMessage(message = '', isError = false) {
 }
 
 function persistImageLibrary() {
-  try {
-    persistImageLibraryToIndexedDb(imageLibraryStore)
-      .then((status) => {
-        if (status?.ok) {
-          setStorageStatusMessage('');
-          return;
-        }
-
-        if (status?.reason === 'quota-exceeded') {
-          setStorageStatusMessage('Image library storage is full. Delete images or folders to free space.', true);
-          return;
-        }
-
-        setStorageStatusMessage('');
-        if (status?.error) {
-          console.warn('Unable to persist image library to IndexedDB.', status.error);
-        }
-      })
-      .catch((error) => {
-        setStorageStatusMessage('');
-        console.warn('Unable to persist image library to IndexedDB.', error);
-      });
-  } catch (error) {
-    setStorageStatusMessage('');
-    console.warn('Unable to persist image library to IndexedDB.', error);
-  }
+  imageLibraryService.persist(imageLibraryStore);
 }
 
 
@@ -569,88 +537,19 @@ function parsePaddingNumber(value, fallback = 0) {
   return parsed;
 }
 
-function loadImageFromSourceUrl(sourceUrl) {
-  return new Promise((resolve, reject) => {
-    const imageElement = new Image();
-    imageElement.onload = () => resolve(imageElement);
-    imageElement.onerror = () => reject(new Error('Unable to load image.'));
-    imageElement.src = sourceUrl;
-  });
-}
 
-async function toDrawableImageFromBlob(blob) {
-  if (typeof createImageBitmap === 'function') {
-    try {
-      return await createImageBitmap(blob);
-    } catch (error) {
-      // Fall back to <img> based loading.
-    }
-  }
 
-  const objectUrl = URL.createObjectURL(blob);
-  try {
-    return await loadImageFromSourceUrl(objectUrl);
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
-}
 
-async function loadImageFromFile(file) {
-  if (!file || !file.type || !file.type.startsWith('image/')) {
-    throw new Error('Please choose a valid image file.');
-  }
-
-  const image = await toDrawableImageFromBlob(file);
-
-  return {
-    image,
-    blob: file,
-    byteSize: file.size,
-    mimeType: file.type || null,
-  };
-}
-
-async function restoreImageLibraryContentFromPersistence(store) {
-  const images = store.listAllImages();
-
-  await Promise.all(images.map(async (entry) => {
-    if (!entry.blob && !entry.dataUrl) {
-      return;
-    }
-
-    try {
-      const restoredImage = entry.blob
-        ? await toDrawableImageFromBlob(entry.blob)
-        : await loadImageFromSourceUrl(entry.dataUrl);
-      store.updateImage(entry.id, { image: restoredImage });
-    } catch (error) {
-      console.warn('Unable to restore persisted image content.', error);
-    }
-  }));
-}
 
 function getImageBorderSlotState(slotType, slotName) {
   return getImageBorderSlotStateModule(imageBorderState, slotType, slotName);
 }
 
 const imageLibraryStore = createImageLibraryStore();
+const imageLibraryService = createImageLibraryService({
+  setStorageStatusMessage,
+});
 
-async function initializeImageLibrary() {
-  try {
-    const indexedDbLibrary = await restoreImageLibraryFromIndexedDb();
-    if (indexedDbLibrary) {
-      imageLibraryStore.deserialize(indexedDbLibrary);
-      return;
-    }
-
-    await migrateLegacyImageLibraryToIndexedDb(imageLibraryStore, {
-      storage: window.localStorage,
-      storageKey: IMAGE_LIBRARY_STORAGE_KEY,
-    });
-  } catch (error) {
-    console.warn('Unable to initialize image library persistence.', error);
-  }
-}
 
 function getManagedImageById(imageId) {
   return imageLibraryStore.getImage(imageId);
@@ -730,7 +629,7 @@ function clearDeletedImageSlots() {
 
 const manageImagesWindowController = createManageImagesWindowController({
   store: imageLibraryStore,
-  loadImageFromFile,
+  loadImageFromFile: (file) => imageLibraryService.loadFile(file),
   elements: {
     overlay: manageImagesOverlay,
     closeButton: closeManageImagesWindowButton,
@@ -1657,7 +1556,7 @@ syncColorPreviewButtons();
 applySavedSettings();
 updateAllPieceButtonLabels();
 
-initializeImageLibrary().then(() => restoreImageLibraryContentFromPersistence(imageLibraryStore)).then(() => {
+imageLibraryService.init(imageLibraryStore).then(() => imageLibraryService.hydrateImages(imageLibraryStore)).then(() => {
   updateAllPieceButtonLabels();
   drawEditorToCanvas();
 });
