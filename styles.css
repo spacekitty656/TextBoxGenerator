@@ -583,11 +583,13 @@ body.dark-mode .piece-select-button {
   text-overflow: ellipsis;
 }
 
-.manage-images-body {
-  display: grid;
-  grid-template-columns: 1fr;
+.color-window-body.manage-images-body {
+  display: flex;
+  flex-direction: column;
   gap: 0.6rem;
   min-width: 760px;
+  width: min(900px, 92vw);
+  max-height: 78vh;
 }
 
 .manage-images-hidden-input {
@@ -596,7 +598,9 @@ body.dark-mode .piece-select-button {
 
 .manage-images-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 0.4rem;
 }
 
@@ -616,10 +620,13 @@ body.dark-mode .piece-select-button {
 
 .manage-images-content {
   min-height: 320px;
+  flex: 1;
 }
 
 .manage-images-tree {
-  height: 360px;
+  height: 100%;
+  min-height: 320px;
+  max-height: calc(78vh - 170px);
   overflow: auto;
   border: 1px solid #4b5563;
   border-radius: 8px;
@@ -677,12 +684,17 @@ body.dark-mode .piece-select-button {
 
 .manage-tree-rename-input {
   flex: 1;
-  min-width: 120px;
+  min-width: 160px;
   border: 1px solid #6b7280;
   border-radius: 5px;
   background: #0f172a;
   color: #f9fafb;
   padding: 0.2rem 0.35rem;
+}
+
+.manage-images-body .dialog-action-row {
+  justify-content: flex-end;
+  margin-top: auto;
 }
 
 .manage-images-context-menu {

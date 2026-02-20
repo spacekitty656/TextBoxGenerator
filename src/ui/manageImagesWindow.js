@@ -1,3 +1,5 @@
+const NEW_FOLDER_ROW_KEY = '__new-folder__';
+
 function getEntityKey(entity) {
   if (!entity) {
     return '';
@@ -30,7 +32,7 @@ export function createManageImagesWindowController({
     lastSelectedKey: null,
     collapsedFolderIds: new Set(),
     draggedKey: null,
-    editingKey: null,
+    editor: null,
   };
 
   function listEntities(parentId) {
@@ -63,32 +65,50 @@ export function createManageImagesWindowController({
     return getEntityByKey(state.selectedKeys[0]);
   }
 
-  function buildVisibleTree() {
+  function getVisibleRows() {
     const rows = [];
 
-    function walk(folderId, depth) {
-      listEntities(folderId).forEach((entry) => {
-        rows.push({ ...entry, depth });
+    function walkFolder(folder, depth) {
+      rows.push({ ...folder, depth, synthetic: false, key: getEntityKey(folder) });
 
-        if (entry.type === 'folder' && !state.collapsedFolderIds.has(entry.id)) {
-          walk(entry.id, depth + 1);
+      if (state.collapsedFolderIds.has(folder.id)) {
+        return;
+      }
+
+      listEntities(folder.id).forEach((child) => {
+        if (child.type === 'folder') {
+          walkFolder(child, depth + 1);
+          return;
         }
+
+        rows.push({ ...child, depth: depth + 1, synthetic: false, key: getEntityKey(child) });
       });
+
+      if (state.editor?.mode === 'create-folder' && state.editor.parentId === folder.id) {
+        rows.push({
+          type: 'folder',
+          id: NEW_FOLDER_ROW_KEY,
+          name: state.editor.draftName,
+          depth: depth + 1,
+          synthetic: true,
+          key: NEW_FOLDER_ROW_KEY,
+          parentId: folder.id,
+        });
+      }
     }
 
     const root = store.getRootFolder();
     if (root) {
-      rows.push({ ...root, depth: 0 });
-      if (!state.collapsedFolderIds.has(root.id)) {
-        walk(root.id, 1);
-      }
+      walkFolder(root, 0);
     }
 
     return rows;
   }
 
-  function getVisibleKeys() {
-    return buildVisibleTree().map((entry) => getEntityKey(entry));
+  function getVisibleSelectionKeys() {
+    return getVisibleRows()
+      .filter((row) => !row.synthetic)
+      .map((row) => row.key);
   }
 
   function syncToolbarState() {
@@ -97,15 +117,16 @@ export function createManageImagesWindowController({
     const isImage = singleSelection?.type === 'image';
     const isRoot = singleSelection?.type === 'folder' && singleSelection.id === store.ROOT_FOLDER_ID;
 
-    elements.renameButton.disabled = !singleSelection || isMultiSelection() || isRoot;
-    elements.refreshButton.disabled = !isImage || isMultiSelection();
-    elements.deleteButton.disabled = !hasSelection || state.selectedKeys.some((key) => {
+    elements.renameButton.disabled = !singleSelection || isMultiSelection() || isRoot || Boolean(state.editor);
+    elements.refreshButton.disabled = !isImage || isMultiSelection() || Boolean(state.editor);
+    elements.deleteButton.disabled = !hasSelection || Boolean(state.editor) || state.selectedKeys.some((key) => {
       const entry = getEntityByKey(key);
       return entry?.type === 'folder' && entry.id === store.ROOT_FOLDER_ID;
     });
 
     const inSlotMode = Boolean(state.activeSlot);
-    elements.okButton.disabled = Boolean(singleSelection?.type === 'folder') || (inSlotMode && (!isImage || isMultiSelection()));
+    elements.okButton.disabled = Boolean(singleSelection?.type === 'folder') || Boolean(state.editor)
+      || (inSlotMode && (!isImage || isMultiSelection()));
   }
 
   function setSelection(keys, lastKey = null) {
@@ -116,11 +137,15 @@ export function createManageImagesWindowController({
   }
 
   function applyClickSelection(key, event = {}) {
+    if (state.editor) {
+      return;
+    }
+
     const { ctrlKey = false, metaKey = false, shiftKey = false } = event;
     const toggleSelection = ctrlKey || metaKey;
 
     if (shiftKey && state.lastSelectedKey) {
-      const orderedKeys = getVisibleKeys();
+      const orderedKeys = getVisibleSelectionKeys();
       const start = orderedKeys.indexOf(state.lastSelectedKey);
       const end = orderedKeys.indexOf(key);
 
@@ -176,8 +201,9 @@ export function createManageImagesWindowController({
     render();
   }
 
-  function getPreferredParentFolderId() {
+  function getPreferredFolderParentId() {
     const selected = getSingleSelection();
+
     if (!selected) {
       return store.ROOT_FOLDER_ID;
     }
@@ -189,7 +215,88 @@ export function createManageImagesWindowController({
     return selected.parentId || store.ROOT_FOLDER_ID;
   }
 
-  async function addImagesFromFiles(fileList, parentId = getPreferredParentFolderId()) {
+  function startCreateFolderInline() {
+    const parentId = getPreferredFolderParentId();
+    state.collapsedFolderIds.delete(parentId);
+    state.editor = {
+      mode: 'create-folder',
+      parentId,
+      draftName: 'Untitled Folder',
+    };
+    render();
+  }
+
+  function startRenameInline() {
+    const selected = getSingleSelection();
+    if (!selected || selected.id === store.ROOT_FOLDER_ID) {
+      return;
+    }
+
+    state.editor = {
+      mode: 'rename',
+      key: getEntityKey(selected),
+      draftName: selected.name,
+    };
+
+    render();
+  }
+
+  function cancelInlineEdit() {
+    state.editor = null;
+    render();
+  }
+
+  function commitInlineEdit(value) {
+    if (!state.editor) {
+      return;
+    }
+
+    const nextName = String(value || '').trim();
+
+    if (state.editor.mode === 'create-folder') {
+      if (!nextName) {
+        state.editor = null;
+        render();
+        return;
+      }
+
+      const created = store.createFolder({
+        name: nextName,
+        parentId: state.editor.parentId,
+      });
+
+      state.editor = null;
+      onStoreChanged?.();
+      setSelection([getEntityKey(created)], getEntityKey(created));
+      render();
+      return;
+    }
+
+    const entity = getEntityByKey(state.editor.key);
+    if (entity && nextName) {
+      if (entity.type === 'folder') {
+        store.updateFolder(entity.id, { name: nextName });
+      } else {
+        store.updateImage(entity.id, { name: nextName });
+      }
+      onStoreChanged?.();
+    }
+
+    state.editor = null;
+    render();
+  }
+
+  function requestRefresh() {
+    const selected = getSingleSelection();
+    if (!selected || selected.type !== 'image') {
+      return;
+    }
+
+    elements.refreshInput.dataset.targetImageId = selected.id;
+    elements.refreshInput.click();
+  }
+
+  async function addImagesFromFiles(fileList, parentId = getPreferredFolderParentId()) {
     const files = Array.from(fileList || []).filter((file) => file?.type?.startsWith('image/'));
 
     for (const file of files) {
@@ -203,65 +310,6 @@ export function createManageImagesWindowController({
 
     onStoreChanged?.();
     render();
-  }
-
-  function requestCreateFolder() {
-    const name = window.prompt('Folder name:', 'Untitled Folder');
-    if (!name) {
-      return;
-    }
-
-    store.createFolder({
-      name: name.trim() || 'Untitled Folder',
-      parentId: getPreferredParentFolderId(),
-    });
-    onStoreChanged?.();
-    render();
-  }
-
-  function commitInlineRename(key, nameValue) {
-    const entity = getEntityByKey(key);
-    if (!entity || entity.id === store.ROOT_FOLDER_ID) {
-      return;
-    }
-
-    const nextName = String(nameValue || '').trim();
-    if (!nextName) {
-      return;
-    }
-
-    if (entity.type === 'folder') {
-      store.updateFolder(entity.id, { name: nextName });
-    } else {
-      store.updateImage(entity.id, { name: nextName });
-    }
-
-    onStoreChanged?.();
-  }
-
-  function startInlineRename() {
-    const selected = getSingleSelection();
-    if (!selected || selected.id === store.ROOT_FOLDER_ID) {
-      return;
-    }
-
-    state.editingKey = getEntityKey(selected);
-    render();
-  }
-
-  function stopInlineRename() {
-    state.editingKey = null;
-    render();
-  }
-
-  function requestRefresh() {
-    const selected = getSingleSelection();
-    if (!selected || selected.type !== 'image') {
-      return;
-    }
-
-    elements.refreshInput.dataset.targetImageId = selected.id;
-    elements.refreshInput.click();
   }
 
   function deleteFolderWithStrategy(folder, strategy) {
@@ -352,14 +400,14 @@ export function createManageImagesWindowController({
 
     if (entity.type === 'image') {
       elements.contextMenu.append(
-        createMenuItem('Refresh', () => requestRefresh()),
-        createMenuItem('Rename', () => startInlineRename()),
-        createMenuItem('Delete', () => requestDelete()),
+        createMenuItem('Refresh', requestRefresh),
+        createMenuItem('Rename', startRenameInline),
+        createMenuItem('Delete', requestDelete),
       );
     } else {
       elements.contextMenu.append(
-        createMenuItem('Rename', () => startInlineRename()),
-        createMenuItem('Delete', () => requestDelete()),
+        createMenuItem('Rename', startRenameInline),
+        createMenuItem('Delete', requestDelete),
       );
     }
 
@@ -369,38 +417,45 @@ export function createManageImagesWindowController({
   }
 
   function renderTree() {
-    const rows = buildVisibleTree();
+    const rows = getVisibleRows();
     elements.tree.innerHTML = '';
 
     rows.forEach((entry) => {
       const row = document.createElement('div');
-      const key = getEntityKey(entry);
-      const hasFolderChildren = entry.type === 'folder' && store.listChildren(entry.id).folders.length > 0;
-      const isCollapsed = entry.type === 'folder' && state.collapsedFolderIds.has(entry.id);
+      const key = entry.key || getEntityKey(entry);
+      const folderChildren = entry.type === 'folder' && !entry.synthetic ? store.listChildren(entry.id).folders : [];
+      const hasFolderChildren = folderChildren.length > 0;
+      const isCollapsed = entry.type === 'folder' && !entry.synthetic && state.collapsedFolderIds.has(entry.id);
+      const isSelected = state.selectedKeys.includes(key);
+      const isRenameEditing = state.editor?.mode === 'rename' && state.editor.key === key;
+      const isCreateEditing = entry.synthetic && state.editor?.mode === 'create-folder';
+      const isEditing = isRenameEditing || isCreateEditing;
 
       row.className = 'manage-tree-row';
       row.dataset.entityKey = key;
-      row.draggable = entry.id !== store.ROOT_FOLDER_ID;
+      row.draggable = !entry.synthetic && entry.id !== store.ROOT_FOLDER_ID && !state.editor;
       row.style.paddingLeft = `${entry.depth * 18 + 8}px`;
 
-      if (state.selectedKeys.includes(key)) {
+      if (isSelected) {
         row.classList.add('active');
       }
 
-      const chevron = entry.type === 'folder'
+      const toggleMarkup = entry.type === 'folder'
         ? `<button type="button" class="manage-tree-toggle" aria-label="Toggle folder" ${hasFolderChildren ? '' : 'disabled'}>${hasFolderChildren ? (isCollapsed ? '▸' : '▾') : '•'}</button>`
         : '<span class="manage-tree-toggle-spacer"></span>';
-
       const icon = entry.type === 'folder' ? '📁' : '🖼️';
-      const isEditing = state.editingKey === key;
       const nameMarkup = isEditing
-        ? `<input type="text" class="manage-tree-rename-input" value="${escapeHtml(entry.name)}" />`
+        ? `<input type="text" class="manage-tree-rename-input" value="${escapeHtml(state.editor?.draftName || entry.name)}" />`
         : `<span class="manage-tree-name">${escapeHtml(entry.name)}</span>`;
 
-      row.innerHTML = `${chevron}<span class="manage-tree-icon">${icon}</span>${nameMarkup}`;
+      row.innerHTML = `${toggleMarkup}<span class="manage-tree-icon">${icon}</span>${nameMarkup}`;
 
       row.addEventListener('click', (event) => {
-        if (event.target.closest('.manage-tree-toggle')) {
+        if (event.target.closest('.manage-tree-toggle') || event.target.closest('.manage-tree-rename-input')) {
+          return;
+        }
+
+        if (entry.synthetic) {
           return;
         }
 
@@ -409,13 +464,17 @@ export function createManageImagesWindowController({
       });
 
       row.addEventListener('contextmenu', (event) => {
+        if (entry.synthetic || state.editor) {
+          return;
+        }
+
         event.preventDefault();
         applyClickSelection(key, event);
         renderTree();
         showContextMenu(event.clientX, event.clientY, entry);
       });
 
-      if (entry.type === 'folder') {
+      if (entry.type === 'folder' && !entry.synthetic) {
         const toggleButton = row.querySelector('.manage-tree-toggle');
         toggleButton?.addEventListener('click', (event) => {
           event.stopPropagation();
@@ -428,7 +487,6 @@ export function createManageImagesWindowController({
           } else {
             state.collapsedFolderIds.add(entry.id);
           }
-
           renderTree();
         });
       }
@@ -439,10 +497,26 @@ export function createManageImagesWindowController({
         renameInput?.select();
 
         const commitRenameAndClose = () => {
-          commitInlineRename(key, renameInput.value);
-          state.editingKey = null;
-          render();
+          state.editor = {
+            ...state.editor,
+            draftName: renameInput.value,
+          };
+          commitInlineEdit(renameInput.value);
         };
+
+        renameInput?.addEventListener('mousedown', (event) => {
+          event.stopPropagation();
+        });
+
+        renameInput?.addEventListener('click', (event) => {
+          event.stopPropagation();
+        });
+
+        renameInput?.addEventListener('input', () => {
+          if (state.editor) {
+            state.editor.draftName = renameInput.value;
+          }
+        });
 
         renameInput?.addEventListener('keydown', (event) => {
           if (event.key === 'Enter') {
@@ -452,25 +526,47 @@ export function createManageImagesWindowController({
 
           if (event.key === 'Escape') {
             event.preventDefault();
-            stopInlineRename();
+            cancelInlineEdit();
           }
         });
 
         renameInput?.addEventListener('blur', () => {
-          commitRenameAndClose();
+          if (state.editor) {
+            commitRenameAndClose();
+          }
         });
       }
 
-      row.addEventListener('dragstart', () => {
+      row.addEventListener('dragstart', (event) => {
+        if (!row.draggable) {
+          event.preventDefault();
+          return;
+        }
+
         state.draggedKey = key;
+        event.dataTransfer.effectAllowed = 'move';
       });
 
       row.addEventListener('dragover', (event) => {
+        if (state.editor) {
+          return;
+        }
+
         event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
       });
 
       row.addEventListener('drop', (event) => {
+        if (state.editor) {
+          return;
+        }
+
         event.preventDefault();
+        event.stopPropagation();
+
+        if (entry.synthetic) {
+          return;
+        }
 
         if (entry.type === 'folder' && state.draggedKey !== key) {
           moveDraggedEntity(entry.id);
@@ -527,7 +623,7 @@ export function createManageImagesWindowController({
   function close() {
     state.isOpen = false;
     state.activeSlot = null;
-    state.editingKey = null;
+    state.editor = null;
     hideContextMenu();
     elements.overlay.classList.add('hidden');
     elements.overlay.setAttribute('aria-hidden', 'true');
@@ -544,17 +640,33 @@ export function createManageImagesWindowController({
   }
 
   elements.tree.addEventListener('dragover', (event) => {
+    if (state.editor) {
+      return;
+    }
+
     event.preventDefault();
   });
 
   elements.tree.addEventListener('drop', (event) => {
+    if (state.editor) {
+      return;
+    }
+
+    if (event.target.closest('.manage-tree-row')) {
+      return;
+    }
+
     event.preventDefault();
     moveDraggedEntity(store.ROOT_FOLDER_ID);
   });
 
-  elements.importButton.addEventListener('click', () => elements.input.click());
-  elements.createFolderButton.addEventListener('click', requestCreateFolder);
-  elements.renameButton.addEventListener('click', startInlineRename);
+  elements.importButton.addEventListener('click', () => {
+    if (!state.editor) {
+      elements.input.click();
+    }
+  });
+  elements.createFolderButton.addEventListener('click', startCreateFolderInline);
+  elements.renameButton.addEventListener('click', startRenameInline);
   elements.refreshButton.addEventListener('click', requestRefresh);
   elements.deleteButton.addEventListener('click', requestDelete);
   elements.okButton.addEventListener('click', applySelection);
