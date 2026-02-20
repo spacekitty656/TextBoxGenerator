@@ -149,15 +149,17 @@ test('supports multiselect mouse/keyboard behavior and context menus', async ({ 
   const rowB = page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'multi-b.png' });
 
   await rowA.click();
-  await rowB.click({ modifiers: ['Control'] });
+  await rowB.click({ modifiers: ['Shift'] });
   await expect(page.locator('.manage-tree-row.active')).toHaveCount(2);
-
-  await rowA.click({ button: 'right' });
-  await expect(page.locator('#manage-images-context-menu')).toBeVisible();
-  await expect(page.locator('#manage-images-context-menu')).toContainText('Delete');
 
   await page.keyboard.press('Delete');
   await page.getByRole('button', { name: 'Delete Image(s)' }).click();
   await expect(page.locator('#manage-images-tree')).not.toContainText('multi-a.png');
   await expect(page.locator('#manage-images-tree')).not.toContainText('multi-b.png');
+
+  await importImage(page, 'context-only.png');
+  const contextOnlyRow = page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'context-only.png' });
+  await contextOnlyRow.click({ button: 'right' });
+  await expect(page.locator('#manage-images-context-menu')).toBeVisible();
+  await expect(page.locator('#manage-images-context-menu')).toContainText('Delete');
 });
