@@ -377,7 +377,7 @@ export function createManageImagesWindowController({
     if (selectedImages.length) {
       const response = await openWindowChoiceDialog({
         title: 'Delete Image',
-        message: 'Deleting image(s) may break references in border slots. Consider using Refresh instead. Continue?',
+        message: 'Deleting image(s) may break references in border slots. If you are uploading a new version of this image consider using refresh from computer. Continue?',
         buttons: [
           { label: 'Delete Image(s)', value: 'delete', variant: 'primary' },
           { label: 'Cancel', value: 'cancel', variant: 'secondary' },
