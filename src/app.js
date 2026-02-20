@@ -23,6 +23,12 @@ import {
   drawSideImage as drawSideImageModule,
   getImageBorderSlotState as getImageBorderSlotStateModule,
 } from './border/imageBorder.js';
+import {
+  assignImageBorderSlot,
+  clearImageBorderSlot,
+  createImageBorderSlotState,
+  resolveRenderableImageBorderGroup,
+} from './border/imageBorderState.js';
 import { createImageLibraryStore } from './images/libraryStore.js';
 import {
   IMAGE_LIBRARY_STORAGE_KEY,
@@ -157,15 +163,6 @@ const manageImagesOkButton = document.getElementById('manage-images-ok');
 const manageImagesCancelButton = document.getElementById('manage-images-cancel');
 
 const insideOutColorInputs = [];
-
-function createImageBorderSlotState() {
-  return {
-    imageId: null,
-    rotation: 0,
-    flipX: false,
-    flipY: false,
-  };
-}
 
 const imageBorderState = {
   corners: {
@@ -702,14 +699,6 @@ function getImageBorderSlotState(slotType, slotName) {
   return getImageBorderSlotStateModule(imageBorderState, slotType, slotName);
 }
 
-function clearImageBorderSlot(slotState) {
-  if (!slotState) {
-    return;
-  }
-
-  slotState.imageId = null;
-}
-
 const imageLibraryStore = createImageLibraryStore();
 
 async function initializeImageLibrary() {
@@ -734,20 +723,13 @@ function getManagedImageById(imageId) {
 }
 
 function assignManagedImageToSlot(slotType, slotName, imageId) {
-  const slotState = getImageBorderSlotState(slotType, slotName);
-
-  if (!slotState) {
-    return;
-  }
-
-  const selectedImage = getManagedImageById(imageId);
-
-  if (!selectedImage) {
-    clearImageBorderSlot(slotState);
-    return;
-  }
-
-  slotState.imageId = selectedImage.id;
+  assignImageBorderSlot({
+    imageBorderState,
+    slotType,
+    slotName,
+    getImageById: getManagedImageById,
+    imageId,
+  });
 }
 
 function getPieceButton(slotType, slotName) {
@@ -787,9 +769,14 @@ function updatePieceButtonLabel(slotType, slotName) {
   }
 
   const imageEntry = slotState?.imageId ? getManagedImageById(slotState.imageId) : null;
+  const isBrokenReference = Boolean(slotState?.imageId && !imageEntry);
   const sourceName = imageEntry?.name || '';
-  button.textContent = toCompactPieceLabel(sourceName);
-  button.title = sourceName || 'Select image';
+
+  button.textContent = isBrokenReference ? '⚠ Missing image' : toCompactPieceLabel(sourceName);
+  button.title = isBrokenReference
+    ? 'Missing image reference. Reassign this piece.'
+    : (sourceName || 'Select image');
+  button.classList.toggle('piece-select-button-broken', isBrokenReference);
 }
 
 function updateAllPieceButtonLabels() {
@@ -802,21 +789,7 @@ function updateAllPieceButtonLabels() {
   });
 }
 
-function clearDeletedImageSlots(imageIds) {
-  const imageIdSet = new Set(imageIds);
-
-  Object.values(imageBorderState.corners).forEach((slotState) => {
-    if (slotState.imageId && imageIdSet.has(slotState.imageId)) {
-      clearImageBorderSlot(slotState);
-    }
-  });
-
-  Object.values(imageBorderState.sides).forEach((slotState) => {
-    if (slotState.imageId && imageIdSet.has(slotState.imageId)) {
-      clearImageBorderSlot(slotState);
-    }
-  });
-
+function clearDeletedImageSlots() {
   updateAllPieceButtonLabels();
   drawEditorToCanvas();
 }
@@ -1046,28 +1019,6 @@ function resolveBorderColorMode() {
 }
 
 function getBorderConfig() {
-  const resolveRenderableImageSlot = (slot) => {
-    const imageEntry = slot?.imageId ? getManagedImageById(slot.imageId) : null;
-
-    if (!imageEntry?.image) {
-      return {
-        ...slot,
-        image: null,
-        status: 'empty',
-      };
-    }
-
-    return {
-      ...slot,
-      image: imageEntry.image,
-      status: 'ready',
-    };
-  };
-
-  const resolveRenderableSlotGroup = (slotGroup) => Object.fromEntries(
-    Object.entries(slotGroup).map(([slotName, slot]) => [slotName, resolveRenderableImageSlot(slot)]),
-  );
-
   return getBorderConfigFromModule({
     enabled: borderToggle.checked,
     borderWidthValue: borderWidthInput.value,
@@ -1086,8 +1037,8 @@ function getBorderConfig() {
       left: sidePaddingControls.left.input.value,
     },
     imageBorder: {
-      corners: resolveRenderableSlotGroup(imageBorderState.corners),
-      sides: resolveRenderableSlotGroup(imageBorderState.sides),
+      corners: resolveRenderableImageBorderGroup(imageBorderState.corners, getManagedImageById),
+      sides: resolveRenderableImageBorderGroup(imageBorderState.sides, getManagedImageById),
       sizingStrategy: imageBorderSizingModeInput?.value || 'auto',
       sideMode: imageBorderRepeatModeInput?.value || 'stretch',
     },

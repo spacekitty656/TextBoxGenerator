@@ -16,23 +16,55 @@ describe('image library store', () => {
     expect(store.deleteFolder(root.id)).toBe(false);
   });
 
-  it('supports CRUD/move/reorder while preserving stable image ids', () => {
+  it('keeps image ids stable across rename, move, and reorder', () => {
     const store = createImageLibraryStore();
     const folderA = store.createFolder({ name: 'Folder A' });
     const folderB = store.createFolder({ name: 'Folder B' });
     const image = store.createImage({ name: 'frame.png', parentId: folderA.id });
 
-    const slotReference = { imageId: image.id, rotation: 90, flipX: true, flipY: false };
-
     store.updateImage(image.id, { name: 'renamed-frame.png' });
     store.moveImage(image.id, { parentId: folderB.id, orderIndex: 0 });
     store.reorderImage(image.id, 0);
 
-    const referencedImage = store.getImage(slotReference.imageId);
-    expect(referencedImage).toBeTruthy();
-    expect(referencedImage.id).toBe(image.id);
-    expect(referencedImage.name).toBe('renamed-frame.png');
-    expect(referencedImage.parentId).toBe(folderB.id);
+    expect(store.getImage(image.id)).toMatchObject({
+      id: image.id,
+      name: 'renamed-frame.png',
+      parentId: folderB.id,
+    });
+  });
+
+  it('supports folder rename and recursive delete semantics', () => {
+    const store = createImageLibraryStore();
+    const parent = store.createFolder({ name: 'Parent' });
+    const child = store.createFolder({ name: 'Child', parentId: parent.id });
+    const image = store.createImage({ name: 'nested.png', parentId: child.id });
+
+    store.updateFolder(parent.id, { name: 'Renamed Parent' });
+    expect(store.getFolder(parent.id)?.name).toBe('Renamed Parent');
+
+    expect(store.deleteFolder(parent.id)).toBe(true);
+    expect(store.getFolder(parent.id)).toBeNull();
+    expect(store.getFolder(child.id)).toBeNull();
+    expect(store.getImage(image.id)).toBeNull();
+  });
+
+  it('supports delete-folder strategy workflows via snapshot and restore', () => {
+    const store = createImageLibraryStore();
+    const parent = store.createFolder({ name: 'Parent' });
+    const child = store.createFolder({ name: 'Child', parentId: parent.id });
+    const image = store.createImage({ name: 'nested.png', parentId: parent.id });
+
+    const snapshot = store.createSnapshot();
+
+    // Delete strategy
+    store.deleteFolder(parent.id);
+    expect(store.getFolder(parent.id)).toBeNull();
+
+    // Cancel strategy
+    store.restoreSnapshot(snapshot);
+    expect(store.getFolder(parent.id)).toBeTruthy();
+    expect(store.getFolder(child.id)).toBeTruthy();
+    expect(store.getImage(image.id)).toBeTruthy();
   });
 
   it('serializes and deserializes hierarchy with ordering', () => {
@@ -50,7 +82,7 @@ describe('image library store', () => {
     expect(rootChildren.folders.map((folder) => folder.id)).toEqual([folderB.id, folderA.id]);
 
     const folderAChildren = restored.listChildren(folderA.id);
-    expect(folderAChildren.images.map((image) => image.id)).toEqual([img2.id, img1.id]);
+    expect(folderAChildren.images.map((imageEntry) => imageEntry.id)).toEqual([img2.id, img1.id]);
     expect(restored.getImage(img1.id)).toMatchObject({
       dataUrl: 'data:image/png;base64,AAA',
       mimeType: 'image/png',
