@@ -47,6 +47,8 @@
             aria-label="Rich text editor"
           ></div>
 
+          <p id="storage-status-message" class="status-message hidden" role="status" aria-live="polite"></p>
+
           <div class="wrap-text-controls">
             <label class="inline-checkbox" for="wrap-text">
               <input type="checkbox" id="wrap-text" checked />
@@ -216,32 +218,107 @@
                   <div class="image-border-input-groups" aria-describedby="image-border-help">
                     <fieldset class="image-border-slot-group" aria-label="Corner image slots">
                       <legend>Corners</legend>
-                      <label for="image-border-corner-top-left">Top-left corner image</label>
-                      <input type="file" id="image-border-corner-top-left" accept="image/*" aria-label="Upload image for top-left border corner" />
+                      <div class="image-border-slot-header" aria-hidden="true">
+                        <span></span>
+                        <span>Name</span>
+                        <span>Rotate</span>
+                        <span>Flip H</span>
+                        <span>Flip V</span>
+                        <span></span>
+                      </div>
+                      <div class="image-border-slot-row" data-slot="image-border-corner-top-left">
+                        <label for="image-border-corner-top-left">Top Left</label>
+                        <button type="button" id="image-border-corner-top-left" class="piece-select-button" aria-label="Select image for top left piece">No image</button>
+                        <select id="image-border-corner-top-left-rotation" aria-label="Rotation for top left piece">
+                          <option value="0">0°</option>
+                          <option value="90">90°</option>
+                          <option value="180">180°</option>
+                          <option value="270">270°</option>
+                        </select>
+                        <label><input type="checkbox" id="image-border-corner-top-left-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-top-left-flip-y" /></label>
+                        <button type="button" id="image-border-corner-top-left-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
 
-                      <label for="image-border-corner-top-right">Top-right corner image</label>
-                      <input type="file" id="image-border-corner-top-right" accept="image/*" aria-label="Upload image for top-right border corner" />
+                      <div class="image-border-slot-row" data-slot="image-border-corner-top-right">
+                        <label for="image-border-corner-top-right">Top Right</label>
+                        <button type="button" id="image-border-corner-top-right" class="piece-select-button" aria-label="Select image for top right piece">No image</button>
+                        <select id="image-border-corner-top-right-rotation" aria-label="Rotation for top right piece">
+                          <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>
+                        </select>
+                        <label><input type="checkbox" id="image-border-corner-top-right-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-top-right-flip-y" /></label>
+                        <button type="button" id="image-border-corner-top-right-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
 
-                      <label for="image-border-corner-bottom-right">Bottom-right corner image</label>
-                      <input type="file" id="image-border-corner-bottom-right" accept="image/*" aria-label="Upload image for bottom-right border corner" />
+                      <div class="image-border-slot-row" data-slot="image-border-corner-bottom-right">
+                        <label for="image-border-corner-bottom-right">Bottom Right</label>
+                        <button type="button" id="image-border-corner-bottom-right" class="piece-select-button" aria-label="Select image for bottom right piece">No image</button>
+                        <select id="image-border-corner-bottom-right-rotation" aria-label="Rotation for bottom right piece">
+                          <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>
+                        </select>
+                        <label><input type="checkbox" id="image-border-corner-bottom-right-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-bottom-right-flip-y" /></label>
+                        <button type="button" id="image-border-corner-bottom-right-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
 
-                      <label for="image-border-corner-bottom-left">Bottom-left corner image</label>
-                      <input type="file" id="image-border-corner-bottom-left" accept="image/*" aria-label="Upload image for bottom-left border corner" />
+                      <div class="image-border-slot-row" data-slot="image-border-corner-bottom-left">
+                        <label for="image-border-corner-bottom-left">Bottom Left</label>
+                        <button type="button" id="image-border-corner-bottom-left" class="piece-select-button" aria-label="Select image for bottom left piece">No image</button>
+                        <select id="image-border-corner-bottom-left-rotation" aria-label="Rotation for bottom left piece">
+                          <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>
+                        </select>
+                        <label><input type="checkbox" id="image-border-corner-bottom-left-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-bottom-left-flip-y" /></label>
+                        <button type="button" id="image-border-corner-bottom-left-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
                     </fieldset>
 
                     <fieldset class="image-border-slot-group" aria-label="Side image slots">
                       <legend>Sides</legend>
-                      <label for="image-border-side-top">Top side image</label>
-                      <input type="file" id="image-border-side-top" accept="image/*" aria-label="Upload image for top border side" />
+                      <div class="image-border-slot-header" aria-hidden="true">
+                        <span></span>
+                        <span>Name</span>
+                        <span>Rotate</span>
+                        <span>Flip H</span>
+                        <span>Flip V</span>
+                        <span></span>
+                      </div>
+                      <div class="image-border-slot-row" data-slot="image-border-side-top">
+                        <label for="image-border-side-top">Top</label>
+                        <button type="button" id="image-border-side-top" class="piece-select-button" aria-label="Select image for top piece">No image</button>
+                        <select id="image-border-side-top-rotation" aria-label="Rotation for top piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-top-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-top-flip-y" /></label>
+                        <button type="button" id="image-border-side-top-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
 
-                      <label for="image-border-side-right">Right side image</label>
-                      <input type="file" id="image-border-side-right" accept="image/*" aria-label="Upload image for right border side" />
+                      <div class="image-border-slot-row" data-slot="image-border-side-right">
+                        <label for="image-border-side-right">Right</label>
+                        <button type="button" id="image-border-side-right" class="piece-select-button" aria-label="Select image for right piece">No image</button>
+                        <select id="image-border-side-right-rotation" aria-label="Rotation for right piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-right-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-right-flip-y" /></label>
+                        <button type="button" id="image-border-side-right-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
 
-                      <label for="image-border-side-bottom">Bottom side image</label>
-                      <input type="file" id="image-border-side-bottom" accept="image/*" aria-label="Upload image for bottom border side" />
+                      <div class="image-border-slot-row" data-slot="image-border-side-bottom">
+                        <label for="image-border-side-bottom">Bottom</label>
+                        <button type="button" id="image-border-side-bottom" class="piece-select-button" aria-label="Select image for bottom piece">No image</button>
+                        <select id="image-border-side-bottom-rotation" aria-label="Rotation for bottom piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-bottom-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-bottom-flip-y" /></label>
+                        <button type="button" id="image-border-side-bottom-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
 
-                      <label for="image-border-side-left">Left side image</label>
-                      <input type="file" id="image-border-side-left" accept="image/*" aria-label="Upload image for left border side" />
+                      <div class="image-border-slot-row" data-slot="image-border-side-left">
+                        <label for="image-border-side-left">Left</label>
+                        <button type="button" id="image-border-side-left" class="piece-select-button" aria-label="Select image for left piece">No image</button>
+                        <select id="image-border-side-left-rotation" aria-label="Rotation for left piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-left-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-left-flip-y" /></label>
+                        <button type="button" id="image-border-side-left-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
                     </fieldset>
                   </div>
                 </div>
@@ -356,6 +433,35 @@
               <button type="button" class="window-primary-button" id="color-window-ok">OK</button>
               <button type="button" class="window-secondary-button" id="color-window-cancel">Cancel</button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="manage-images-overlay" class="color-window-overlay hidden" aria-hidden="true">
+      <div class="color-window manage-images-window" role="dialog" aria-modal="true" aria-labelledby="manage-images-title">
+        <div class="color-window-header">
+          <h2 id="manage-images-title">Manage Images</h2>
+          <button type="button" id="close-manage-images-window" class="close-window-button" aria-label="Close manage images window">✕</button>
+        </div>
+        <div class="color-window-body manage-images-body">
+          <input type="file" id="manage-images-input" accept="image/*" multiple class="manage-images-hidden-input" />
+          <input type="file" id="manage-images-refresh-input" accept="image/*" class="manage-images-hidden-input" />
+          <p class="manage-images-description">Import, edit and organize images here for use in your creations. Please note that if you modify an image on your hard drive you will need to use the 'Refresh from Computer' button to see the change apply here.</p>
+          <div class="manage-images-toolbar" role="toolbar" aria-label="Manage images toolbar">
+            <button type="button" id="manage-images-import">🖼️ Import Image</button>
+            <button type="button" id="manage-images-create-folder">📁 Create Folder</button>
+            <button type="button" id="manage-images-refresh">🗘 Refresh from Computer</button>
+            <button type="button" id="manage-images-rename">📝 Rename</button>
+            <button type="button" id="manage-images-delete" aria-label="Delete selected">🗑️</button>
+          </div>
+          <div class="manage-images-content">
+            <div id="manage-images-tree" class="manage-images-tree" aria-label="Images and folders tree"></div>
+          </div>
+          <div id="manage-images-context-menu" class="manage-images-context-menu hidden" role="menu" aria-label="Manage images context menu"></div>
+          <div class="dialog-action-row">
+            <button type="button" class="window-primary-button" id="manage-images-ok">OK</button>
+            <button type="button" class="window-secondary-button" id="manage-images-cancel">Cancel</button>
           </div>
         </div>
       </div>

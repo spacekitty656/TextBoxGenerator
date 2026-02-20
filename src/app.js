@@ -23,7 +23,23 @@ import {
   drawSideImage as drawSideImageModule,
   getImageBorderSlotState as getImageBorderSlotStateModule,
 } from './border/imageBorder.js';
+import {
+  assignImageBorderSlot,
+  clearImageBorderSlot,
+  createImageBorderSlotState,
+  resolveRenderableImageBorderGroup,
+} from './border/imageBorderState.js';
+import { createImageLibraryStore } from './images/libraryStore.js';
+import {
+  IMAGE_LIBRARY_STORAGE_KEY,
+} from './images/libraryPersistence.js';
+import {
+  migrateLegacyImageLibraryToIndexedDb,
+  persistImageLibraryToIndexedDb,
+  restoreImageLibraryFromIndexedDb,
+} from './images/libraryPersistenceIndexedDb.js';
 import { createQuillEditor, extractDocumentFromDelta as extractDocumentFromDeltaModule } from './editor/quillAdapter.js';
+import { createManageImagesWindowController } from './ui/manageImagesWindow.js';
 import {
   layoutDocumentForCanvas as layoutDocumentForCanvasFromRenderer,
   calculateCanvasDimensions as calculateCanvasDimensionsFromRenderer,
@@ -37,11 +53,12 @@ const editorElement = document.getElementById('editor');
 const saveButton = document.getElementById('save-image');
 const imageNameInput = document.getElementById('image-name');
 const appVersionBadge = document.getElementById('app-version');
+const storageStatusMessage = document.getElementById('storage-status-message');
 const settingsButton = document.getElementById('settings-button');
 const settingsOverlay = document.getElementById('settings-overlay');
 const closeSettingsWindowButton = document.getElementById('close-settings-window');
 const darkModeToggle = document.getElementById('dark-mode-toggle');
-const APP_VERSION = 'v1.1.8';
+const APP_VERSION = '1.1.9';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 const SETTINGS_STORAGE_KEY = DEFAULT_SETTINGS_STORAGE_KEY;
 
@@ -65,28 +82,87 @@ const insideOutAddColorButton = document.getElementById('inside-out-add-color');
 const imageBorderControls = document.getElementById('image-border-controls');
 const imageBorderSizingModeInput = document.getElementById('image-border-sizing-mode');
 const imageBorderRepeatModeInput = document.getElementById('image-border-repeat-mode');
-const imageBorderCornerInputs = {
+const imageBorderCornerButtons = {
   topLeft: document.getElementById('image-border-corner-top-left'),
   topRight: document.getElementById('image-border-corner-top-right'),
   bottomRight: document.getElementById('image-border-corner-bottom-right'),
   bottomLeft: document.getElementById('image-border-corner-bottom-left'),
 };
-const imageBorderSideInputs = {
+const imageBorderSideButtons = {
   top: document.getElementById('image-border-side-top'),
   right: document.getElementById('image-border-side-right'),
   bottom: document.getElementById('image-border-side-bottom'),
   left: document.getElementById('image-border-side-left'),
 };
-const insideOutColorInputs = [];
+const imageBorderTransformInputs = {
+  corners: {
+    topLeft: {
+      rotation: document.getElementById('image-border-corner-top-left-rotation'),
+      flipX: document.getElementById('image-border-corner-top-left-flip-x'),
+      flipY: document.getElementById('image-border-corner-top-left-flip-y'),
+      clear: document.getElementById('image-border-corner-top-left-clear'),
+    },
+    topRight: {
+      rotation: document.getElementById('image-border-corner-top-right-rotation'),
+      flipX: document.getElementById('image-border-corner-top-right-flip-x'),
+      flipY: document.getElementById('image-border-corner-top-right-flip-y'),
+      clear: document.getElementById('image-border-corner-top-right-clear'),
+    },
+    bottomRight: {
+      rotation: document.getElementById('image-border-corner-bottom-right-rotation'),
+      flipX: document.getElementById('image-border-corner-bottom-right-flip-x'),
+      flipY: document.getElementById('image-border-corner-bottom-right-flip-y'),
+      clear: document.getElementById('image-border-corner-bottom-right-clear'),
+    },
+    bottomLeft: {
+      rotation: document.getElementById('image-border-corner-bottom-left-rotation'),
+      flipX: document.getElementById('image-border-corner-bottom-left-flip-x'),
+      flipY: document.getElementById('image-border-corner-bottom-left-flip-y'),
+      clear: document.getElementById('image-border-corner-bottom-left-clear'),
+    },
+  },
+  sides: {
+    top: {
+      rotation: document.getElementById('image-border-side-top-rotation'),
+      flipX: document.getElementById('image-border-side-top-flip-x'),
+      flipY: document.getElementById('image-border-side-top-flip-y'),
+      clear: document.getElementById('image-border-side-top-clear'),
+    },
+    right: {
+      rotation: document.getElementById('image-border-side-right-rotation'),
+      flipX: document.getElementById('image-border-side-right-flip-x'),
+      flipY: document.getElementById('image-border-side-right-flip-y'),
+      clear: document.getElementById('image-border-side-right-clear'),
+    },
+    bottom: {
+      rotation: document.getElementById('image-border-side-bottom-rotation'),
+      flipX: document.getElementById('image-border-side-bottom-flip-x'),
+      flipY: document.getElementById('image-border-side-bottom-flip-y'),
+      clear: document.getElementById('image-border-side-bottom-clear'),
+    },
+    left: {
+      rotation: document.getElementById('image-border-side-left-rotation'),
+      flipX: document.getElementById('image-border-side-left-flip-x'),
+      flipY: document.getElementById('image-border-side-left-flip-y'),
+      clear: document.getElementById('image-border-side-left-clear'),
+    },
+  },
+};
+const manageImagesOverlay = document.getElementById('manage-images-overlay');
+const closeManageImagesWindowButton = document.getElementById('close-manage-images-window');
+const manageImagesInput = document.getElementById('manage-images-input');
+const manageImagesRefreshInput = document.getElementById('manage-images-refresh-input');
+const manageImagesTree = document.getElementById('manage-images-tree');
+const manageImagesContextMenu = document.getElementById('manage-images-context-menu');
+const manageImagesImportButton = document.getElementById('manage-images-import');
+const manageImagesCreateFolderButton = document.getElementById('manage-images-create-folder');
+const manageImagesRefreshButton = document.getElementById('manage-images-refresh');
+const manageImagesRenameButton = document.getElementById('manage-images-rename');
+const manageImagesDeleteButton = document.getElementById('manage-images-delete');
+const manageImagesOkButton = document.getElementById('manage-images-ok');
+const manageImagesCancelButton = document.getElementById('manage-images-cancel');
 
-function createImageBorderSlotState() {
-  return {
-    image: null,
-    sourceName: '',
-    status: 'empty',
-    error: null,
-  };
-}
+const insideOutColorInputs = [];
 
 const imageBorderState = {
   corners: {
@@ -392,6 +468,45 @@ function applySavedSettings() {
   });
 }
 
+function setStorageStatusMessage(message = '', isError = false) {
+  if (!storageStatusMessage) {
+    return;
+  }
+
+  storageStatusMessage.textContent = message;
+  storageStatusMessage.classList.toggle('hidden', !message);
+  storageStatusMessage.classList.toggle('status-message-error', Boolean(message) && isError);
+}
+
+function persistImageLibrary() {
+  try {
+    persistImageLibraryToIndexedDb(imageLibraryStore)
+      .then((status) => {
+        if (status?.ok) {
+          setStorageStatusMessage('');
+          return;
+        }
+
+        if (status?.reason === 'quota-exceeded') {
+          setStorageStatusMessage('Image library storage is full. Delete images or folders to free space.', true);
+          return;
+        }
+
+        setStorageStatusMessage('');
+        if (status?.error) {
+          console.warn('Unable to persist image library to IndexedDB.', status.error);
+        }
+      })
+      .catch((error) => {
+        setStorageStatusMessage('');
+        console.warn('Unable to persist image library to IndexedDB.', error);
+      });
+  } catch (error) {
+    setStorageStatusMessage('');
+    console.warn('Unable to persist image library to IndexedDB.', error);
+  }
+}
+
 
 function panelHasVerticalScrollbar(panelElement) {
   if (!panelElement) {
@@ -520,89 +635,226 @@ function parsePaddingNumber(value, fallback = 0) {
   return parsed;
 }
 
+function loadImageFromSourceUrl(sourceUrl) {
+  return new Promise((resolve, reject) => {
+    const imageElement = new Image();
+    imageElement.onload = () => resolve(imageElement);
+    imageElement.onerror = () => reject(new Error('Unable to load image.'));
+    imageElement.src = sourceUrl;
+  });
+}
+
+async function toDrawableImageFromBlob(blob) {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      return await createImageBitmap(blob);
+    } catch (error) {
+      // Fall back to <img> based loading.
+    }
+  }
+
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    return await loadImageFromSourceUrl(objectUrl);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 async function loadImageFromFile(file) {
   if (!file || !file.type || !file.type.startsWith('image/')) {
     throw new Error('Please choose a valid image file.');
   }
 
-  if (typeof createImageBitmap === 'function') {
-    return createImageBitmap(file);
-  }
+  const image = await toDrawableImageFromBlob(file);
 
-  return new Promise((resolve, reject) => {
-    const imageElement = new Image();
-    imageElement.onload = () => resolve(imageElement);
-    imageElement.onerror = () => reject(new Error('Unable to load image.'));
-    imageElement.src = URL.createObjectURL(file);
-  });
+  return {
+    image,
+    blob: file,
+    byteSize: file.size,
+    mimeType: file.type || null,
+  };
+}
+
+async function restoreImageLibraryContentFromPersistence(store) {
+  const images = store.listAllImages();
+
+  await Promise.all(images.map(async (entry) => {
+    if (!entry.blob && !entry.dataUrl) {
+      return;
+    }
+
+    try {
+      const restoredImage = entry.blob
+        ? await toDrawableImageFromBlob(entry.blob)
+        : await loadImageFromSourceUrl(entry.dataUrl);
+      store.updateImage(entry.id, { image: restoredImage });
+    } catch (error) {
+      console.warn('Unable to restore persisted image content.', error);
+    }
+  }));
 }
 
 function getImageBorderSlotState(slotType, slotName) {
   return getImageBorderSlotStateModule(imageBorderState, slotType, slotName);
 }
 
-function clearImageBorderSlot(slotState) {
-  if (!slotState) {
-    return;
-  }
+const imageLibraryStore = createImageLibraryStore();
 
-  slotState.image = null;
-  slotState.sourceName = '';
-  slotState.status = 'empty';
-  slotState.error = null;
+async function initializeImageLibrary() {
+  try {
+    const indexedDbLibrary = await restoreImageLibraryFromIndexedDb();
+    if (indexedDbLibrary) {
+      imageLibraryStore.deserialize(indexedDbLibrary);
+      return;
+    }
+
+    await migrateLegacyImageLibraryToIndexedDb(imageLibraryStore, {
+      storage: window.localStorage,
+      storageKey: IMAGE_LIBRARY_STORAGE_KEY,
+    });
+  } catch (error) {
+    console.warn('Unable to initialize image library persistence.', error);
+  }
 }
 
-async function handleImageBorderFileChange(slotType, slotName, fileInput) {
+function getManagedImageById(imageId) {
+  return imageLibraryStore.getImage(imageId);
+}
+
+function assignManagedImageToSlot(slotType, slotName, imageId) {
+  assignImageBorderSlot({
+    imageBorderState,
+    slotType,
+    slotName,
+    getImageById: getManagedImageById,
+    imageId,
+  });
+}
+
+function getPieceButton(slotType, slotName) {
+  return slotType === 'corners'
+    ? imageBorderCornerButtons[slotName]
+    : imageBorderSideButtons[slotName];
+}
+
+function toCompactPieceLabel(sourceName) {
+  if (!sourceName) {
+    return 'No image';
+  }
+
+  const trimmed = sourceName.trim();
+  const extensionIndex = trimmed.lastIndexOf('.');
+  const hasExtension = extensionIndex > 0;
+  const baseName = hasExtension ? trimmed.slice(0, extensionIndex) : trimmed;
+  const extension = hasExtension ? trimmed.slice(extensionIndex) : '';
+
+  const compactBase = baseName.length > 12
+    ? `${baseName.slice(0, 12)}…`
+    : baseName;
+
+  const compactExtension = extension.length > 6
+    ? extension.slice(0, 6)
+    : extension;
+
+  return `${compactBase}${compactExtension}`;
+}
+
+function updatePieceButtonLabel(slotType, slotName) {
   const slotState = getImageBorderSlotState(slotType, slotName);
+  const button = getPieceButton(slotType, slotName);
 
-  if (!slotState) {
+  if (!button || !slotState) {
     return;
   }
 
-  const [selectedFile] = fileInput.files || [];
+  const imageEntry = slotState?.imageId ? getManagedImageById(slotState.imageId) : null;
+  const isBrokenReference = Boolean(slotState?.imageId && !imageEntry);
+  const sourceName = imageEntry?.name || '';
 
-  if (!selectedFile) {
-    clearImageBorderSlot(slotState);
-    drawEditorToCanvas();
-    return;
-  }
+  button.textContent = isBrokenReference ? '⚠ Missing image' : toCompactPieceLabel(sourceName);
+  button.title = isBrokenReference
+    ? 'Missing image reference. Reassign this piece.'
+    : (sourceName || 'Select image');
+  button.classList.toggle('piece-select-button-broken', isBrokenReference);
+}
 
-  if (!selectedFile.type || !selectedFile.type.startsWith('image/')) {
-    clearImageBorderSlot(slotState);
-    slotState.status = 'error';
-    slotState.error = 'Invalid file type';
-    fileInput.value = '';
-    drawEditorToCanvas();
-    return;
-  }
+function updateAllPieceButtonLabels() {
+  Object.keys(imageBorderCornerButtons).forEach((slotName) => {
+    updatePieceButtonLabel('corners', slotName);
+  });
 
-  slotState.status = 'loading';
-  slotState.error = null;
+  Object.keys(imageBorderSideButtons).forEach((slotName) => {
+    updatePieceButtonLabel('sides', slotName);
+  });
+}
 
-  try {
-    const loadedImage = await loadImageFromFile(selectedFile);
-    slotState.image = loadedImage;
-    slotState.sourceName = selectedFile.name;
-    slotState.status = 'ready';
-    slotState.error = null;
+function clearDeletedImageSlots() {
+  updateAllPieceButtonLabels();
+  drawEditorToCanvas();
+}
+
+const manageImagesWindowController = createManageImagesWindowController({
+  store: imageLibraryStore,
+  loadImageFromFile,
+  elements: {
+    overlay: manageImagesOverlay,
+    closeButton: closeManageImagesWindowButton,
+    input: manageImagesInput,
+    refreshInput: manageImagesRefreshInput,
+    tree: manageImagesTree,
+    contextMenu: manageImagesContextMenu,
+    importButton: manageImagesImportButton,
+    createFolderButton: manageImagesCreateFolderButton,
+    refreshButton: manageImagesRefreshButton,
+    renameButton: manageImagesRenameButton,
+    deleteButton: manageImagesDeleteButton,
+    okButton: manageImagesOkButton,
+    cancelButton: manageImagesCancelButton,
+  },
+  onSelectionApplied: ({ slotType, slotName }, imageId) => {
+    assignManagedImageToSlot(slotType, slotName, imageId);
+    updatePieceButtonLabel(slotType, slotName);
     drawEditorToCanvas();
-  } catch (error) {
-    clearImageBorderSlot(slotState);
-    slotState.status = 'error';
-    slotState.error = error instanceof Error ? error.message : 'Unable to load image';
-    drawEditorToCanvas();
-  }
+  },
+  onStoreChanged: () => {
+    updateAllPieceButtonLabels();
+    persistImageLibrary();
+  },
+  onImagesDeleted: clearDeletedImageSlots,
+});
+
+function openManageImagesWindow(slotType = null, slotName = null) {
+  const initialImageId = slotType && slotName
+    ? (getImageBorderSlotState(slotType, slotName)?.imageId || null)
+    : null;
+
+  manageImagesWindowController.open({ slotType, slotName, initialImageId });
+}
+
+function closeManageImagesWindow() {
+  manageImagesWindowController.close();
 }
 
 function updateImageBorderSlotInputsState(isImageModeActive) {
   [
-    ...Object.values(imageBorderCornerInputs),
-    ...Object.values(imageBorderSideInputs),
+    ...Object.values(imageBorderCornerButtons),
+    ...Object.values(imageBorderSideButtons),
   ].forEach((input) => {
     if (input) {
       input.disabled = !isImageModeActive;
     }
   });
+
+  Object.values(imageBorderTransformInputs).forEach((group) => {
+    Object.values(group).forEach((controls) => {
+      controls.rotation.disabled = !isImageModeActive;
+      controls.flipX.disabled = !isImageModeActive;
+      controls.flipY.disabled = !isImageModeActive;
+      controls.clear.disabled = !isImageModeActive;
+    });
+  });
+
 }
 
 function registerInsideOutColorInput(input) {
@@ -785,8 +1037,8 @@ function getBorderConfig() {
       left: sidePaddingControls.left.input.value,
     },
     imageBorder: {
-      corners: imageBorderState.corners,
-      sides: imageBorderState.sides,
+      corners: resolveRenderableImageBorderGroup(imageBorderState.corners, getManagedImageById),
+      sides: resolveRenderableImageBorderGroup(imageBorderState.sides, getManagedImageById),
       sizingStrategy: imageBorderSizingModeInput?.value || 'auto',
       sideMode: imageBorderRepeatModeInput?.value || 'stretch',
     },
@@ -1300,15 +1552,54 @@ Object.entries(sidePaddingControls).forEach(([side, { lock, input }]) => {
   });
 });
 
-Object.entries(imageBorderCornerInputs).forEach(([corner, input]) => {
-  input?.addEventListener('change', () => {
-    handleImageBorderFileChange('corners', corner, input);
+Object.entries(imageBorderCornerButtons).forEach(([corner, button]) => {
+  button?.addEventListener('click', () => {
+    openManageImagesWindow('corners', corner);
   });
 });
 
-Object.entries(imageBorderSideInputs).forEach(([side, input]) => {
-  input?.addEventListener('change', () => {
-    handleImageBorderFileChange('sides', side, input);
+Object.entries(imageBorderSideButtons).forEach(([side, button]) => {
+  button?.addEventListener('click', () => {
+    openManageImagesWindow('sides', side);
+  });
+});
+
+Object.entries(imageBorderTransformInputs).forEach(([slotType, group]) => {
+  Object.entries(group).forEach(([slotName, controls]) => {
+    controls.rotation?.addEventListener('change', () => {
+      const slotState = getImageBorderSlotState(slotType, slotName);
+      if (!slotState) {
+        return;
+      }
+      slotState.rotation = Number.parseInt(controls.rotation.value, 10) || 0;
+      drawEditorToCanvas();
+    });
+
+    controls.flipX?.addEventListener('change', () => {
+      const slotState = getImageBorderSlotState(slotType, slotName);
+      if (!slotState) {
+        return;
+      }
+      slotState.flipX = controls.flipX.checked;
+      drawEditorToCanvas();
+    });
+
+    controls.flipY?.addEventListener('change', () => {
+      const slotState = getImageBorderSlotState(slotType, slotName);
+      if (!slotState) {
+        return;
+      }
+      slotState.flipY = controls.flipY.checked;
+      drawEditorToCanvas();
+    });
+
+    controls.clear?.addEventListener('click', () => {
+      const slotState = getImageBorderSlotState(slotType, slotName);
+      clearImageBorderSlot(slotState);
+
+      updatePieceButtonLabel(slotType, slotName);
+      drawEditorToCanvas();
+    });
   });
 });
 
@@ -1584,6 +1875,7 @@ if (settingsOverlay) {
   });
 }
 
+
 if (darkModeToggle) {
   darkModeToggle.addEventListener('change', () => {
     applyDarkMode(darkModeToggle.checked);
@@ -1595,6 +1887,15 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     closeColorWindow();
     closeSettingsWindow();
+    closeManageImagesWindow();
+  }
+
+  if (event.key === 'Enter' && manageImagesWindowController.handleEnterKey(event)) {
+    event.preventDefault();
+  }
+
+  if (event.key === 'Delete' && manageImagesWindowController.handleDeleteKey(event)) {
+    event.preventDefault();
   }
 });
 
@@ -1605,6 +1906,17 @@ if (appVersionBadge) {
 syncColorPickerUI();
 syncColorPreviewButtons();
 applySavedSettings();
+updateAllPieceButtonLabels();
+
+initializeImageLibrary().then(() => restoreImageLibraryContentFromPersistence(imageLibraryStore)).then(() => {
+  updateAllPieceButtonLabels();
+  drawEditorToCanvas();
+});
+
+window.addEventListener('beforeunload', () => {
+  persistSettings();
+  persistImageLibrary();
+});
 
 updateBorderControlsState();
 syncImageLockedPaddingValues();

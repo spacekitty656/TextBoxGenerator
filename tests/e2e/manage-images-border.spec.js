@@ -1,0 +1,133 @@
+const { test, expect } = require('@playwright/test');
+
+async function enableImageBorderMode(page) {
+  await page.goto('/');
+  await page.locator('#enable-border').check();
+  await page.locator('#border-color-images').check();
+}
+
+async function importImage(page, name = 'imported.png') {
+  const pngBuffer = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8N6hQAAAAASUVORK5CYII=',
+    'base64',
+  );
+  await page.setInputFiles('#manage-images-input', {
+    name,
+    mimeType: 'image/png',
+    buffer: pngBuffer,
+  });
+}
+
+test('opens Manage Images from piece dropdown and supports import/create/rename/delete', async ({ page }) => {
+  await enableImageBorderMode(page);
+
+  await page.locator('#image-border-corner-top-left').click();
+  await expect(page.locator('#manage-images-overlay')).toBeVisible();
+
+  await importImage(page, 'folder-test.png');
+  await expect(page.locator('#manage-images-tree')).toContainText('folder-test.png');
+
+  await page.locator('#manage-images-create-folder').click();
+  const newFolderInput = page.locator('.manage-tree-rename-input');
+  await newFolderInput.fill('My Folder');
+  await newFolderInput.press('Enter');
+
+  const folderRow = page.locator('.manage-tree-row', { hasText: 'My Folder' });
+  await folderRow.click();
+  await page.locator('#manage-images-rename').click();
+  const renameInput = page.locator('.manage-tree-rename-input');
+  await renameInput.fill('Renamed Folder');
+  await renameInput.press('Enter');
+  await expect(page.locator('#manage-images-tree')).toContainText('Renamed Folder');
+
+  await page.locator('.manage-tree-row', { hasText: 'Renamed Folder' }).click();
+  await page.locator('#manage-images-delete').click();
+  await page.getByRole('button', { name: /Delete Folder/ }).first().click();
+  await expect(page.locator('#manage-images-tree')).not.toContainText('Renamed Folder');
+
+  await page.locator('#manage-images-cancel').click();
+  await expect(page.locator('#manage-images-overlay')).toBeHidden();
+});
+
+test('supports assignment via double-click, Enter, OK and preserves prior assignment on Cancel', async ({ page }) => {
+  await enableImageBorderMode(page);
+
+  await page.locator('#image-border-corner-top-left').click();
+  await importImage(page, 'assign-a.png');
+  const firstImageRow = page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'assign-a.png' });
+  await firstImageRow.dblclick();
+  await expect(page.locator('#manage-images-overlay')).toBeHidden();
+  await expect(page.locator('#image-border-corner-top-left')).toContainText('assign-a');
+
+  await page.locator('#image-border-corner-top-left').click();
+  await importImage(page, 'assign-b.png');
+  const secondImageRow = page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'assign-b.png' });
+  await secondImageRow.click();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#manage-images-overlay')).toBeHidden();
+  await expect(page.locator('#image-border-corner-top-left')).toContainText('assign-b');
+
+  await page.locator('#image-border-corner-top-left').click();
+  await firstImageRow.click();
+  await page.locator('#manage-images-ok').click();
+  await expect(page.locator('#image-border-corner-top-left')).toContainText('assign-a');
+
+  await page.locator('#image-border-corner-top-left').click();
+  await secondImageRow.click();
+  await page.locator('#manage-images-cancel').click();
+  await expect(page.locator('#image-border-corner-top-left')).toContainText('assign-a');
+});
+
+test('supports rotation/flip/clear controls and shows broken-reference warning after deletion', async ({ page }) => {
+  await enableImageBorderMode(page);
+
+  await page.locator('#image-border-corner-top-left').click();
+  await importImage(page, 'warn-me.png');
+  await page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'warn-me.png' }).dblclick();
+
+  await page.selectOption('#image-border-corner-top-left-rotation', '90');
+  await page.locator('#image-border-corner-top-left-flip-x').check();
+  await page.locator('#image-border-corner-top-left-flip-y').check();
+  await expect(page.locator('#image-border-corner-top-left-rotation')).toHaveValue('90');
+  await expect(page.locator('#image-border-corner-top-left-flip-x')).toBeChecked();
+  await expect(page.locator('#image-border-corner-top-left-flip-y')).toBeChecked();
+
+  await page.locator('#image-border-corner-top-left-clear').click();
+  await expect(page.locator('#image-border-corner-top-left')).toContainText('No image');
+
+  await page.locator('#image-border-corner-top-left').click();
+  await page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'warn-me.png' }).click();
+  await page.locator('#manage-images-ok').click();
+
+  await page.locator('#image-border-corner-top-right').click();
+  await page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'warn-me.png' }).click();
+  await page.locator('#manage-images-delete').click();
+  await page.getByRole('button', { name: 'Delete Image(s)' }).click();
+  await page.locator('#manage-images-cancel').click();
+
+  await expect(page.locator('#image-border-corner-top-left')).toContainText('⚠ Missing image');
+});
+
+test('supports multiselect mouse/keyboard behavior and context menus', async ({ page }) => {
+  await enableImageBorderMode(page);
+
+  await page.locator('#image-border-side-top').click();
+  await importImage(page, 'multi-a.png');
+  await importImage(page, 'multi-b.png');
+
+  const rowA = page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'multi-a.png' });
+  const rowB = page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'multi-b.png' });
+
+  await rowA.click();
+  await rowB.click({ modifiers: ['Control'] });
+  await expect(page.locator('.manage-tree-row.active')).toHaveCount(2);
+
+  await rowA.click({ button: 'right' });
+  await expect(page.locator('#manage-images-context-menu')).toBeVisible();
+  await expect(page.locator('#manage-images-context-menu')).toContainText('Delete');
+
+  await page.keyboard.press('Delete');
+  await page.getByRole('button', { name: 'Delete Image(s)' }).click();
+  await expect(page.locator('#manage-images-tree')).not.toContainText('multi-a.png');
+  await expect(page.locator('#manage-images-tree')).not.toContainText('multi-b.png');
+});
