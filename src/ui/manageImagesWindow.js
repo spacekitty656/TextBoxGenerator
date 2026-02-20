@@ -203,6 +203,19 @@ export function createManageImagesWindowController({
     render();
   }
 
+  function toggleFolderCollapsed(folderId, hasChildren = true) {
+    if (!hasChildren) {
+      return;
+    }
+
+    if (state.collapsedFolderIds.has(folderId)) {
+      state.collapsedFolderIds.delete(folderId);
+    } else {
+      state.collapsedFolderIds.add(folderId);
+    }
+    renderTree();
+  }
+
   function getPreferredFolderParentId() {
     const selected = getSingleSelection();
 
@@ -300,20 +313,27 @@ export function createManageImagesWindowController({
 
   async function addImagesFromFiles(fileList, parentId = getPreferredFolderParentId()) {
     const files = Array.from(fileList || []).filter((file) => file?.type?.startsWith('image/'));
+    const createdKeys = [];
 
     for (const file of files) {
       try {
         const loaded = await loadImageFromFile(file);
-        store.createImage({
+        const createdImage = store.createImage({
           name: file.name,
           parentId,
           image: loaded.image,
           dataUrl: loaded.dataUrl,
           mimeType: loaded.mimeType,
         });
+        createdKeys.push(getEntityKey(createdImage));
       } catch (error) {
         console.error('Unable to import selected image.', error);
       }
+    }
+
+    if (createdKeys.length > 0) {
+      const selectedKey = createdKeys[createdKeys.length - 1];
+      setSelection([selectedKey], selectedKey);
     }
 
     onStoreChanged?.();
@@ -493,6 +513,27 @@ export function createManageImagesWindowController({
         renderTree();
       });
 
+      row.addEventListener('dblclick', (event) => {
+        if (entry.synthetic || state.editor) {
+          return;
+        }
+
+        if (entry.type === 'folder') {
+          event.preventDefault();
+          toggleFolderCollapsed(entry.id, hasFolderChildren);
+          return;
+        }
+
+        if (entry.type !== 'image') {
+          return;
+        }
+
+        event.preventDefault();
+        applyClickSelection(key, event);
+        renderTree();
+        applySelection();
+      });
+
       row.addEventListener('contextmenu', (event) => {
         if (entry.synthetic || state.editor) {
           return;
@@ -508,16 +549,7 @@ export function createManageImagesWindowController({
         const toggleButton = row.querySelector('.manage-tree-toggle');
         toggleButton?.addEventListener('click', (event) => {
           event.stopPropagation();
-          if (!hasFolderChildren) {
-            return;
-          }
-
-          if (isCollapsed) {
-            state.collapsedFolderIds.delete(entry.id);
-          } else {
-            state.collapsedFolderIds.add(entry.id);
-          }
-          renderTree();
+          toggleFolderCollapsed(entry.id, hasFolderChildren);
         });
       }
 
@@ -676,6 +708,24 @@ export function createManageImagesWindowController({
     return true;
   }
 
+  function handleDeleteKey(event = null) {
+    if (!state.isOpen) {
+      return false;
+    }
+
+    const target = event?.target;
+    if (state.editor || target?.closest?.('.manage-tree-rename-input')) {
+      return false;
+    }
+
+    if (elements.deleteButton.disabled) {
+      return false;
+    }
+
+    elements.deleteButton.click();
+    return true;
+  }
+
   elements.tree.addEventListener('dragover', (event) => {
     if (state.editor) {
       return;
@@ -695,6 +745,17 @@ export function createManageImagesWindowController({
 
     event.preventDefault();
     moveDraggedEntity(store.ROOT_FOLDER_ID);
+  });
+
+  elements.tree.addEventListener('click', (event) => {
+    if (state.editor) {
+      return;
+    }
+
+    if (!event.target.closest('.manage-tree-row') && state.selectedKeys.length > 0) {
+      setSelection([]);
+      renderTree();
+    }
   });
 
   elements.importButton.addEventListener('click', () => {
@@ -757,5 +818,6 @@ export function createManageImagesWindowController({
     close,
     render,
     handleEnterKey,
+    handleDeleteKey,
   };
 }

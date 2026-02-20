@@ -72,7 +72,7 @@ body.dark-mode .canvas-panel {
 
 @supports (scrollbar-gutter: stable) {
   .form-panel {
-    overflow-y: auto;
+    overflow-y: scroll;
     scrollbar-gutter: stable both-edges;
   }
 }
@@ -633,6 +633,8 @@ body.dark-mode .piece-select-button {
 }
 
 .manage-images-content {
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   flex: 1;
   min-width: 0;
@@ -640,11 +642,11 @@ body.dark-mode .piece-select-button {
 }
 
 .manage-images-tree {
-  height: 100%;
+  flex: 1;
   min-height: 240px;
   width: 100%;
   max-width: 100%;
-  overflow: auto;
+  overflow-y: auto;
   overflow-x: hidden;
   border: 1px solid #4b5563;
   border-radius: 8px;
@@ -1080,6 +1082,13 @@ body.dark-mode .compact-input input {
 .window-primary-button {
   background: linear-gradient(#4b81b8, #356ca5);
   color: #ffffff;
+}
+
+.window-primary-button:disabled,
+.window-secondary-button:disabled {
+  opacity: 0.55;
+  filter: grayscale(0.2);
+  cursor: not-allowed;
 }
 
 .color-right-panel {
