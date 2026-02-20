@@ -23,6 +23,7 @@ import {
   drawSideImage as drawSideImageModule,
   getImageBorderSlotState as getImageBorderSlotStateModule,
 } from './border/imageBorder.js';
+import { createImageLibraryStore } from './images/libraryStore.js';
 import { createQuillEditor, extractDocumentFromDelta as extractDocumentFromDeltaModule } from './editor/quillAdapter.js';
 import {
   layoutDocumentForCanvas as layoutDocumentForCanvasFromRenderer,
@@ -142,11 +143,7 @@ const insideOutColorInputs = [];
 
 function createImageBorderSlotState() {
   return {
-    image: null,
-    sourceName: '',
-    sourceId: '',
-    status: 'empty',
-    error: null,
+    imageId: null,
     rotation: 0,
     flipX: false,
     flipY: false,
@@ -611,21 +608,16 @@ function clearImageBorderSlot(slotState) {
     return;
   }
 
-  slotState.image = null;
-  slotState.sourceName = '';
-  slotState.sourceId = '';
-  slotState.status = 'empty';
-  slotState.error = null;
+  slotState.imageId = null;
 }
 
-const managedImages = [];
-let managedImageIdCounter = 0;
+const imageLibraryStore = createImageLibraryStore();
 let activeImageSlotSelection = null;
 let pendingSlotSelection = null;
 let managedImagesSnapshot = [];
 
 function getManagedImageById(imageId) {
-  return managedImages.find((entry) => entry.id === imageId) || null;
+  return imageLibraryStore.getImage(imageId);
 }
 
 function assignManagedImageToSlot(slotType, slotName, imageId) {
@@ -642,11 +634,7 @@ function assignManagedImageToSlot(slotType, slotName, imageId) {
     return;
   }
 
-  slotState.image = selectedImage.image;
-  slotState.sourceName = selectedImage.name;
-  slotState.sourceId = selectedImage.id;
-  slotState.status = 'ready';
-  slotState.error = null;
+  slotState.imageId = selectedImage.id;
 }
 
 function getPieceButton(slotType, slotName) {
@@ -685,8 +673,10 @@ function updatePieceButtonLabel(slotType, slotName) {
     return;
   }
 
-  button.textContent = toCompactPieceLabel(slotState.sourceName);
-  button.title = slotState.sourceName || 'Select image';
+  const imageEntry = slotState?.imageId ? getManagedImageById(slotState.imageId) : null;
+  const sourceName = imageEntry?.name || '';
+  button.textContent = toCompactPieceLabel(sourceName);
+  button.title = sourceName || 'Select image';
 }
 
 function updateAllPieceButtonLabels() {
@@ -705,8 +695,7 @@ async function addManagedImagesFromFileList(fileList) {
   for (const file of files) {
     try {
       const loadedImage = await loadImageFromFile(file);
-      managedImages.push({
-        id: `img-${++managedImageIdCounter}`,
+      imageLibraryStore.createImage({
         name: file.name,
         image: loadedImage,
       });
@@ -724,7 +713,7 @@ function renderManageImagesList() {
   }
 
   manageImagesList.innerHTML = '';
-  managedImages.forEach((imageEntry) => {
+  imageLibraryStore.listAllImages().forEach((imageEntry) => {
     const row = document.createElement('button');
     row.type = 'button';
     row.className = 'manage-image-item';
@@ -766,10 +755,10 @@ function openManageImagesWindow(slotType = null, slotName = null) {
     return;
   }
 
-  managedImagesSnapshot = managedImages.slice();
+  managedImagesSnapshot = imageLibraryStore.createSnapshot();
   activeImageSlotSelection = slotType && slotName ? { slotType, slotName } : null;
   pendingSlotSelection = activeImageSlotSelection
-    ? (getImageBorderSlotState(activeImageSlotSelection.slotType, activeImageSlotSelection.slotName)?.sourceId || null)
+    ? (getImageBorderSlotState(activeImageSlotSelection.slotType, activeImageSlotSelection.slotName)?.imageId || null)
     : null;
   renderManageImagesList();
   manageImagesOverlay.classList.remove('hidden');
@@ -970,6 +959,28 @@ function resolveBorderColorMode() {
 }
 
 function getBorderConfig() {
+  const resolveRenderableImageSlot = (slot) => {
+    const imageEntry = slot?.imageId ? getManagedImageById(slot.imageId) : null;
+
+    if (!imageEntry?.image) {
+      return {
+        ...slot,
+        image: null,
+        status: 'empty',
+      };
+    }
+
+    return {
+      ...slot,
+      image: imageEntry.image,
+      status: 'ready',
+    };
+  };
+
+  const resolveRenderableSlotGroup = (slotGroup) => Object.fromEntries(
+    Object.entries(slotGroup).map(([slotName, slot]) => [slotName, resolveRenderableImageSlot(slot)]),
+  );
+
   return getBorderConfigFromModule({
     enabled: borderToggle.checked,
     borderWidthValue: borderWidthInput.value,
@@ -988,8 +999,8 @@ function getBorderConfig() {
       left: sidePaddingControls.left.input.value,
     },
     imageBorder: {
-      corners: imageBorderState.corners,
-      sides: imageBorderState.sides,
+      corners: resolveRenderableSlotGroup(imageBorderState.corners),
+      sides: resolveRenderableSlotGroup(imageBorderState.sides),
       sizingStrategy: imageBorderSizingModeInput?.value || 'auto',
       sideMode: imageBorderRepeatModeInput?.value || 'stretch',
     },
@@ -1842,7 +1853,7 @@ if (closeManageImagesWindowButton) {
 
 if (manageImagesCancelButton) {
   manageImagesCancelButton.addEventListener('click', () => {
-    managedImages.splice(0, managedImages.length, ...managedImagesSnapshot);
+    imageLibraryStore.restoreSnapshot(managedImagesSnapshot);
     closeManageImagesWindow();
   });
 }
