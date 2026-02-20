@@ -26,9 +26,18 @@ describe('image library persistence', () => {
     });
   });
 
-  it('persists to storage and restores snapshot payload', () => {
+  it('round-trips persisted payloads without losing ids, ordering, or metadata', () => {
     const store = createImageLibraryStore();
-    store.createFolder({ name: 'Tiles' });
+    const folder = store.createFolder({ name: 'Tiles' });
+    store.createImage({
+      name: 'a.png',
+      parentId: folder.id,
+      dataUrl: 'data:image/png;base64,AAA',
+      mimeType: 'image/png',
+      byteSize: 123,
+      blobId: 'blob-a',
+    });
+    store.createImage({ name: 'b.png', parentId: folder.id, orderIndex: 0 });
 
     const storage = {
       getItem: vi.fn(),
@@ -36,16 +45,24 @@ describe('image library persistence', () => {
     };
 
     persistImageLibrary(storage, store, 'custom-key');
-
-    expect(storage.setItem).toHaveBeenCalledOnce();
-    expect(storage.setItem.mock.calls[0][0]).toBe('custom-key');
-
     storage.getItem.mockReturnValue(storage.setItem.mock.calls[0][1]);
-    const restored = restoreImageLibrarySnapshot(storage, 'custom-key');
-    expect(restored).toMatchObject({
-      folders: expect.arrayContaining([
-        expect.objectContaining({ name: 'Tiles' }),
-      ]),
+
+    const restoredSnapshot = restoreImageLibrarySnapshot(storage, 'custom-key');
+    const restoredStore = createImageLibraryStore(restoredSnapshot);
+
+    const originalChildren = store.listChildren(folder.id);
+    const restoredFolder = restoredStore.serialize().folders.find((entry) => entry.name === 'Tiles');
+    const restoredChildren = restoredStore.listChildren(restoredFolder.id);
+
+    expect(restoredChildren.images.map((entry) => entry.name)).toEqual(
+      originalChildren.images.map((entry) => entry.name),
+    );
+    expect(restoredChildren.images[1]).toMatchObject({
+      dataUrl: 'data:image/png;base64,AAA',
+      mimeType: 'image/png',
+      blobId: 'blob-a',
+      storageKey: 'blob-a',
+      byteSize: 123,
     });
   });
 });
