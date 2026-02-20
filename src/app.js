@@ -41,7 +41,7 @@ const settingsButton = document.getElementById('settings-button');
 const settingsOverlay = document.getElementById('settings-overlay');
 const closeSettingsWindowButton = document.getElementById('close-settings-window');
 const darkModeToggle = document.getElementById('dark-mode-toggle');
-const APP_VERSION = 'v1.1.8';
+const APP_VERSION = '1.1.9';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 const SETTINGS_STORAGE_KEY = DEFAULT_SETTINGS_STORAGE_KEY;
 
@@ -77,14 +77,80 @@ const imageBorderSideInputs = {
   bottom: document.getElementById('image-border-side-bottom'),
   left: document.getElementById('image-border-side-left'),
 };
+const imageBorderTransformInputs = {
+  corners: {
+    topLeft: {
+      rotation: document.getElementById('image-border-corner-top-left-rotation'),
+      flipX: document.getElementById('image-border-corner-top-left-flip-x'),
+      flipY: document.getElementById('image-border-corner-top-left-flip-y'),
+      clear: document.getElementById('image-border-corner-top-left-clear'),
+    },
+    topRight: {
+      rotation: document.getElementById('image-border-corner-top-right-rotation'),
+      flipX: document.getElementById('image-border-corner-top-right-flip-x'),
+      flipY: document.getElementById('image-border-corner-top-right-flip-y'),
+      clear: document.getElementById('image-border-corner-top-right-clear'),
+    },
+    bottomRight: {
+      rotation: document.getElementById('image-border-corner-bottom-right-rotation'),
+      flipX: document.getElementById('image-border-corner-bottom-right-flip-x'),
+      flipY: document.getElementById('image-border-corner-bottom-right-flip-y'),
+      clear: document.getElementById('image-border-corner-bottom-right-clear'),
+    },
+    bottomLeft: {
+      rotation: document.getElementById('image-border-corner-bottom-left-rotation'),
+      flipX: document.getElementById('image-border-corner-bottom-left-flip-x'),
+      flipY: document.getElementById('image-border-corner-bottom-left-flip-y'),
+      clear: document.getElementById('image-border-corner-bottom-left-clear'),
+    },
+  },
+  sides: {
+    top: {
+      rotation: document.getElementById('image-border-side-top-rotation'),
+      flipX: document.getElementById('image-border-side-top-flip-x'),
+      flipY: document.getElementById('image-border-side-top-flip-y'),
+      clear: document.getElementById('image-border-side-top-clear'),
+    },
+    right: {
+      rotation: document.getElementById('image-border-side-right-rotation'),
+      flipX: document.getElementById('image-border-side-right-flip-x'),
+      flipY: document.getElementById('image-border-side-right-flip-y'),
+      clear: document.getElementById('image-border-side-right-clear'),
+    },
+    bottom: {
+      rotation: document.getElementById('image-border-side-bottom-rotation'),
+      flipX: document.getElementById('image-border-side-bottom-flip-x'),
+      flipY: document.getElementById('image-border-side-bottom-flip-y'),
+      clear: document.getElementById('image-border-side-bottom-clear'),
+    },
+    left: {
+      rotation: document.getElementById('image-border-side-left-rotation'),
+      flipX: document.getElementById('image-border-side-left-flip-x'),
+      flipY: document.getElementById('image-border-side-left-flip-y'),
+      clear: document.getElementById('image-border-side-left-clear'),
+    },
+  },
+};
+const manageImagesButton = document.getElementById('manage-images-button');
+const manageImagesOverlay = document.getElementById('manage-images-overlay');
+const closeManageImagesWindowButton = document.getElementById('close-manage-images-window');
+const manageImagesInput = document.getElementById('manage-images-input');
+const manageImagesList = document.getElementById('manage-images-list');
+const manageImagesOkButton = document.getElementById('manage-images-ok');
+const manageImagesCancelButton = document.getElementById('manage-images-cancel');
+
 const insideOutColorInputs = [];
 
 function createImageBorderSlotState() {
   return {
     image: null,
     sourceName: '',
+    sourceId: '',
     status: 'empty',
     error: null,
+    rotation: 0,
+    flipX: false,
+    flipY: false,
   };
 }
 
@@ -548,50 +614,165 @@ function clearImageBorderSlot(slotState) {
 
   slotState.image = null;
   slotState.sourceName = '';
+  slotState.sourceId = '';
   slotState.status = 'empty';
   slotState.error = null;
 }
 
-async function handleImageBorderFileChange(slotType, slotName, fileInput) {
+const managedImages = [];
+let managedImageIdCounter = 0;
+let activeImageSlotSelection = null;
+let pendingSlotSelection = null;
+let managedImagesSnapshot = [];
+
+function getManagedImageById(imageId) {
+  return managedImages.find((entry) => entry.id === imageId) || null;
+}
+
+function assignManagedImageToSlot(slotType, slotName, imageId) {
   const slotState = getImageBorderSlotState(slotType, slotName);
 
   if (!slotState) {
     return;
   }
 
-  const [selectedFile] = fileInput.files || [];
+  const selectedImage = getManagedImageById(imageId);
 
-  if (!selectedFile) {
+  if (!selectedImage) {
     clearImageBorderSlot(slotState);
-    drawEditorToCanvas();
     return;
   }
 
-  if (!selectedFile.type || !selectedFile.type.startsWith('image/')) {
-    clearImageBorderSlot(slotState);
-    slotState.status = 'error';
-    slotState.error = 'Invalid file type';
-    fileInput.value = '';
-    drawEditorToCanvas();
-    return;
-  }
-
-  slotState.status = 'loading';
+  slotState.image = selectedImage.image;
+  slotState.sourceName = selectedImage.name;
+  slotState.sourceId = selectedImage.id;
+  slotState.status = 'ready';
   slotState.error = null;
+}
 
-  try {
-    const loadedImage = await loadImageFromFile(selectedFile);
-    slotState.image = loadedImage;
-    slotState.sourceName = selectedFile.name;
-    slotState.status = 'ready';
-    slotState.error = null;
-    drawEditorToCanvas();
-  } catch (error) {
-    clearImageBorderSlot(slotState);
-    slotState.status = 'error';
-    slotState.error = error instanceof Error ? error.message : 'Unable to load image';
+function updateSlotDropdownOptions() {
+  const slotSelects = [
+    ...Object.values(imageBorderCornerInputs),
+    ...Object.values(imageBorderSideInputs),
+  ].filter(Boolean);
+
+  slotSelects.forEach((selectElement) => {
+    const currentValue = selectElement.value;
+    selectElement.innerHTML = '';
+
+    const emptyOption = document.createElement('option');
+    emptyOption.value = '';
+    emptyOption.textContent = 'No image';
+    selectElement.appendChild(emptyOption);
+
+    managedImages.forEach((imageEntry) => {
+      const option = document.createElement('option');
+      option.value = imageEntry.id;
+      option.textContent = imageEntry.name;
+      selectElement.appendChild(option);
+    });
+
+    const manageOption = document.createElement('option');
+    manageOption.value = '__manage__';
+    manageOption.textContent = 'Manage images…';
+    selectElement.appendChild(manageOption);
+
+    if ([...selectElement.options].some((option) => option.value === currentValue)) {
+      selectElement.value = currentValue;
+    } else {
+      selectElement.value = '';
+    }
+  });
+}
+
+async function addManagedImagesFromFileList(fileList) {
+  const files = Array.from(fileList || []).filter((file) => file?.type?.startsWith('image/'));
+
+  for (const file of files) {
+    try {
+      const loadedImage = await loadImageFromFile(file);
+      managedImages.push({
+        id: `img-${++managedImageIdCounter}`,
+        name: file.name,
+        image: loadedImage,
+      });
+    } catch (error) {
+      console.error('Unable to load selected image.', error);
+    }
+  }
+
+  updateSlotDropdownOptions();
+  renderManageImagesList();
+}
+
+function renderManageImagesList() {
+  if (!manageImagesList) {
+    return;
+  }
+
+  manageImagesList.innerHTML = '';
+  managedImages.forEach((imageEntry) => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'manage-image-item';
+    row.dataset.imageId = imageEntry.id;
+    row.textContent = imageEntry.name;
+
+    row.addEventListener('click', () => {
+      pendingSlotSelection = imageEntry.id;
+      manageImagesList.querySelectorAll('.manage-image-item').forEach((item) => item.classList.remove('active'));
+      row.classList.add('active');
+    });
+
+    row.addEventListener('dblclick', () => {
+      pendingSlotSelection = imageEntry.id;
+      applyManageImagesSelection();
+    });
+
+    manageImagesList.appendChild(row);
+  });
+}
+
+function closeManageImagesWindow() {
+  if (!manageImagesOverlay) {
+    return;
+  }
+
+  manageImagesOverlay.classList.add('hidden');
+  manageImagesOverlay.setAttribute('aria-hidden', 'true');
+  activeImageSlotSelection = null;
+  pendingSlotSelection = null;
+}
+
+function openManageImagesWindow(slotType = null, slotName = null) {
+  if (!manageImagesOverlay) {
+    return;
+  }
+
+  managedImagesSnapshot = managedImages.slice();
+  activeImageSlotSelection = slotType && slotName ? { slotType, slotName } : null;
+  pendingSlotSelection = null;
+  renderManageImagesList();
+  manageImagesOverlay.classList.remove('hidden');
+  manageImagesOverlay.setAttribute('aria-hidden', 'false');
+}
+
+function applyManageImagesSelection() {
+  if (activeImageSlotSelection && pendingSlotSelection) {
+    assignManagedImageToSlot(activeImageSlotSelection.slotType, activeImageSlotSelection.slotName, pendingSlotSelection);
+
+    const slotSelect = activeImageSlotSelection.slotType === 'corners'
+      ? imageBorderCornerInputs[activeImageSlotSelection.slotName]
+      : imageBorderSideInputs[activeImageSlotSelection.slotName];
+
+    if (slotSelect) {
+      slotSelect.value = pendingSlotSelection;
+    }
+
     drawEditorToCanvas();
   }
+
+  closeManageImagesWindow();
 }
 
 function updateImageBorderSlotInputsState(isImageModeActive) {
@@ -603,6 +784,19 @@ function updateImageBorderSlotInputsState(isImageModeActive) {
       input.disabled = !isImageModeActive;
     }
   });
+
+  Object.values(imageBorderTransformInputs).forEach((group) => {
+    Object.values(group).forEach((controls) => {
+      controls.rotation.disabled = !isImageModeActive;
+      controls.flipX.disabled = !isImageModeActive;
+      controls.flipY.disabled = !isImageModeActive;
+      controls.clear.disabled = !isImageModeActive;
+    });
+  });
+
+  if (manageImagesButton) {
+    manageImagesButton.disabled = !isImageModeActive;
+  }
 }
 
 function registerInsideOutColorInput(input) {
@@ -1302,13 +1496,70 @@ Object.entries(sidePaddingControls).forEach(([side, { lock, input }]) => {
 
 Object.entries(imageBorderCornerInputs).forEach(([corner, input]) => {
   input?.addEventListener('change', () => {
-    handleImageBorderFileChange('corners', corner, input);
+    if (input.value === '__manage__') {
+      input.value = '';
+      openManageImagesWindow('corners', corner);
+      return;
+    }
+
+    assignManagedImageToSlot('corners', corner, input.value);
+    drawEditorToCanvas();
   });
 });
 
 Object.entries(imageBorderSideInputs).forEach(([side, input]) => {
   input?.addEventListener('change', () => {
-    handleImageBorderFileChange('sides', side, input);
+    if (input.value === '__manage__') {
+      input.value = '';
+      openManageImagesWindow('sides', side);
+      return;
+    }
+
+    assignManagedImageToSlot('sides', side, input.value);
+    drawEditorToCanvas();
+  });
+});
+
+Object.entries(imageBorderTransformInputs).forEach(([slotType, group]) => {
+  Object.entries(group).forEach(([slotName, controls]) => {
+    controls.rotation?.addEventListener('change', () => {
+      const slotState = getImageBorderSlotState(slotType, slotName);
+      if (!slotState) {
+        return;
+      }
+      slotState.rotation = Number.parseInt(controls.rotation.value, 10) || 0;
+      drawEditorToCanvas();
+    });
+
+    controls.flipX?.addEventListener('change', () => {
+      const slotState = getImageBorderSlotState(slotType, slotName);
+      if (!slotState) {
+        return;
+      }
+      slotState.flipX = controls.flipX.checked;
+      drawEditorToCanvas();
+    });
+
+    controls.flipY?.addEventListener('change', () => {
+      const slotState = getImageBorderSlotState(slotType, slotName);
+      if (!slotState) {
+        return;
+      }
+      slotState.flipY = controls.flipY.checked;
+      drawEditorToCanvas();
+    });
+
+    controls.clear?.addEventListener('click', () => {
+      const slotState = getImageBorderSlotState(slotType, slotName);
+      clearImageBorderSlot(slotState);
+
+      const slotSelect = slotType === 'corners' ? imageBorderCornerInputs[slotName] : imageBorderSideInputs[slotName];
+      if (slotSelect) {
+        slotSelect.value = '';
+      }
+
+      drawEditorToCanvas();
+    });
   });
 });
 
@@ -1584,6 +1835,47 @@ if (settingsOverlay) {
   });
 }
 
+if (manageImagesButton) {
+  manageImagesButton.addEventListener('click', () => {
+    openManageImagesWindow();
+  });
+}
+
+if (manageImagesInput) {
+  manageImagesInput.addEventListener('change', async () => {
+    await addManagedImagesFromFileList(manageImagesInput.files);
+    manageImagesInput.value = '';
+  });
+}
+
+if (closeManageImagesWindowButton) {
+  closeManageImagesWindowButton.addEventListener('click', () => {
+    closeManageImagesWindow();
+  });
+}
+
+if (manageImagesCancelButton) {
+  manageImagesCancelButton.addEventListener('click', () => {
+    managedImages.splice(0, managedImages.length, ...managedImagesSnapshot);
+    updateSlotDropdownOptions();
+    closeManageImagesWindow();
+  });
+}
+
+if (manageImagesOkButton) {
+  manageImagesOkButton.addEventListener('click', () => {
+    applyManageImagesSelection();
+  });
+}
+
+if (manageImagesOverlay) {
+  manageImagesOverlay.addEventListener('click', (event) => {
+    if (event.target === manageImagesOverlay) {
+      closeManageImagesWindow();
+    }
+  });
+}
+
 if (darkModeToggle) {
   darkModeToggle.addEventListener('change', () => {
     applyDarkMode(darkModeToggle.checked);
@@ -1595,6 +1887,12 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     closeColorWindow();
     closeSettingsWindow();
+    closeManageImagesWindow();
+  }
+
+  if (event.key === 'Enter' && manageImagesOverlay && !manageImagesOverlay.classList.contains('hidden')) {
+    event.preventDefault();
+    applyManageImagesSelection();
   }
 });
 
@@ -1605,6 +1903,7 @@ if (appVersionBadge) {
 syncColorPickerUI();
 syncColorPreviewButtons();
 applySavedSettings();
+updateSlotDropdownOptions();
 
 updateBorderControlsState();
 syncImageLockedPaddingValues();

@@ -532,8 +532,55 @@ body.dark-mode .image-border-slot-group legend {
   color: #1f2937;
 }
 
-.image-border-slot-group input[type='file'] {
-  width: 100%;
+
+.image-border-slot-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(120px, 1fr) 74px 70px 70px 42px;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.image-border-slot-row select,
+.image-border-slot-row button {
+  height: 30px;
+}
+
+.image-border-slot-row button {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.manage-images-body {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.manage-images-list {
+  min-height: 180px;
+  max-height: 280px;
+  overflow: auto;
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.manage-image-item {
+  text-align: left;
+  border: 1px solid #5b616a;
+  background: #1f2937;
+  color: #f9fafb;
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+}
+
+.manage-image-item.active {
+  border-color: #60a5fa;
+  background: #1e3a8a;
 }
 
 .background-color-solid-row {
