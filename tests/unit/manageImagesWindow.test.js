@@ -95,4 +95,27 @@ describe('manage images window', () => {
 
     expect(onSelectionApplied).toHaveBeenCalledWith({ slotType: 'corners', slotName: 'topLeft' }, image.id);
   });
+
+  it('toggles folder collapsed state on double click', () => {
+    const store = createImageLibraryStore();
+    const folder = store.createFolder({ name: 'Folder A' });
+    store.createImage({ name: 'Nested', parentId: folder.id });
+    const elements = createElements();
+
+    createManageImagesWindowController({
+      store,
+      elements,
+      loadImageFromFile: vi.fn(),
+    }).open();
+
+    const folderRow = elements.tree.querySelector(`[data-entity-key="folder:${folder.id}"]`);
+    expect(elements.tree.textContent).toContain('Nested');
+
+    folderRow.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(elements.tree.textContent).not.toContain('Nested');
+
+    const updatedFolderRow = elements.tree.querySelector(`[data-entity-key="folder:${folder.id}"]`);
+    updatedFolderRow.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(elements.tree.textContent).toContain('Nested');
+  });
 });

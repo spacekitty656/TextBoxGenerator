@@ -203,6 +203,19 @@ export function createManageImagesWindowController({
     render();
   }
 
+  function toggleFolderCollapsed(folderId, hasChildren = true) {
+    if (!hasChildren) {
+      return;
+    }
+
+    if (state.collapsedFolderIds.has(folderId)) {
+      state.collapsedFolderIds.delete(folderId);
+    } else {
+      state.collapsedFolderIds.add(folderId);
+    }
+    renderTree();
+  }
+
   function getPreferredFolderParentId() {
     const selected = getSingleSelection();
 
@@ -501,7 +514,17 @@ export function createManageImagesWindowController({
       });
 
       row.addEventListener('dblclick', (event) => {
-        if (entry.synthetic || entry.type !== 'image' || state.editor) {
+        if (entry.synthetic || state.editor) {
+          return;
+        }
+
+        if (entry.type === 'folder') {
+          event.preventDefault();
+          toggleFolderCollapsed(entry.id, hasFolderChildren);
+          return;
+        }
+
+        if (entry.type !== 'image') {
           return;
         }
 
@@ -526,16 +549,7 @@ export function createManageImagesWindowController({
         const toggleButton = row.querySelector('.manage-tree-toggle');
         toggleButton?.addEventListener('click', (event) => {
           event.stopPropagation();
-          if (!hasFolderChildren) {
-            return;
-          }
-
-          if (isCollapsed) {
-            state.collapsedFolderIds.delete(entry.id);
-          } else {
-            state.collapsedFolderIds.add(entry.id);
-          }
-          renderTree();
+          toggleFolderCollapsed(entry.id, hasFolderChildren);
         });
       }
 
