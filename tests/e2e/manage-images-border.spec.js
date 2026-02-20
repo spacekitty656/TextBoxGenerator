@@ -3,7 +3,15 @@ const { test, expect } = require('@playwright/test');
 async function enableImageBorderMode(page) {
   await page.goto('/');
   await page.locator('#enable-border').check();
-  await page.locator('#border-color-images').check();
+  const borderColorImages = page.locator('#border-color-images');
+  if (!(await borderColorImages.isChecked())) {
+    await borderColorImages.evaluate((element) => {
+      element.checked = true;
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
+  await expect(borderColorImages).toBeChecked();
 }
 
 async function importImage(page, name = 'imported.png') {
