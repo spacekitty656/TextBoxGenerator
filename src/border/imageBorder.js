@@ -30,23 +30,28 @@ export function drawSideImage({ context, slot, x, y, width, height, orientation,
       ? Math.max(1, sourceSize.width || sourceSize.height || width)
       : Math.max(1, sourceSize.height || sourceSize.width || height);
 
+    context.save();
+    context.beginPath();
+    context.rect(x, y, width, height);
+    context.clip();
+
     if (orientation === 'horizontal') {
       let drawX = x;
       const maxX = x + width;
       while (drawX < maxX) {
-        const drawWidth = Math.min(tileLength, maxX - drawX);
-        context.drawImage(sourceImage, drawX, y, drawWidth, height);
+        context.drawImage(sourceImage, drawX, y, tileLength, height);
         drawX += tileLength;
       }
     } else {
       let drawY = y;
       const maxY = y + height;
       while (drawY < maxY) {
-        const drawHeight = Math.min(tileLength, maxY - drawY);
-        context.drawImage(sourceImage, x, drawY, width, drawHeight);
+        context.drawImage(sourceImage, x, drawY, width, tileLength);
         drawY += tileLength;
       }
     }
+
+    context.restore();
 
     return true;
   }
