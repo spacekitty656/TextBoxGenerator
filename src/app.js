@@ -614,7 +614,6 @@ function clearImageBorderSlot(slotState) {
 const imageLibraryStore = createImageLibraryStore();
 let activeImageSlotSelection = null;
 let pendingSlotSelection = null;
-let managedImagesSnapshot = [];
 
 function getManagedImageById(imageId) {
   return imageLibraryStore.getImage(imageId);
@@ -755,7 +754,6 @@ function openManageImagesWindow(slotType = null, slotName = null) {
     return;
   }
 
-  managedImagesSnapshot = imageLibraryStore.createSnapshot();
   activeImageSlotSelection = slotType && slotName ? { slotType, slotName } : null;
   pendingSlotSelection = activeImageSlotSelection
     ? (getImageBorderSlotState(activeImageSlotSelection.slotType, activeImageSlotSelection.slotName)?.imageId || null)
@@ -1853,7 +1851,6 @@ if (closeManageImagesWindowButton) {
 
 if (manageImagesCancelButton) {
   manageImagesCancelButton.addEventListener('click', () => {
-    imageLibraryStore.restoreSnapshot(managedImagesSnapshot);
     closeManageImagesWindow();
   });
 }
