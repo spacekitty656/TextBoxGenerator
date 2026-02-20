@@ -8,7 +8,7 @@ import {
   restoreImageLibraryFromIndexedDb,
 } from '../../src/images/libraryPersistenceIndexedDb.js';
 
-function createFakeIndexedDb() {
+function createFakeIndexedDb({ imagePutError = null } = {}) {
   const databases = new Map();
 
   function createDatabase(name) {
@@ -43,6 +43,7 @@ function createFakeIndexedDb() {
             onerror: null,
             onabort: null,
           };
+          let abortedError = null;
 
           function scheduleComplete() {
             if (!closed && pending === 0 && typeof listeners.oncomplete === 'function') {
@@ -52,6 +53,7 @@ function createFakeIndexedDb() {
           }
 
           const transaction = {
+            error: null,
             get oncomplete() {
               return listeners.oncomplete;
             },
@@ -64,12 +66,18 @@ function createFakeIndexedDb() {
             },
             set onerror(handler) {
               listeners.onerror = handler;
+              if (abortedError && typeof handler === 'function') {
+                setTimeout(() => handler(), 0);
+              }
             },
             get onabort() {
               return listeners.onabort;
             },
             set onabort(handler) {
               listeners.onabort = handler;
+              if (abortedError && typeof handler === 'function') {
+                setTimeout(() => handler(), 0);
+              }
             },
             objectStore(storeName) {
               if (!names.includes(storeName)) {
@@ -98,7 +106,13 @@ function createFakeIndexedDb() {
                   } catch (error) {
                     request.error = error;
                     request.onerror?.();
-                    listeners.onerror?.();
+                    if (!closed) {
+                      closed = true;
+                      abortedError = error;
+                      transaction.error = error;
+                      listeners.onerror?.();
+                      listeners.onabort?.();
+                    }
                   } finally {
                     pending -= 1;
                     scheduleComplete();
@@ -111,6 +125,10 @@ function createFakeIndexedDb() {
               return {
                 put(value) {
                   return makeRequest(() => {
+                    if (storeName === 'images' && imagePutError) {
+                      throw imagePutError;
+                    }
+
                     const key = storeName === 'images' ? value.blobId : value.id;
                     backingStore.set(key, value);
                     return key;
@@ -183,8 +201,8 @@ describe('indexeddb image library persistence', () => {
       byteSize: blob.size,
     });
 
-    const didPersist = await persistImageLibraryToIndexedDb(store, { indexedDb });
-    expect(didPersist).toBe(true);
+    const persistStatus = await persistImageLibraryToIndexedDb(store, { indexedDb });
+    expect(persistStatus).toMatchObject({ ok: true });
 
     const persistedImage = store.getImage(created.id);
     expect(persistedImage.blobId).toBeTruthy();
@@ -199,6 +217,29 @@ describe('indexeddb image library persistence', () => {
       storageKey: persistedImage.blobId,
     });
     expect(restored.images[0].blob).toBeInstanceOf(Blob);
+  });
+
+  it('returns quota-exceeded status when indexeddb writes fail with quota errors', async () => {
+    const quotaError = new Error('Storage full.');
+    quotaError.name = 'QuotaExceededError';
+
+    const indexedDb = createFakeIndexedDb({ imagePutError: quotaError });
+    const store = createImageLibraryStore();
+    const blob = new Blob(['hello'], { type: 'image/png' });
+
+    store.createImage({
+      name: 'large.png',
+      blob,
+      mimeType: 'image/png',
+      byteSize: blob.size,
+    });
+
+    const persistStatus = await persistImageLibraryToIndexedDb(store, { indexedDb });
+    expect(persistStatus).toMatchObject({
+      ok: false,
+      reason: 'quota-exceeded',
+      error: quotaError,
+    });
   });
 
   it('migrates legacy localStorage payload into indexeddb and clears legacy key', async () => {
@@ -217,12 +258,16 @@ describe('indexeddb image library persistence', () => {
     };
 
     const targetStore = createImageLibraryStore();
-    await migrateLegacyImageLibraryToIndexedDb(targetStore, {
+    const migrationResult = await migrateLegacyImageLibraryToIndexedDb(targetStore, {
       storage,
       storageKey: IMAGE_LIBRARY_STORAGE_KEY,
       indexedDb,
     });
 
+    expect(migrationResult).toMatchObject({
+      ok: true,
+      library: expect.any(Object),
+    });
     expect(storage.getItem).toHaveBeenCalledWith(IMAGE_LIBRARY_STORAGE_KEY);
     expect(storage.removeItem).toHaveBeenCalledWith(IMAGE_LIBRARY_STORAGE_KEY);
 
