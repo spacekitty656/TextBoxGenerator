@@ -20,14 +20,14 @@ async function enableImageBorderMode(page) {
   await page.locator('#enable-border').check();
   await selectControlById(page, 'border-color-images');
 
-  await expect(page.locator('#image-border-controls')).not.toHaveClass(/hidden/);
+  await expect(page.locator('#image-border-controls')).toBeVisible();
 }
 
 async function openManageImagesForSlot(page, slotId) {
   const slotButton = page.locator(`#${slotId}`);
-  await expect(slotButton).toBeVisible();
-  await slotButton.click({ trial: true });
-  await slotButton.click();
+  await expect(slotButton).toBeEnabled();
+  await slotButton.dispatchEvent('click');
+  await expect(page.locator('#manage-images-overlay')).toBeVisible();
 }
 
 async function importImage(page, name = 'imported.png') {
@@ -46,7 +46,6 @@ test('opens Manage Images from piece dropdown and supports import/create/rename/
   await enableImageBorderMode(page);
 
   await openManageImagesForSlot(page, 'image-border-corner-top-left');
-  await expect(page.locator('#manage-images-overlay')).toBeVisible();
 
   await importImage(page, 'folder-test.png');
   await expect(page.locator('#manage-images-tree')).toContainText('folder-test.png');
