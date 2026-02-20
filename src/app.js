@@ -44,123 +44,72 @@ import {
   layoutDocumentForCanvas as layoutDocumentForCanvasFromRenderer,
   calculateCanvasDimensions as calculateCanvasDimensionsFromRenderer,
 } from './render/canvasRenderer.js';
+import { createBorderControlsView } from './ui/views/borderControlsView.js';
+import { createColorPickerView } from './ui/views/colorPickerView.js';
+import { createEditorView } from './ui/views/editorView.js';
+import { createManageImagesView } from './ui/views/manageImagesView.js';
+import { createSettingsView } from './ui/views/settingsView.js';
 
 const Quill = window.Quill;
 
-const canvas = document.getElementById('preview-canvas');
+const editorView = createEditorView(document);
+const settingsView = createSettingsView(document);
+const borderControlsView = createBorderControlsView(document);
+const manageImagesView = createManageImagesView(document);
+const colorPickerView = createColorPickerView(document);
+
+const canvas = editorView.canvas.preview;
 const context = canvas.getContext('2d');
-const editorElement = document.getElementById('editor');
-const saveButton = document.getElementById('save-image');
-const imageNameInput = document.getElementById('image-name');
-const appVersionBadge = document.getElementById('app-version');
-const storageStatusMessage = document.getElementById('storage-status-message');
-const settingsButton = document.getElementById('settings-button');
-const settingsOverlay = document.getElementById('settings-overlay');
-const closeSettingsWindowButton = document.getElementById('close-settings-window');
-const darkModeToggle = document.getElementById('dark-mode-toggle');
+const editorElement = editorView.editor.root;
+const saveButton = editorView.output.saveButton;
+const imageNameInput = editorView.output.imageNameInput;
+const appVersionBadge = editorView.output.appVersionBadge;
+const storageStatusMessage = editorView.output.storageStatusMessage;
+const settingsButton = settingsView.window.openButton;
+const settingsOverlay = settingsView.window.overlay;
+const closeSettingsWindowButton = settingsView.window.closeButton;
+const darkModeToggle = settingsView.preferences.darkModeToggle;
 const APP_VERSION = '1.1.9';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 const SETTINGS_STORAGE_KEY = DEFAULT_SETTINGS_STORAGE_KEY;
 
-const borderToggle = document.getElementById('enable-border');
-const borderOptions = document.getElementById('border-options');
-const borderWidthInput = document.getElementById('border-width');
-const borderRadiusInput = document.getElementById('border-radius');
-const borderColorSolidRadio = document.getElementById('border-color-solid');
-const borderColorInsideOutRadio = document.getElementById('border-color-inside-out');
-const borderColorImagesRadio = document.getElementById('border-color-images');
-const borderColorInput = document.getElementById('border-color-input');
-const backgroundColorTransparentRadio = document.getElementById('background-color-transparent');
-const backgroundColorSolidRadio = document.getElementById('background-color-solid');
-const backgroundColorInput = document.getElementById('background-color-input');
-const borderBackgroundColorTransparentRadio = document.getElementById('border-background-color-transparent');
-const borderBackgroundColorSolidRadio = document.getElementById('border-background-color-solid');
-const borderBackgroundColorInput = document.getElementById('border-background-color-input');
-const insideOutColors = document.getElementById('inside-out-colors');
-const insideOutColorList = document.getElementById('inside-out-color-list');
-const insideOutAddColorButton = document.getElementById('inside-out-add-color');
-const imageBorderControls = document.getElementById('image-border-controls');
-const imageBorderSizingModeInput = document.getElementById('image-border-sizing-mode');
-const imageBorderRepeatModeInput = document.getElementById('image-border-repeat-mode');
-const imageBorderCornerButtons = {
-  topLeft: document.getElementById('image-border-corner-top-left'),
-  topRight: document.getElementById('image-border-corner-top-right'),
-  bottomRight: document.getElementById('image-border-corner-bottom-right'),
-  bottomLeft: document.getElementById('image-border-corner-bottom-left'),
-};
-const imageBorderSideButtons = {
-  top: document.getElementById('image-border-side-top'),
-  right: document.getElementById('image-border-side-right'),
-  bottom: document.getElementById('image-border-side-bottom'),
-  left: document.getElementById('image-border-side-left'),
-};
-const imageBorderTransformInputs = {
-  corners: {
-    topLeft: {
-      rotation: document.getElementById('image-border-corner-top-left-rotation'),
-      flipX: document.getElementById('image-border-corner-top-left-flip-x'),
-      flipY: document.getElementById('image-border-corner-top-left-flip-y'),
-      clear: document.getElementById('image-border-corner-top-left-clear'),
-    },
-    topRight: {
-      rotation: document.getElementById('image-border-corner-top-right-rotation'),
-      flipX: document.getElementById('image-border-corner-top-right-flip-x'),
-      flipY: document.getElementById('image-border-corner-top-right-flip-y'),
-      clear: document.getElementById('image-border-corner-top-right-clear'),
-    },
-    bottomRight: {
-      rotation: document.getElementById('image-border-corner-bottom-right-rotation'),
-      flipX: document.getElementById('image-border-corner-bottom-right-flip-x'),
-      flipY: document.getElementById('image-border-corner-bottom-right-flip-y'),
-      clear: document.getElementById('image-border-corner-bottom-right-clear'),
-    },
-    bottomLeft: {
-      rotation: document.getElementById('image-border-corner-bottom-left-rotation'),
-      flipX: document.getElementById('image-border-corner-bottom-left-flip-x'),
-      flipY: document.getElementById('image-border-corner-bottom-left-flip-y'),
-      clear: document.getElementById('image-border-corner-bottom-left-clear'),
-    },
-  },
-  sides: {
-    top: {
-      rotation: document.getElementById('image-border-side-top-rotation'),
-      flipX: document.getElementById('image-border-side-top-flip-x'),
-      flipY: document.getElementById('image-border-side-top-flip-y'),
-      clear: document.getElementById('image-border-side-top-clear'),
-    },
-    right: {
-      rotation: document.getElementById('image-border-side-right-rotation'),
-      flipX: document.getElementById('image-border-side-right-flip-x'),
-      flipY: document.getElementById('image-border-side-right-flip-y'),
-      clear: document.getElementById('image-border-side-right-clear'),
-    },
-    bottom: {
-      rotation: document.getElementById('image-border-side-bottom-rotation'),
-      flipX: document.getElementById('image-border-side-bottom-flip-x'),
-      flipY: document.getElementById('image-border-side-bottom-flip-y'),
-      clear: document.getElementById('image-border-side-bottom-clear'),
-    },
-    left: {
-      rotation: document.getElementById('image-border-side-left-rotation'),
-      flipX: document.getElementById('image-border-side-left-flip-x'),
-      flipY: document.getElementById('image-border-side-left-flip-y'),
-      clear: document.getElementById('image-border-side-left-clear'),
-    },
-  },
-};
-const manageImagesOverlay = document.getElementById('manage-images-overlay');
-const closeManageImagesWindowButton = document.getElementById('close-manage-images-window');
-const manageImagesInput = document.getElementById('manage-images-input');
-const manageImagesRefreshInput = document.getElementById('manage-images-refresh-input');
-const manageImagesTree = document.getElementById('manage-images-tree');
-const manageImagesContextMenu = document.getElementById('manage-images-context-menu');
-const manageImagesImportButton = document.getElementById('manage-images-import');
-const manageImagesCreateFolderButton = document.getElementById('manage-images-create-folder');
-const manageImagesRefreshButton = document.getElementById('manage-images-refresh');
-const manageImagesRenameButton = document.getElementById('manage-images-rename');
-const manageImagesDeleteButton = document.getElementById('manage-images-delete');
-const manageImagesOkButton = document.getElementById('manage-images-ok');
-const manageImagesCancelButton = document.getElementById('manage-images-cancel');
+const borderToggle = borderControlsView.toggles.borderToggle;
+const borderOptions = borderControlsView.toggles.borderOptions;
+const borderWidthInput = borderControlsView.borderStyle.widthInput;
+const borderRadiusInput = borderControlsView.borderStyle.radiusInput;
+const borderColorSolidRadio = borderControlsView.colorModes.borderColorSolidRadio;
+const borderColorInsideOutRadio = borderControlsView.colorModes.borderColorInsideOutRadio;
+const borderColorImagesRadio = borderControlsView.colorModes.borderColorImagesRadio;
+const borderColorInput = borderControlsView.borderStyle.borderColorInput;
+const backgroundColorTransparentRadio = borderControlsView.colorModes.backgroundColorTransparentRadio;
+const backgroundColorSolidRadio = borderControlsView.colorModes.backgroundColorSolidRadio;
+const backgroundColorInput = borderControlsView.borderStyle.backgroundColorInput;
+const borderBackgroundColorTransparentRadio = borderControlsView.colorModes.borderBackgroundColorTransparentRadio;
+const borderBackgroundColorSolidRadio = borderControlsView.colorModes.borderBackgroundColorSolidRadio;
+const borderBackgroundColorInput = borderControlsView.borderStyle.borderBackgroundColorInput;
+const insideOutColors = borderControlsView.insideOut.colorsContainer;
+const insideOutColorList = borderControlsView.insideOut.colorList;
+const insideOutAddColorButton = borderControlsView.insideOut.addColorButton;
+const imageBorderControls = borderControlsView.imageBorder.controls;
+const imageBorderSizingModeInput = borderControlsView.imageBorder.sizingModeInput;
+const imageBorderRepeatModeInput = borderControlsView.imageBorder.repeatModeInput;
+const imageBorderCornerButtons = borderControlsView.imageBorder.cornerButtons;
+const imageBorderSideButtons = borderControlsView.imageBorder.sideButtons;
+const imageBorderTransformInputs = borderControlsView.imageBorder.transformInputs;
+
+const manageImagesOverlay = manageImagesView.window.overlay;
+const closeManageImagesWindowButton = manageImagesView.window.closeButton;
+const manageImagesInput = manageImagesView.tree.input;
+const manageImagesRefreshInput = manageImagesView.tree.refreshInput;
+const manageImagesTree = manageImagesView.tree.tree;
+const manageImagesContextMenu = manageImagesView.tree.contextMenu;
+const manageImagesImportButton = manageImagesView.actions.importButton;
+const manageImagesCreateFolderButton = manageImagesView.actions.createFolderButton;
+const manageImagesRefreshButton = manageImagesView.actions.refreshButton;
+const manageImagesRenameButton = manageImagesView.actions.renameButton;
+const manageImagesDeleteButton = manageImagesView.actions.deleteButton;
+const manageImagesOkButton = manageImagesView.window.okButton;
+const manageImagesCancelButton = manageImagesView.window.cancelButton;
 
 const insideOutColorInputs = [];
 
@@ -179,47 +128,33 @@ const imageBorderState = {
   },
 };
 
-const centerPaddingInput = document.getElementById('padding-center');
-const sidePaddingControls = {
-  top: { input: document.getElementById('padding-top'), lock: document.getElementById('lock-top') },
-  right: { input: document.getElementById('padding-right'), lock: document.getElementById('lock-right') },
-  bottom: { input: document.getElementById('padding-bottom'), lock: document.getElementById('lock-bottom') },
-  left: { input: document.getElementById('padding-left'), lock: document.getElementById('lock-left') },
-};
+const centerPaddingInput = editorView.padding.text.centerInput;
+const sidePaddingControls = editorView.padding.text.sides;
 
-const wrapTextInput = document.getElementById('wrap-text');
-const maxImageWidthInput = document.getElementById('max-image-width');
-const colorWindowOverlay = document.getElementById('color-window-overlay');
-const closeColorWindowButton = document.getElementById('close-color-window');
-const basicColorsGrid = document.querySelector('.basic-colors-grid');
-const customColorsGrid = document.querySelector('.custom-colors-grid');
-const canvasPanel = document.querySelector('.canvas-panel');
-const formPanel = document.querySelector('.form-panel');
-const addCustomColorButton = document.getElementById('add-custom-color');
-const pickScreenColorButton = document.getElementById('pick-screen-color');
-const openBackgroundColorWindowButton = document.querySelector('.ql-open-background-color-window');
-const backgroundColorWindowButton = document.getElementById('background-color-window-button');
-const borderColorWindowButton = document.getElementById('border-color-window-button');
-const borderBackgroundColorWindowButton = document.getElementById('border-background-color-window-button');
+const wrapTextInput = editorView.editor.wrapTextInput;
+const maxImageWidthInput = editorView.editor.maxImageWidthInput;
+const colorWindowOverlay = colorPickerView.window.overlay;
+const closeColorWindowButton = colorPickerView.window.closeButton;
+const basicColorsGrid = colorPickerView.grids.basicColors;
+const customColorsGrid = colorPickerView.grids.customColors;
+const canvasPanel = editorView.canvas.panel;
+const formPanel = editorView.editor.formPanel;
+const addCustomColorButton = colorPickerView.grids.addCustomColorButton;
+const pickScreenColorButton = colorPickerView.grids.pickScreenColorButton;
+const openBackgroundColorWindowButton = colorPickerView.triggerButtons.openBackgroundColorWindowButton;
+const backgroundColorWindowButton = colorPickerView.triggerButtons.backgroundColorWindowButton;
+const borderColorWindowButton = colorPickerView.triggerButtons.borderColorWindowButton;
+const borderBackgroundColorWindowButton = colorPickerView.triggerButtons.borderBackgroundColorWindowButton;
 
-const colorMap = document.getElementById('color-map');
-const colorMapHandle = document.getElementById('color-map-handle');
-const colorSlider = document.getElementById('color-slider');
-const colorSliderHandle = document.getElementById('color-slider-handle');
-const selectedColorPreview = document.getElementById('selected-color-preview');
-const colorWindowTitle = document.getElementById('color-window-title');
-const colorValueInputs = {
-  hue: document.getElementById('color-value-hue'),
-  sat: document.getElementById('color-value-sat'),
-  val: document.getElementById('color-value-val'),
-  red: document.getElementById('color-value-red'),
-  green: document.getElementById('color-value-green'),
-  blue: document.getElementById('color-value-blue'),
-  alpha: document.getElementById('color-value-alpha'),
-  hex: document.getElementById('color-value-hex'),
-};
-const colorWindowOkButton = document.getElementById('color-window-ok');
-const colorWindowCancelButton = document.getElementById('color-window-cancel');
+const colorMap = colorPickerView.picker.colorMap;
+const colorMapHandle = colorPickerView.picker.colorMapHandle;
+const colorSlider = colorPickerView.picker.colorSlider;
+const colorSliderHandle = colorPickerView.picker.colorSliderHandle;
+const selectedColorPreview = colorPickerView.picker.selectedColorPreview;
+const colorWindowTitle = colorPickerView.window.title;
+const colorValueInputs = colorPickerView.picker.valueInputs;
+const colorWindowOkButton = colorPickerView.window.okButton;
+const colorWindowCancelButton = colorPickerView.window.cancelButton;
 
 const colorPickerState = {
   hue: 35,
@@ -525,13 +460,8 @@ function forwardCanvasPanelScrollToFormPanel(event) {
   event.preventDefault();
 }
 
-const imageCenterPaddingInput = document.getElementById('image-padding-center');
-const imageSidePaddingControls = {
-  top: { input: document.getElementById('image-padding-top'), lock: document.getElementById('image-lock-top') },
-  right: { input: document.getElementById('image-padding-right'), lock: document.getElementById('image-lock-right') },
-  bottom: { input: document.getElementById('image-padding-bottom'), lock: document.getElementById('image-lock-bottom') },
-  left: { input: document.getElementById('image-padding-left'), lock: document.getElementById('image-lock-left') },
-};
+const imageCenterPaddingInput = editorView.padding.image.centerInput;
+const imageSidePaddingControls = editorView.padding.image.sides;
 
 const lockState = {
   top: true,
