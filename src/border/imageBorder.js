@@ -39,14 +39,14 @@ export function drawSideImage({ context, slot, x, y, width, height, orientation,
       let drawX = x;
       const maxX = x + width;
       while (drawX < maxX) {
-        context.drawImage(sourceImage, drawX, y, tileLength, height);
+        drawTransformedImage({ context, slot, sourceImage, x: drawX, y, width: tileLength, height });
         drawX += tileLength;
       }
     } else {
       let drawY = y;
       const maxY = y + height;
       while (drawY < maxY) {
-        context.drawImage(sourceImage, x, drawY, width, tileLength);
+        drawTransformedImage({ context, slot, sourceImage, x, y: drawY, width, height: tileLength });
         drawY += tileLength;
       }
     }
@@ -56,8 +56,26 @@ export function drawSideImage({ context, slot, x, y, width, height, orientation,
     return true;
   }
 
-  context.drawImage(sourceImage, x, y, width, height);
+  drawTransformedImage({ context, slot, sourceImage, x, y, width, height });
   return true;
+}
+
+function drawTransformedImage({ context, slot, sourceImage, x, y, width, height }) {
+  const rotation = Number.parseInt(slot?.rotation, 10) || 0;
+  const flipX = Boolean(slot?.flipX);
+  const flipY = Boolean(slot?.flipY);
+
+  if (rotation === 0 && !flipX && !flipY) {
+    context.drawImage(sourceImage, x, y, width, height);
+    return;
+  }
+
+  context.save();
+  context.translate(x + width / 2, y + height / 2);
+  context.rotate((rotation * Math.PI) / 180);
+  context.scale(flipX ? -1 : 1, flipY ? -1 : 1);
+  context.drawImage(sourceImage, -width / 2, -height / 2, width, height);
+  context.restore();
 }
 
 export function drawImageBorder({ context, borderConfig, borderX, borderY, borderRectWidth, borderRectHeight, drawRoundedRectPath }) {
@@ -90,10 +108,10 @@ export function drawImageBorder({ context, borderConfig, borderX, borderY, borde
   const bottomRightSize = resolveCornerDrawSize(bottomRight, getSlotImageSize(bottomRight));
   const bottomLeftSize = resolveCornerDrawSize(bottomLeft, getSlotImageSize(bottomLeft));
 
-  if (hasReadyImage(topLeft)) context.drawImage(topLeft.image, borderX, borderY, topLeftSize.width, topLeftSize.height);
-  if (hasReadyImage(topRight)) context.drawImage(topRight.image, borderX + borderRectWidth - topRightSize.width, borderY, topRightSize.width, topRightSize.height);
-  if (hasReadyImage(bottomRight)) context.drawImage(bottomRight.image, borderX + borderRectWidth - bottomRightSize.width, borderY + borderRectHeight - bottomRightSize.height, bottomRightSize.width, bottomRightSize.height);
-  if (hasReadyImage(bottomLeft)) context.drawImage(bottomLeft.image, borderX, borderY + borderRectHeight - bottomLeftSize.height, bottomLeftSize.width, bottomLeftSize.height);
+  if (hasReadyImage(topLeft)) drawTransformedImage({ context, slot: topLeft, sourceImage: topLeft.image, x: borderX, y: borderY, width: topLeftSize.width, height: topLeftSize.height });
+  if (hasReadyImage(topRight)) drawTransformedImage({ context, slot: topRight, sourceImage: topRight.image, x: borderX + borderRectWidth - topRightSize.width, y: borderY, width: topRightSize.width, height: topRightSize.height });
+  if (hasReadyImage(bottomRight)) drawTransformedImage({ context, slot: bottomRight, sourceImage: bottomRight.image, x: borderX + borderRectWidth - bottomRightSize.width, y: borderY + borderRectHeight - bottomRightSize.height, width: bottomRightSize.width, height: bottomRightSize.height });
+  if (hasReadyImage(bottomLeft)) drawTransformedImage({ context, slot: bottomLeft, sourceImage: bottomLeft.image, x: borderX, y: borderY + borderRectHeight - bottomLeftSize.height, width: bottomLeftSize.width, height: bottomLeftSize.height });
 
   const topSideX = borderX + topLeftSize.width;
   const topSideWidth = Math.max(0, borderRectWidth - topLeftSize.width - topRightSize.width);

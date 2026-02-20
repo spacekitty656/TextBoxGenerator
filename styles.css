@@ -521,6 +521,16 @@ body.dark-mode .image-border-slot-group legend {
   color: #f3f4f6;
 }
 
+body.dark-mode .image-border-slot-header {
+  color: #9ca3af;
+}
+
+body.dark-mode .piece-select-button {
+  background: #374151;
+  border-color: #6b7280;
+  color: #f9fafb;
+}
+
 .image-border-slot-group legend {
   padding: 0 0.25rem;
   font-weight: 600;
@@ -532,8 +542,76 @@ body.dark-mode .image-border-slot-group legend {
   color: #1f2937;
 }
 
-.image-border-slot-group input[type='file'] {
+
+.image-border-slot-row {
+  display: grid;
+  grid-template-columns: minmax(72px, 1fr) minmax(96px, 1.35fr) 52px 38px 38px 30px;
+  column-gap: 0.16rem;
+  row-gap: 0.35rem;
+  align-items: center;
+}
+
+.image-border-slot-row select,
+.image-border-slot-row button {
+  height: 30px;
+}
+
+.image-border-slot-row button {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+
+.image-border-slot-header {
+  display: grid;
+  grid-template-columns: minmax(72px, 1fr) minmax(96px, 1.35fr) 52px 38px 38px 30px;
+  column-gap: 0.16rem;
+  row-gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.piece-select-button {
   width: 100%;
+  text-align: left;
+  padding: 0 0.45rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.manage-images-body {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.manage-images-list {
+  min-height: 180px;
+  max-height: 280px;
+  overflow: auto;
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.manage-image-item {
+  text-align: left;
+  border: 1px solid #5b616a;
+  background: #1f2937;
+  color: #f9fafb;
+  border-radius: 6px;
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+}
+
+.manage-image-item.active {
+  border-color: #60a5fa;
+  background: #1e3a8a;
 }
 
 .background-color-solid-row {
@@ -1135,4 +1213,13 @@ body.dark-mode .settings-window-header {
     #d1d5db 270deg 360deg
   );
   background-size: 8px 8px;
+}
+
+.image-border-slot-row select[id$='-rotation'] {
+  width: 52px;
+  min-width: 52px;
+}
+
+.image-border-slot-group {
+  overflow-x: clip;
 }
