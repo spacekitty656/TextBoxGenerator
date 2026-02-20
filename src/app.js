@@ -47,6 +47,7 @@ const editorElement = document.getElementById('editor');
 const saveButton = document.getElementById('save-image');
 const imageNameInput = document.getElementById('image-name');
 const appVersionBadge = document.getElementById('app-version');
+const storageStatusMessage = document.getElementById('storage-status-message');
 const settingsButton = document.getElementById('settings-button');
 const settingsOverlay = document.getElementById('settings-overlay');
 const closeSettingsWindowButton = document.getElementById('close-settings-window');
@@ -470,10 +471,43 @@ function applySavedSettings() {
   });
 }
 
+function setStorageStatusMessage(message = '', isError = false) {
+  if (!storageStatusMessage) {
+    return;
+  }
+
+  storageStatusMessage.textContent = message;
+  storageStatusMessage.classList.toggle('hidden', !message);
+  storageStatusMessage.classList.toggle('status-message-error', Boolean(message) && isError);
+}
+
 function persistImageLibrary() {
-  persistImageLibraryToIndexedDb(imageLibraryStore).catch((error) => {
+  try {
+    persistImageLibraryToIndexedDb(imageLibraryStore)
+      .then((status) => {
+        if (status?.ok) {
+          setStorageStatusMessage('');
+          return;
+        }
+
+        if (status?.reason === 'quota-exceeded') {
+          setStorageStatusMessage('Image library storage is full. Delete images or folders to free space.', true);
+          return;
+        }
+
+        setStorageStatusMessage('');
+        if (status?.error) {
+          console.warn('Unable to persist image library to IndexedDB.', status.error);
+        }
+      })
+      .catch((error) => {
+        setStorageStatusMessage('');
+        console.warn('Unable to persist image library to IndexedDB.', error);
+      });
+  } catch (error) {
+    setStorageStatusMessage('');
     console.warn('Unable to persist image library to IndexedDB.', error);
-  });
+  }
 }
 
 

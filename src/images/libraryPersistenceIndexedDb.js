@@ -6,6 +6,50 @@ const LIBRARY_STORE = 'library';
 const IMAGE_BLOB_STORE = 'images';
 const LIBRARY_RECORD_ID = 'snapshot';
 
+const PERSISTENCE_ERROR_REASONS = {
+  QUOTA_EXCEEDED: 'quota-exceeded',
+  UNAVAILABLE: 'unavailable',
+  UNKNOWN: 'unknown',
+};
+
+function createSuccessStatus() {
+  return { ok: true };
+}
+
+function createFailureStatus(reason, error) {
+  return {
+    ok: false,
+    reason,
+    error,
+  };
+}
+
+function isQuotaExceededError(error) {
+  if (!error) {
+    return false;
+  }
+
+  const name = String(error.name || '');
+  const code = Number(error.code);
+
+  return name === 'QuotaExceededError'
+    || name === 'NS_ERROR_DOM_QUOTA_REACHED'
+    || code === 22
+    || code === 1014;
+}
+
+function toPersistenceErrorReason(error) {
+  if (isQuotaExceededError(error)) {
+    return PERSISTENCE_ERROR_REASONS.QUOTA_EXCEEDED;
+  }
+
+  if (error?.name === 'InvalidStateError' || error?.name === 'NotSupportedError') {
+    return PERSISTENCE_ERROR_REASONS.UNAVAILABLE;
+  }
+
+  return PERSISTENCE_ERROR_REASONS.UNKNOWN;
+}
+
 function openDatabase(indexedDb = window.indexedDB) {
   if (!indexedDb || typeof indexedDb.open !== 'function') {
     return Promise.resolve(null);
@@ -52,15 +96,16 @@ function createBlobId(imageId) {
 
 export async function persistImageLibraryToIndexedDb(store, { indexedDb = window.indexedDB } = {}) {
   if (!store) {
-    return false;
+    return createFailureStatus(PERSISTENCE_ERROR_REASONS.UNAVAILABLE, null);
   }
 
-  const database = await openDatabase(indexedDb);
-  if (!database) {
-    return false;
-  }
-
+  let database = null;
   try {
+    database = await openDatabase(indexedDb);
+    if (!database) {
+      return createFailureStatus(PERSISTENCE_ERROR_REASONS.UNAVAILABLE, null);
+    }
+
     const images = store.listAllImages();
     const activeBlobIds = new Set();
     const now = Date.now();
@@ -105,9 +150,11 @@ export async function persistImageLibraryToIndexedDb(store, { indexedDb = window
     });
 
     await transactionDone(writeTransaction);
-    return true;
+    return createSuccessStatus();
+  } catch (error) {
+    return createFailureStatus(toPersistenceErrorReason(error), error);
   } finally {
-    database.close();
+    database?.close();
   }
 }
 
@@ -172,13 +219,20 @@ export async function migrateLegacyImageLibraryToIndexedDb(store, {
   }
 
   store.deserialize(legacyLibrary);
-  await persistImageLibraryToIndexedDb(store, { indexedDb });
+  const persistStatus = await persistImageLibraryToIndexedDb(store, { indexedDb });
+
+  if (!persistStatus.ok) {
+    return persistStatus;
+  }
 
   if (storage && typeof storage.removeItem === 'function') {
     storage.removeItem(storageKey);
   }
 
-  return legacyLibrary;
+  return {
+    ...createSuccessStatus(),
+    library: legacyLibrary,
+  };
 }
 
 export const imageLibraryIndexedDbConfig = {
