@@ -65,13 +65,13 @@ const insideOutAddColorButton = document.getElementById('inside-out-add-color');
 const imageBorderControls = document.getElementById('image-border-controls');
 const imageBorderSizingModeInput = document.getElementById('image-border-sizing-mode');
 const imageBorderRepeatModeInput = document.getElementById('image-border-repeat-mode');
-const imageBorderCornerInputs = {
+const imageBorderCornerButtons = {
   topLeft: document.getElementById('image-border-corner-top-left'),
   topRight: document.getElementById('image-border-corner-top-right'),
   bottomRight: document.getElementById('image-border-corner-bottom-right'),
   bottomLeft: document.getElementById('image-border-corner-bottom-left'),
 };
-const imageBorderSideInputs = {
+const imageBorderSideButtons = {
   top: document.getElementById('image-border-side-top'),
   right: document.getElementById('image-border-side-right'),
   bottom: document.getElementById('image-border-side-bottom'),
@@ -131,7 +131,6 @@ const imageBorderTransformInputs = {
     },
   },
 };
-const manageImagesButton = document.getElementById('manage-images-button');
 const manageImagesOverlay = document.getElementById('manage-images-overlay');
 const closeManageImagesWindowButton = document.getElementById('close-manage-images-window');
 const manageImagesInput = document.getElementById('manage-images-input');
@@ -650,38 +649,31 @@ function assignManagedImageToSlot(slotType, slotName, imageId) {
   slotState.error = null;
 }
 
-function updateSlotDropdownOptions() {
-  const slotSelects = [
-    ...Object.values(imageBorderCornerInputs),
-    ...Object.values(imageBorderSideInputs),
-  ].filter(Boolean);
+function getPieceButton(slotType, slotName) {
+  return slotType === 'corners'
+    ? imageBorderCornerButtons[slotName]
+    : imageBorderSideButtons[slotName];
+}
 
-  slotSelects.forEach((selectElement) => {
-    const currentValue = selectElement.value;
-    selectElement.innerHTML = '';
+function updatePieceButtonLabel(slotType, slotName) {
+  const slotState = getImageBorderSlotState(slotType, slotName);
+  const button = getPieceButton(slotType, slotName);
 
-    const emptyOption = document.createElement('option');
-    emptyOption.value = '';
-    emptyOption.textContent = 'No image';
-    selectElement.appendChild(emptyOption);
+  if (!button || !slotState) {
+    return;
+  }
 
-    managedImages.forEach((imageEntry) => {
-      const option = document.createElement('option');
-      option.value = imageEntry.id;
-      option.textContent = imageEntry.name;
-      selectElement.appendChild(option);
-    });
+  button.textContent = slotState.sourceName || 'No image';
+  button.title = slotState.sourceName || 'Select image';
+}
 
-    const manageOption = document.createElement('option');
-    manageOption.value = '__manage__';
-    manageOption.textContent = 'Manage images…';
-    selectElement.appendChild(manageOption);
+function updateAllPieceButtonLabels() {
+  Object.keys(imageBorderCornerButtons).forEach((slotName) => {
+    updatePieceButtonLabel('corners', slotName);
+  });
 
-    if ([...selectElement.options].some((option) => option.value === currentValue)) {
-      selectElement.value = currentValue;
-    } else {
-      selectElement.value = '';
-    }
+  Object.keys(imageBorderSideButtons).forEach((slotName) => {
+    updatePieceButtonLabel('sides', slotName);
   });
 }
 
@@ -701,7 +693,6 @@ async function addManagedImagesFromFileList(fileList) {
     }
   }
 
-  updateSlotDropdownOptions();
   renderManageImagesList();
 }
 
@@ -717,6 +708,10 @@ function renderManageImagesList() {
     row.className = 'manage-image-item';
     row.dataset.imageId = imageEntry.id;
     row.textContent = imageEntry.name;
+
+    if (pendingSlotSelection === imageEntry.id) {
+      row.classList.add('active');
+    }
 
     row.addEventListener('click', () => {
       pendingSlotSelection = imageEntry.id;
@@ -751,7 +746,9 @@ function openManageImagesWindow(slotType = null, slotName = null) {
 
   managedImagesSnapshot = managedImages.slice();
   activeImageSlotSelection = slotType && slotName ? { slotType, slotName } : null;
-  pendingSlotSelection = null;
+  pendingSlotSelection = activeImageSlotSelection
+    ? (getImageBorderSlotState(activeImageSlotSelection.slotType, activeImageSlotSelection.slotName)?.sourceId || null)
+    : null;
   renderManageImagesList();
   manageImagesOverlay.classList.remove('hidden');
   manageImagesOverlay.setAttribute('aria-hidden', 'false');
@@ -761,14 +758,7 @@ function applyManageImagesSelection() {
   if (activeImageSlotSelection && pendingSlotSelection) {
     assignManagedImageToSlot(activeImageSlotSelection.slotType, activeImageSlotSelection.slotName, pendingSlotSelection);
 
-    const slotSelect = activeImageSlotSelection.slotType === 'corners'
-      ? imageBorderCornerInputs[activeImageSlotSelection.slotName]
-      : imageBorderSideInputs[activeImageSlotSelection.slotName];
-
-    if (slotSelect) {
-      slotSelect.value = pendingSlotSelection;
-    }
-
+    updatePieceButtonLabel(activeImageSlotSelection.slotType, activeImageSlotSelection.slotName);
     drawEditorToCanvas();
   }
 
@@ -777,8 +767,8 @@ function applyManageImagesSelection() {
 
 function updateImageBorderSlotInputsState(isImageModeActive) {
   [
-    ...Object.values(imageBorderCornerInputs),
-    ...Object.values(imageBorderSideInputs),
+    ...Object.values(imageBorderCornerButtons),
+    ...Object.values(imageBorderSideButtons),
   ].forEach((input) => {
     if (input) {
       input.disabled = !isImageModeActive;
@@ -794,9 +784,6 @@ function updateImageBorderSlotInputsState(isImageModeActive) {
     });
   });
 
-  if (manageImagesButton) {
-    manageImagesButton.disabled = !isImageModeActive;
-  }
 }
 
 function registerInsideOutColorInput(input) {
@@ -1494,29 +1481,15 @@ Object.entries(sidePaddingControls).forEach(([side, { lock, input }]) => {
   });
 });
 
-Object.entries(imageBorderCornerInputs).forEach(([corner, input]) => {
-  input?.addEventListener('change', () => {
-    if (input.value === '__manage__') {
-      input.value = '';
-      openManageImagesWindow('corners', corner);
-      return;
-    }
-
-    assignManagedImageToSlot('corners', corner, input.value);
-    drawEditorToCanvas();
+Object.entries(imageBorderCornerButtons).forEach(([corner, button]) => {
+  button?.addEventListener('click', () => {
+    openManageImagesWindow('corners', corner);
   });
 });
 
-Object.entries(imageBorderSideInputs).forEach(([side, input]) => {
-  input?.addEventListener('change', () => {
-    if (input.value === '__manage__') {
-      input.value = '';
-      openManageImagesWindow('sides', side);
-      return;
-    }
-
-    assignManagedImageToSlot('sides', side, input.value);
-    drawEditorToCanvas();
+Object.entries(imageBorderSideButtons).forEach(([side, button]) => {
+  button?.addEventListener('click', () => {
+    openManageImagesWindow('sides', side);
   });
 });
 
@@ -1553,11 +1526,7 @@ Object.entries(imageBorderTransformInputs).forEach(([slotType, group]) => {
       const slotState = getImageBorderSlotState(slotType, slotName);
       clearImageBorderSlot(slotState);
 
-      const slotSelect = slotType === 'corners' ? imageBorderCornerInputs[slotName] : imageBorderSideInputs[slotName];
-      if (slotSelect) {
-        slotSelect.value = '';
-      }
-
+      updatePieceButtonLabel(slotType, slotName);
       drawEditorToCanvas();
     });
   });
@@ -1835,11 +1804,6 @@ if (settingsOverlay) {
   });
 }
 
-if (manageImagesButton) {
-  manageImagesButton.addEventListener('click', () => {
-    openManageImagesWindow();
-  });
-}
 
 if (manageImagesInput) {
   manageImagesInput.addEventListener('change', async () => {
@@ -1857,7 +1821,6 @@ if (closeManageImagesWindowButton) {
 if (manageImagesCancelButton) {
   manageImagesCancelButton.addEventListener('click', () => {
     managedImages.splice(0, managedImages.length, ...managedImagesSnapshot);
-    updateSlotDropdownOptions();
     closeManageImagesWindow();
   });
 }
@@ -1903,7 +1866,7 @@ if (appVersionBadge) {
 syncColorPickerUI();
 syncColorPreviewButtons();
 applySavedSettings();
-updateSlotDropdownOptions();
+updateAllPieceButtonLabels();
 
 updateBorderControlsState();
 syncImageLockedPaddingValues();

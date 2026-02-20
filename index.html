@@ -216,94 +216,110 @@
                   <div class="image-border-input-groups" aria-describedby="image-border-help">
                     <fieldset class="image-border-slot-group" aria-label="Corner image slots">
                       <legend>Corners</legend>
+                      <div class="image-border-slot-header" aria-hidden="true">
+                        <span></span>
+                        <span>Name</span>
+                        <span>Rotate</span>
+                        <span>Flip H</span>
+                        <span>Flip V</span>
+                        <span></span>
+                      </div>
                       <div class="image-border-slot-row" data-slot="image-border-corner-top-left">
-                        <label for="image-border-corner-top-left">Top-left corner image</label>
-                        <select id="image-border-corner-top-left" aria-label="Select image for top-left border corner"></select>
-                        <select id="image-border-corner-top-left-rotation" aria-label="Rotation for top-left border corner">
+                        <label for="image-border-corner-top-left">Top Left</label>
+                        <button type="button" id="image-border-corner-top-left" class="piece-select-button" aria-label="Select image for top left piece">No image</button>
+                        <select id="image-border-corner-top-left-rotation" aria-label="Rotation for top left piece">
                           <option value="0">0°</option>
                           <option value="90">90°</option>
                           <option value="180">180°</option>
                           <option value="270">270°</option>
                         </select>
-                        <label><input type="checkbox" id="image-border-corner-top-left-flip-x" /> Flip H</label>
-                        <label><input type="checkbox" id="image-border-corner-top-left-flip-y" /> Flip V</label>
+                        <label><input type="checkbox" id="image-border-corner-top-left-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-top-left-flip-y" /></label>
                         <button type="button" id="image-border-corner-top-left-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
                       </div>
 
                       <div class="image-border-slot-row" data-slot="image-border-corner-top-right">
-                        <label for="image-border-corner-top-right">Top-right corner image</label>
-                        <select id="image-border-corner-top-right" aria-label="Select image for top-right border corner"></select>
-                        <select id="image-border-corner-top-right-rotation" aria-label="Rotation for top-right border corner">
+                        <label for="image-border-corner-top-right">Top Right</label>
+                        <button type="button" id="image-border-corner-top-right" class="piece-select-button" aria-label="Select image for top right piece">No image</button>
+                        <select id="image-border-corner-top-right-rotation" aria-label="Rotation for top right piece">
                           <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>
                         </select>
-                        <label><input type="checkbox" id="image-border-corner-top-right-flip-x" /> Flip H</label>
-                        <label><input type="checkbox" id="image-border-corner-top-right-flip-y" /> Flip V</label>
+                        <label><input type="checkbox" id="image-border-corner-top-right-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-top-right-flip-y" /></label>
                         <button type="button" id="image-border-corner-top-right-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
                       </div>
 
                       <div class="image-border-slot-row" data-slot="image-border-corner-bottom-right">
-                        <label for="image-border-corner-bottom-right">Bottom-right corner image</label>
-                        <select id="image-border-corner-bottom-right" aria-label="Select image for bottom-right border corner"></select>
-                        <select id="image-border-corner-bottom-right-rotation" aria-label="Rotation for bottom-right border corner">
+                        <label for="image-border-corner-bottom-right">Bottom Right</label>
+                        <button type="button" id="image-border-corner-bottom-right" class="piece-select-button" aria-label="Select image for bottom right piece">No image</button>
+                        <select id="image-border-corner-bottom-right-rotation" aria-label="Rotation for bottom right piece">
                           <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>
                         </select>
-                        <label><input type="checkbox" id="image-border-corner-bottom-right-flip-x" /> Flip H</label>
-                        <label><input type="checkbox" id="image-border-corner-bottom-right-flip-y" /> Flip V</label>
+                        <label><input type="checkbox" id="image-border-corner-bottom-right-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-bottom-right-flip-y" /></label>
                         <button type="button" id="image-border-corner-bottom-right-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
                       </div>
 
                       <div class="image-border-slot-row" data-slot="image-border-corner-bottom-left">
-                        <label for="image-border-corner-bottom-left">Bottom-left corner image</label>
-                        <select id="image-border-corner-bottom-left" aria-label="Select image for bottom-left border corner"></select>
-                        <select id="image-border-corner-bottom-left-rotation" aria-label="Rotation for bottom-left border corner">
+                        <label for="image-border-corner-bottom-left">Bottom Left</label>
+                        <button type="button" id="image-border-corner-bottom-left" class="piece-select-button" aria-label="Select image for bottom left piece">No image</button>
+                        <select id="image-border-corner-bottom-left-rotation" aria-label="Rotation for bottom left piece">
                           <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>
                         </select>
-                        <label><input type="checkbox" id="image-border-corner-bottom-left-flip-x" /> Flip H</label>
-                        <label><input type="checkbox" id="image-border-corner-bottom-left-flip-y" /> Flip V</label>
+                        <label><input type="checkbox" id="image-border-corner-bottom-left-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-bottom-left-flip-y" /></label>
                         <button type="button" id="image-border-corner-bottom-left-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
                       </div>
                     </fieldset>
 
                     <fieldset class="image-border-slot-group" aria-label="Side image slots">
                       <legend>Sides</legend>
+                      <div class="image-border-slot-header" aria-hidden="true">
+                        <span></span>
+                        <span>Name</span>
+                        <span>Rotate</span>
+                        <span>Flip H</span>
+                        <span>Flip V</span>
+                        <span></span>
+                      </div>
                       <div class="image-border-slot-row" data-slot="image-border-side-top">
-                        <label for="image-border-side-top">Top side image</label>
-                        <select id="image-border-side-top" aria-label="Select image for top border side"></select>
-                        <select id="image-border-side-top-rotation" aria-label="Rotation for top border side"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
-                        <label><input type="checkbox" id="image-border-side-top-flip-x" /> Flip H</label>
-                        <label><input type="checkbox" id="image-border-side-top-flip-y" /> Flip V</label>
+                        <label for="image-border-side-top">Top</label>
+                        <button type="button" id="image-border-side-top" class="piece-select-button" aria-label="Select image for top piece">No image</button>
+                        <select id="image-border-side-top-rotation" aria-label="Rotation for top piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-top-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-top-flip-y" /></label>
                         <button type="button" id="image-border-side-top-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
                       </div>
 
                       <div class="image-border-slot-row" data-slot="image-border-side-right">
-                        <label for="image-border-side-right">Right side image</label>
-                        <select id="image-border-side-right" aria-label="Select image for right border side"></select>
-                        <select id="image-border-side-right-rotation" aria-label="Rotation for right border side"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
-                        <label><input type="checkbox" id="image-border-side-right-flip-x" /> Flip H</label>
-                        <label><input type="checkbox" id="image-border-side-right-flip-y" /> Flip V</label>
+                        <label for="image-border-side-right">Right</label>
+                        <button type="button" id="image-border-side-right" class="piece-select-button" aria-label="Select image for right piece">No image</button>
+                        <select id="image-border-side-right-rotation" aria-label="Rotation for right piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-right-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-right-flip-y" /></label>
                         <button type="button" id="image-border-side-right-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
                       </div>
 
                       <div class="image-border-slot-row" data-slot="image-border-side-bottom">
-                        <label for="image-border-side-bottom">Bottom side image</label>
-                        <select id="image-border-side-bottom" aria-label="Select image for bottom border side"></select>
-                        <select id="image-border-side-bottom-rotation" aria-label="Rotation for bottom border side"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
-                        <label><input type="checkbox" id="image-border-side-bottom-flip-x" /> Flip H</label>
-                        <label><input type="checkbox" id="image-border-side-bottom-flip-y" /> Flip V</label>
+                        <label for="image-border-side-bottom">Bottom</label>
+                        <button type="button" id="image-border-side-bottom" class="piece-select-button" aria-label="Select image for bottom piece">No image</button>
+                        <select id="image-border-side-bottom-rotation" aria-label="Rotation for bottom piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-bottom-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-bottom-flip-y" /></label>
                         <button type="button" id="image-border-side-bottom-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
                       </div>
 
                       <div class="image-border-slot-row" data-slot="image-border-side-left">
-                        <label for="image-border-side-left">Left side image</label>
-                        <select id="image-border-side-left" aria-label="Select image for left border side"></select>
-                        <select id="image-border-side-left-rotation" aria-label="Rotation for left border side"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
-                        <label><input type="checkbox" id="image-border-side-left-flip-x" /> Flip H</label>
-                        <label><input type="checkbox" id="image-border-side-left-flip-y" /> Flip V</label>
+                        <label for="image-border-side-left">Left</label>
+                        <button type="button" id="image-border-side-left" class="piece-select-button" aria-label="Select image for left piece">No image</button>
+                        <select id="image-border-side-left-rotation" aria-label="Rotation for left piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-left-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-left-flip-y" /></label>
                         <button type="button" id="image-border-side-left-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
                       </div>
                     </fieldset>
                   </div>
-                  <button type="button" id="manage-images-button" class="window-secondary-button">Manage Images</button>
+</div>
                 </div>
               </details>
 

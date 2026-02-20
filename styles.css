@@ -521,6 +521,16 @@ body.dark-mode .image-border-slot-group legend {
   color: #f3f4f6;
 }
 
+body.dark-mode .image-border-slot-header {
+  color: #9ca3af;
+}
+
+body.dark-mode .piece-select-button {
+  background: #374151;
+  border-color: #6b7280;
+  color: #f9fafb;
+}
+
 .image-border-slot-group legend {
   padding: 0 0.25rem;
   font-weight: 600;
@@ -550,6 +560,25 @@ body.dark-mode .image-border-slot-group legend {
   border-radius: 6px;
   background: #f9fafb;
   cursor: pointer;
+}
+
+
+.image-border-slot-header {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(120px, 1fr) 74px 70px 70px 42px;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.piece-select-button {
+  width: 100%;
+  text-align: left;
+  padding: 0 0.45rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .manage-images-body {
