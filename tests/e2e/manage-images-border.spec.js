@@ -1,17 +1,33 @@
 const { test, expect } = require('@playwright/test');
 
+async function selectControlById(page, id) {
+  const input = page.locator(`#${id}`);
+  if (await input.isChecked()) {
+    return;
+  }
+
+  await input.evaluate((element) => {
+    element.checked = true;
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  await expect(input).toBeChecked();
+}
+
 async function enableImageBorderMode(page) {
   await page.goto('/');
   await page.locator('#enable-border').check();
-  const borderColorImages = page.locator('#border-color-images');
-  if (!(await borderColorImages.isChecked())) {
-    await borderColorImages.evaluate((element) => {
-      element.checked = true;
-      element.dispatchEvent(new Event('input', { bubbles: true }));
-      element.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-  }
-  await expect(borderColorImages).toBeChecked();
+  await selectControlById(page, 'border-color-images');
+
+  await expect(page.locator('#image-border-controls')).not.toHaveClass(/hidden/);
+}
+
+async function openManageImagesForSlot(page, slotId) {
+  const slotButton = page.locator(`#${slotId}`);
+  await expect(slotButton).toBeVisible();
+  await slotButton.click({ trial: true });
+  await slotButton.click();
 }
 
 async function importImage(page, name = 'imported.png') {
@@ -29,7 +45,7 @@ async function importImage(page, name = 'imported.png') {
 test('opens Manage Images from piece dropdown and supports import/create/rename/delete', async ({ page }) => {
   await enableImageBorderMode(page);
 
-  await page.locator('#image-border-corner-top-left').click();
+  await openManageImagesForSlot(page, 'image-border-corner-top-left');
   await expect(page.locator('#manage-images-overlay')).toBeVisible();
 
   await importImage(page, 'folder-test.png');
@@ -60,14 +76,14 @@ test('opens Manage Images from piece dropdown and supports import/create/rename/
 test('supports assignment via double-click, Enter, OK and preserves prior assignment on Cancel', async ({ page }) => {
   await enableImageBorderMode(page);
 
-  await page.locator('#image-border-corner-top-left').click();
+  await openManageImagesForSlot(page, 'image-border-corner-top-left');
   await importImage(page, 'assign-a.png');
   const firstImageRow = page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'assign-a.png' });
   await firstImageRow.dblclick();
   await expect(page.locator('#manage-images-overlay')).toBeHidden();
   await expect(page.locator('#image-border-corner-top-left')).toContainText('assign-a');
 
-  await page.locator('#image-border-corner-top-left').click();
+  await openManageImagesForSlot(page, 'image-border-corner-top-left');
   await importImage(page, 'assign-b.png');
   const secondImageRow = page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'assign-b.png' });
   await secondImageRow.click();
@@ -75,12 +91,12 @@ test('supports assignment via double-click, Enter, OK and preserves prior assign
   await expect(page.locator('#manage-images-overlay')).toBeHidden();
   await expect(page.locator('#image-border-corner-top-left')).toContainText('assign-b');
 
-  await page.locator('#image-border-corner-top-left').click();
+  await openManageImagesForSlot(page, 'image-border-corner-top-left');
   await firstImageRow.click();
   await page.locator('#manage-images-ok').click();
   await expect(page.locator('#image-border-corner-top-left')).toContainText('assign-a');
 
-  await page.locator('#image-border-corner-top-left').click();
+  await openManageImagesForSlot(page, 'image-border-corner-top-left');
   await secondImageRow.click();
   await page.locator('#manage-images-cancel').click();
   await expect(page.locator('#image-border-corner-top-left')).toContainText('assign-a');
@@ -89,7 +105,7 @@ test('supports assignment via double-click, Enter, OK and preserves prior assign
 test('supports rotation/flip/clear controls and shows broken-reference warning after deletion', async ({ page }) => {
   await enableImageBorderMode(page);
 
-  await page.locator('#image-border-corner-top-left').click();
+  await openManageImagesForSlot(page, 'image-border-corner-top-left');
   await importImage(page, 'warn-me.png');
   await page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'warn-me.png' }).dblclick();
 
@@ -103,11 +119,11 @@ test('supports rotation/flip/clear controls and shows broken-reference warning a
   await page.locator('#image-border-corner-top-left-clear').click();
   await expect(page.locator('#image-border-corner-top-left')).toContainText('No image');
 
-  await page.locator('#image-border-corner-top-left').click();
+  await openManageImagesForSlot(page, 'image-border-corner-top-left');
   await page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'warn-me.png' }).click();
   await page.locator('#manage-images-ok').click();
 
-  await page.locator('#image-border-corner-top-right').click();
+  await openManageImagesForSlot(page, 'image-border-corner-top-right');
   await page.locator('.manage-tree-row[data-entity-key^="image:"]', { hasText: 'warn-me.png' }).click();
   await page.locator('#manage-images-delete').click();
   await page.getByRole('button', { name: 'Delete Image(s)' }).click();
@@ -119,7 +135,7 @@ test('supports rotation/flip/clear controls and shows broken-reference warning a
 test('supports multiselect mouse/keyboard behavior and context menus', async ({ page }) => {
   await enableImageBorderMode(page);
 
-  await page.locator('#image-border-side-top').click();
+  await openManageImagesForSlot(page, 'image-border-side-top');
   await importImage(page, 'multi-a.png');
   await importImage(page, 'multi-b.png');
 
