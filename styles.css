@@ -1082,6 +1082,13 @@ body.dark-mode .compact-input input {
   color: #ffffff;
 }
 
+.window-primary-button:disabled,
+.window-secondary-button:disabled {
+  opacity: 0.55;
+  filter: grayscale(0.2);
+  cursor: not-allowed;
+}
+
 .color-right-panel {
   display: grid;
   gap: 12px;

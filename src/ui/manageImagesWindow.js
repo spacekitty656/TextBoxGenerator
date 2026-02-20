@@ -300,20 +300,27 @@ export function createManageImagesWindowController({
 
   async function addImagesFromFiles(fileList, parentId = getPreferredFolderParentId()) {
     const files = Array.from(fileList || []).filter((file) => file?.type?.startsWith('image/'));
+    const createdKeys = [];
 
     for (const file of files) {
       try {
         const loaded = await loadImageFromFile(file);
-        store.createImage({
+        const createdImage = store.createImage({
           name: file.name,
           parentId,
           image: loaded.image,
           dataUrl: loaded.dataUrl,
           mimeType: loaded.mimeType,
         });
+        createdKeys.push(getEntityKey(createdImage));
       } catch (error) {
         console.error('Unable to import selected image.', error);
       }
+    }
+
+    if (createdKeys.length > 0) {
+      const selectedKey = createdKeys[createdKeys.length - 1];
+      setSelection([selectedKey], selectedKey);
     }
 
     onStoreChanged?.();
@@ -491,6 +498,17 @@ export function createManageImagesWindowController({
 
         applyClickSelection(key, event);
         renderTree();
+      });
+
+      row.addEventListener('dblclick', (event) => {
+        if (entry.synthetic || entry.type !== 'image' || state.editor) {
+          return;
+        }
+
+        event.preventDefault();
+        applyClickSelection(key, event);
+        renderTree();
+        applySelection();
       });
 
       row.addEventListener('contextmenu', (event) => {
@@ -695,6 +713,17 @@ export function createManageImagesWindowController({
 
     event.preventDefault();
     moveDraggedEntity(store.ROOT_FOLDER_ID);
+  });
+
+  elements.tree.addEventListener('click', (event) => {
+    if (state.editor) {
+      return;
+    }
+
+    if (!event.target.closest('.manage-tree-row') && state.selectedKeys.length > 0) {
+      setSelection([]);
+      renderTree();
+    }
   });
 
   elements.importButton.addEventListener('click', () => {
