@@ -1830,7 +1830,7 @@ window.addEventListener('keydown', (event) => {
     closeManageImagesWindow();
   }
 
-  if (event.key === 'Enter' && manageImagesWindowController.handleEnterKey()) {
+  if (event.key === 'Enter' && manageImagesWindowController.handleEnterKey(event)) {
     event.preventDefault();
   }
 });

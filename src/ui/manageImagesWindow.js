@@ -366,14 +366,25 @@ export function createManageImagesWindowController({
     });
 
     for (const folder of selectedFolders) {
-      const response = await openWindowChoiceDialog({
-        title: `Delete Folder: ${folder.name}`,
-        message: 'Choose how to handle this folder and its children.',
-        buttons: [
+      const children = store.listChildren(folder.id);
+      const hasChildren = (children.folders.length + children.images.length) > 0;
+      const buttons = hasChildren
+        ? [
           { label: 'Delete Folder and Children', value: 'delete', variant: 'primary' },
           { label: 'Delete Folder and move Children to Parent', value: 'move', variant: 'secondary' },
           { label: 'Cancel', value: 'cancel', variant: 'secondary' },
-        ],
+        ]
+        : [
+          { label: 'Delete Folder', value: 'delete', variant: 'primary' },
+          { label: 'Cancel', value: 'cancel', variant: 'secondary' },
+        ];
+
+      const response = await openWindowChoiceDialog({
+        title: 'Delete Folder',
+        message: hasChildren
+          ? 'Choose how to handle this folder and its children.'
+          : 'Delete this folder?',
+        buttons,
       });
 
       if (response === 'delete') {
@@ -645,8 +656,13 @@ export function createManageImagesWindowController({
     setSelection([]);
   }
 
-  function handleEnterKey() {
+  function handleEnterKey(event = null) {
     if (!state.isOpen) {
+      return false;
+    }
+
+    const target = event?.target;
+    if (state.editor || target?.closest?.('.manage-tree-rename-input')) {
       return false;
     }
 

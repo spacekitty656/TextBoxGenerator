@@ -621,12 +621,16 @@ body.dark-mode .piece-select-button {
 .manage-images-content {
   min-height: 320px;
   flex: 1;
+  min-width: 0;
+  width: 100%;
 }
 
 .manage-images-tree {
   height: 100%;
   min-height: 320px;
   max-height: calc(78vh - 170px);
+  width: 100%;
+  max-width: 100%;
   overflow: auto;
   overflow-x: hidden;
   border: 1px solid #4b5563;
@@ -648,8 +652,9 @@ body.dark-mode .piece-select-button {
   cursor: pointer;
   margin-bottom: 0.15rem;
   box-sizing: border-box;
-  width: 100%;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .manage-tree-row.active {
