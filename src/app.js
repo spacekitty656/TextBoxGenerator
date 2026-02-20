@@ -1,4 +1,3 @@
-import { clampNumber, hexToRgb, rgbToHsv } from './color.js';
 import { getAlignedStartX, getAlignmentWidth } from './layout.js';
 import {
   getBorderConfig as getBorderConfigFromModule,
@@ -49,6 +48,11 @@ import { createColorPickerView } from './ui/views/colorPickerView.js';
 import { createEditorView } from './ui/views/editorView.js';
 import { createManageImagesView } from './ui/views/manageImagesView.js';
 import { createSettingsView } from './ui/views/settingsView.js';
+import { createBorderController } from './controllers/borderController.js';
+import { createColorPickerController } from './controllers/colorPickerController.js';
+import { createEditorController } from './controllers/editorController.js';
+import { createManageImagesController } from './controllers/manageImagesController.js';
+import { createSettingsController } from './controllers/settingsController.js';
 
 const Quill = window.Quill;
 
@@ -759,11 +763,11 @@ function openManageImagesWindow(slotType = null, slotName = null) {
     ? (getImageBorderSlotState(slotType, slotName)?.imageId || null)
     : null;
 
-  manageImagesWindowController.open({ slotType, slotName, initialImageId });
+  manageImagesController.open(slotType, slotName, initialImageId);
 }
 
 function closeManageImagesWindow() {
-  manageImagesWindowController.close();
+  manageImagesController.close();
 }
 
 function updateImageBorderSlotInputsState(isImageModeActive) {
@@ -1446,388 +1450,203 @@ function drawEditorToCanvas() {
   renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConfig, canvasSizePaddingConfig, maxContentWidth);
 }
 
-Object.entries(imageSidePaddingControls).forEach(([side, { lock, input }]) => {
-  lock.addEventListener('click', () => {
-    imageLockState[side] = !imageLockState[side];
-    syncImageLockedPaddingValues();
-    drawEditorToCanvas();
-  });
-
-  input.addEventListener('input', () => {
-    drawEditorToCanvas();
-  });
-});
-
-imageCenterPaddingInput.addEventListener('input', () => {
-  syncImageLockedPaddingValues();
-  drawEditorToCanvas();
-});
-
-Object.entries(sidePaddingControls).forEach(([side, { lock, input }]) => {
-  lock.addEventListener('click', () => {
-    lockState[side] = !lockState[side];
-    syncLockedPaddingValues();
-    drawEditorToCanvas();
-  });
-
-  input.addEventListener('input', () => {
-    drawEditorToCanvas();
-  });
-});
-
-[centerPaddingInput, borderWidthInput, borderRadiusInput].forEach((input) => {
-  input.addEventListener('input', () => {
-    syncLockedPaddingValues();
-    drawEditorToCanvas();
-  });
-});
-
-Object.entries(imageBorderCornerButtons).forEach(([corner, button]) => {
-  button?.addEventListener('click', () => {
-    openManageImagesWindow('corners', corner);
-  });
-});
-
-Object.entries(imageBorderSideButtons).forEach(([side, button]) => {
-  button?.addEventListener('click', () => {
-    openManageImagesWindow('sides', side);
-  });
-});
-
-Object.entries(imageBorderTransformInputs).forEach(([slotType, group]) => {
-  Object.entries(group).forEach(([slotName, controls]) => {
-    controls.rotation?.addEventListener('change', () => {
-      const slotState = getImageBorderSlotState(slotType, slotName);
-      if (!slotState) {
-        return;
-      }
-      slotState.rotation = Number.parseInt(controls.rotation.value, 10) || 0;
-      drawEditorToCanvas();
-    });
-
-    controls.flipX?.addEventListener('change', () => {
-      const slotState = getImageBorderSlotState(slotType, slotName);
-      if (!slotState) {
-        return;
-      }
-      slotState.flipX = controls.flipX.checked;
-      drawEditorToCanvas();
-    });
-
-    controls.flipY?.addEventListener('change', () => {
-      const slotState = getImageBorderSlotState(slotType, slotName);
-      if (!slotState) {
-        return;
-      }
-      slotState.flipY = controls.flipY.checked;
-      drawEditorToCanvas();
-    });
-
-    controls.clear?.addEventListener('click', () => {
-      const slotState = getImageBorderSlotState(slotType, slotName);
-      clearImageBorderSlot(slotState);
-
-      updatePieceButtonLabel(slotType, slotName);
-      drawEditorToCanvas();
-    });
-  });
-});
-
 createInsideOutColorRow('#1f2937');
 createInsideOutColorRow('#9ca3af');
-
-insideOutAddColorButton.addEventListener('click', () => {
-  addInsideOutColor();
-});
-
-[borderColorSolidRadio, borderColorInsideOutRadio, borderColorImagesRadio].forEach((radioInput) => {
-  radioInput.addEventListener('change', () => {
-    updateBorderColorModeUI();
-    drawEditorToCanvas();
-  });
-});
-
-[backgroundColorTransparentRadio, backgroundColorSolidRadio].forEach((radioInput) => {
-  radioInput.addEventListener('change', () => {
-    updateCanvasBackgroundControlsState();
-    drawEditorToCanvas();
-  });
-});
-
-borderColorInput.addEventListener('input', () => {
-  syncColorPreviewButtons();
-  drawEditorToCanvas();
-});
-
-[imageBorderSizingModeInput, imageBorderRepeatModeInput].forEach((input) => {
-  input?.addEventListener('change', () => {
-    drawEditorToCanvas();
-  });
-});
-
-backgroundColorInput.addEventListener('input', () => {
-  syncColorPreviewButtons();
-  drawEditorToCanvas();
-});
-
-[borderBackgroundColorTransparentRadio, borderBackgroundColorSolidRadio].forEach((radioInput) => {
-  radioInput.addEventListener('change', () => {
-    updateBorderColorModeUI();
-    drawEditorToCanvas();
-  });
-});
-
-borderBackgroundColorInput.addEventListener('input', () => {
-  syncColorPreviewButtons();
-  drawEditorToCanvas();
-});
-
-borderToggle.addEventListener('change', () => {
-  syncColorPickerUI();
-  syncColorPreviewButtons();
-
-  updateBorderControlsState();
-  drawEditorToCanvas();
-});
-
-quill.on('text-change', () => {
-  drawEditorToCanvas();
-});
-
-if (wrapTextInput) {
-  wrapTextInput.addEventListener('change', () => {
-    syncEditorWrapMode();
-    drawEditorToCanvas();
-  });
-}
-
-if (maxImageWidthInput) {
-  maxImageWidthInput.addEventListener('input', () => {
-    drawEditorToCanvas();
-  });
-}
-
-saveButton.addEventListener('click', () => {
-  drawEditorToCanvas();
-
-  const rawImageName = imageNameInput?.value.trim() || 'NewImage';
-  const safeImageName = rawImageName.replace(/[\/:*?"<>|]/g, '_');
-  const hasExtension = /\.[^./\\\s]+$/.test(safeImageName);
-  const fileName = hasExtension ? safeImageName : `${safeImageName}.png`;
-  const imageData = canvas.toDataURL('image/png');
-  const downloadLink = document.createElement('a');
-  downloadLink.href = imageData;
-  downloadLink.download = fileName;
-  downloadLink.click();
-});
-
-imageNameInput.addEventListener('keydown', (event) => {
-  if (event.key !== 'Enter') {
-    return;
-  }
-
-  event.preventDefault();
-  triggerSaveImage();
-});
 
 populateColorGrid(basicColorsGrid, basicColorPalette);
 populateColorGrid(customColorsGrid, customColorPalette);
 
-if (addCustomColorButton) {
-  addCustomColorButton.addEventListener('click', handleAddCustomColor);
-}
-
-
-if (pickScreenColorButton) {
-  pickScreenColorButton.addEventListener('click', async () => {
-    if (!window.EyeDropper || colorPickerState.isPickingFromScreen) {
-      return;
-    }
-
-    pickScreenColorButton.disabled = true;
-    await pickColorFromScreen();
-  });
-
-  if (!window.EyeDropper) {
-    pickScreenColorButton.disabled = true;
-    pickScreenColorButton.title = 'Your browser does not support screen color picking.';
-  }
-}
-
-
-
-if (openBackgroundColorWindowButton) {
-  openBackgroundColorWindowButton.addEventListener('click', openBackgroundColorWindow);
-}
-
-if (backgroundColorWindowButton) {
-  backgroundColorWindowButton.addEventListener('click', () => {
-    openColorWindowForInput(backgroundColorInput, 'Image Background Color');
-  });
-}
-
-if (borderColorWindowButton) {
-  borderColorWindowButton.addEventListener('click', () => {
-    openColorWindowForInput(borderColorInput, 'Border Color');
-  });
-}
-
-if (borderBackgroundColorWindowButton) {
-  borderBackgroundColorWindowButton.addEventListener('click', () => {
-    openColorWindowForInput(borderBackgroundColorInput, 'Border Background Color');
-  });
-}
-
-if (closeColorWindowButton) {
-  closeColorWindowButton.addEventListener('click', closeColorWindow);
-}
-
-if (colorWindowOverlay) {
-  colorWindowOverlay.addEventListener('click', (event) => {
-    if (event.target === colorWindowOverlay) {
-      closeColorWindow();
-    }
-  });
-}
-
-if (canvasPanel) {
-  canvasPanel.addEventListener('wheel', forwardCanvasPanelScrollToFormPanel, { passive: false });
-}
-
-
-if (colorMap) {
-  colorMap.addEventListener('pointerdown', (event) => {
-    colorPickerState.dragTarget = 'map';
-    colorMap.setPointerCapture(event.pointerId);
-    updateMapFromPointer(event);
-  });
-
-  colorMap.addEventListener('pointermove', (event) => {
-    if (colorPickerState.dragTarget === 'map') {
-      updateMapFromPointer(event);
-    }
-  });
-
-  colorMap.addEventListener('pointerup', (event) => {
-    colorPickerState.dragTarget = null;
-    colorMap.releasePointerCapture(event.pointerId);
-  });
-}
-
-if (colorSlider) {
-  colorSlider.addEventListener('pointerdown', (event) => {
-    colorPickerState.dragTarget = 'slider';
-    colorSlider.setPointerCapture(event.pointerId);
-    updateHueFromPointer(event);
-  });
-
-  colorSlider.addEventListener('pointermove', (event) => {
-    if (colorPickerState.dragTarget === 'slider') {
-      updateHueFromPointer(event);
-    }
-  });
-
-  colorSlider.addEventListener('pointerup', (event) => {
-    colorPickerState.dragTarget = null;
-    colorSlider.releasePointerCapture(event.pointerId);
-  });
-}
-
-if (colorValueInputs.hue) {
-  colorValueInputs.hue.addEventListener('input', () => {
-    colorPickerState.hue = clampNumber(colorValueInputs.hue.value, 0, 360, colorPickerState.hue);
-    syncColorPickerUI();
-  });
-  colorValueInputs.sat.addEventListener('input', () => {
-    colorPickerState.sat = clampNumber(colorValueInputs.sat.value, 0, 255, colorPickerState.sat);
-    syncColorPickerUI();
-  });
-  colorValueInputs.val.addEventListener('input', () => {
-    colorPickerState.val = clampNumber(colorValueInputs.val.value, 0, 255, colorPickerState.val);
-    syncColorPickerUI();
-  });
-
-  ['red', 'green', 'blue', 'alpha'].forEach((key) => {
-    colorValueInputs[key].addEventListener('input', () => {
-      const red = clampNumber(colorValueInputs.red.value, 0, 255, 0);
-      const green = clampNumber(colorValueInputs.green.value, 0, 255, 0);
-      const blue = clampNumber(colorValueInputs.blue.value, 0, 255, 0);
-      const hsv = rgbToHsv(red, green, blue);
-      colorPickerState.hue = hsv.hue;
-      colorPickerState.sat = hsv.sat;
-      colorPickerState.val = hsv.val;
-      colorPickerState.alpha = clampNumber(colorValueInputs.alpha.value, 0, 255, colorPickerState.alpha);
-      syncColorPickerUI();
-    });
-  });
-
-  colorValueInputs.hex.addEventListener('change', () => {
-    const rgb = hexToRgb(colorValueInputs.hex.value);
-    if (!rgb) {
-      syncColorPickerUI();
-      return;
-    }
-
-    const hsv = rgbToHsv(rgb.red, rgb.green, rgb.blue);
-    colorPickerState.hue = hsv.hue;
-    colorPickerState.sat = hsv.sat;
-    colorPickerState.val = hsv.val;
-    colorPickerState.alpha = rgb.alpha ?? 255;
-    syncColorPickerUI();
-  });
-}
-
-if (colorWindowOkButton) {
-  colorWindowOkButton.addEventListener('click', () => {
-    applyDraftColorFromWindow();
-  });
-}
-
-if (colorWindowCancelButton) {
-  colorWindowCancelButton.addEventListener('click', () => {
-    closeColorWindow();
-  });
-}
-
-if (settingsButton) {
-  settingsButton.addEventListener('click', openSettingsWindow);
-}
-
-if (closeSettingsWindowButton) {
-  closeSettingsWindowButton.addEventListener('click', closeSettingsWindow);
-}
-
-if (settingsOverlay) {
-  settingsOverlay.addEventListener('click', (event) => {
-    if (event.target === settingsOverlay) {
-      closeSettingsWindow();
-    }
-  });
-}
-
-
-if (darkModeToggle) {
-  darkModeToggle.addEventListener('change', () => {
-    applyDarkMode(darkModeToggle.checked);
-    persistSettings();
-  });
-}
-
-window.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') {
-    closeColorWindow();
-    closeSettingsWindow();
-    closeManageImagesWindow();
-  }
-
-  if (event.key === 'Enter' && manageImagesWindowController.handleEnterKey(event)) {
-    event.preventDefault();
-  }
-
-  if (event.key === 'Delete' && manageImagesWindowController.handleDeleteKey(event)) {
-    event.preventDefault();
-  }
+const manageImagesController = createManageImagesController({
+  manageImagesWindowController,
+  callbacks: {
+    onRenderRequested: drawEditorToCanvas,
+    onStateChanged: null,
+  },
 });
+
+const borderController = createBorderController({
+  elements: {
+    imageSidePaddingControls,
+    imageCenterPaddingInput,
+    sidePaddingControls,
+    centerPaddingInput,
+    borderWidthInput,
+    borderRadiusInput,
+    imageBorderCornerButtons,
+    imageBorderSideButtons,
+    imageBorderTransformInputs,
+    insideOutAddColorButton,
+    borderColorSolidRadio,
+    borderColorInsideOutRadio,
+    borderColorImagesRadio,
+    backgroundColorTransparentRadio,
+    backgroundColorSolidRadio,
+    borderColorInput,
+    imageBorderSizingModeInput,
+    imageBorderRepeatModeInput,
+    backgroundColorInput,
+    borderBackgroundColorTransparentRadio,
+    borderBackgroundColorSolidRadio,
+    borderBackgroundColorInput,
+    borderToggle,
+  },
+  actions: {
+    toggleImageSideLock: (side) => {
+      imageLockState[side] = !imageLockState[side];
+      syncImageLockedPaddingValues();
+    },
+    onImageSidePaddingInput: () => {},
+    onImageCenterPaddingInput: () => {
+      syncImageLockedPaddingValues();
+    },
+    toggleSideLock: (side) => {
+      lockState[side] = !lockState[side];
+      syncLockedPaddingValues();
+    },
+    onSidePaddingInput: () => {},
+    onCorePaddingInput: () => {
+      syncLockedPaddingValues();
+    },
+    openManageImagesWindow: (slotType, slotName) => {
+      openManageImagesWindow(slotType, slotName);
+    },
+    onImageBorderTransformChanged: (slotType, slotName, key, value) => {
+      const slotState = getImageBorderSlotState(slotType, slotName);
+      if (!slotState) {
+        return;
+      }
+
+      slotState[key] = value;
+    },
+    onImageBorderSlotCleared: (slotType, slotName) => {
+      const slotState = getImageBorderSlotState(slotType, slotName);
+      clearImageBorderSlot(slotState);
+      updatePieceButtonLabel(slotType, slotName);
+    },
+    addInsideOutColor,
+    updateBorderColorModeUI,
+    updateCanvasBackgroundControlsState,
+    syncColorPreviewButtons,
+    updateBorderControlsState,
+    syncColorPickerUI,
+  },
+  callbacks: {
+    onRenderRequested: drawEditorToCanvas,
+    onStateChanged: null,
+  },
+});
+
+const colorPickerController = createColorPickerController({
+  elements: {
+    addCustomColorButton,
+    pickScreenColorButton,
+    openBackgroundColorWindowButton,
+    backgroundColorWindowButton,
+    borderColorWindowButton,
+    borderBackgroundColorWindowButton,
+    closeColorWindowButton,
+    colorWindowOverlay,
+    canvasPanel,
+    colorMap,
+    colorSlider,
+    colorValueInputs,
+    colorWindowOkButton,
+    colorWindowCancelButton,
+  },
+  state: colorPickerState,
+  actions: {
+    handleAddCustomColor,
+    pickColorFromScreen,
+    openBackgroundColorWindow,
+    openColorWindowForInput: (key) => {
+      if (key === 'background') {
+        openColorWindowForInput(backgroundColorInput, 'Image Background Color');
+      }
+
+      if (key === 'border') {
+        openColorWindowForInput(borderColorInput, 'Border Color');
+      }
+
+      if (key === 'borderBackground') {
+        openColorWindowForInput(borderBackgroundColorInput, 'Border Background Color');
+      }
+    },
+    closeColorWindow,
+    forwardCanvasPanelScrollToFormPanel,
+    updateMapFromPointer,
+    updateHueFromPointer,
+    syncColorPickerUI,
+    applyDraftColorFromWindow,
+  },
+  callbacks: {
+    onRenderRequested: drawEditorToCanvas,
+    onStateChanged: null,
+  },
+});
+
+const settingsController = createSettingsController({
+  elements: {
+    settingsButton,
+    closeSettingsWindowButton,
+    settingsOverlay,
+    darkModeToggle,
+  },
+  actions: {
+    openSettingsWindow,
+    closeSettingsWindow,
+    applyDarkMode,
+    persistSettings,
+  },
+  callbacks: {
+    onRenderRequested: null,
+    onStateChanged: null,
+  },
+});
+
+const editorController = createEditorController({
+  elements: {
+    wrapTextInput,
+    maxImageWidthInput,
+    saveButton,
+    imageNameInput,
+    windowObject: window,
+  },
+  quill,
+  actions: {
+    syncEditorWrapMode,
+    triggerSaveImage,
+    onSave: () => {
+      drawEditorToCanvas();
+
+      const rawImageName = imageNameInput?.value.trim() || 'NewImage';
+      const safeImageName = rawImageName.replace(/[\/:*?"<>|]/g, '_');
+      const hasExtension = /\.[^./\\\s]+$/.test(safeImageName);
+      const fileName = hasExtension ? safeImageName : `${safeImageName}.png`;
+      const imageData = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.href = imageData;
+      downloadLink.download = fileName;
+      downloadLink.click();
+    },
+    closeColorWindow,
+    closeSettingsWindow,
+    closeManageImagesWindow,
+    handleManageImagesEnter: (event) => manageImagesController.handleEnterKey(event),
+    handleManageImagesDelete: (event) => manageImagesController.handleDeleteKey(event),
+    persistSettings,
+    persistImageLibrary,
+  },
+  callbacks: {
+    onRenderRequested: drawEditorToCanvas,
+    onStateChanged: null,
+  },
+});
+
+manageImagesController.mount();
+borderController.mount();
+colorPickerController.mount();
+settingsController.mount();
+editorController.mount();
 
 if (appVersionBadge) {
   appVersionBadge.textContent = APP_VERSION;
@@ -1843,10 +1662,6 @@ initializeImageLibrary().then(() => restoreImageLibraryContentFromPersistence(im
   drawEditorToCanvas();
 });
 
-window.addEventListener('beforeunload', () => {
-  persistSettings();
-  persistImageLibrary();
-});
 
 updateBorderControlsState();
 syncImageLockedPaddingValues();
