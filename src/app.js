@@ -25,6 +25,7 @@ import {
 } from './border/imageBorder.js';
 import { createImageLibraryStore } from './images/libraryStore.js';
 import { createQuillEditor, extractDocumentFromDelta as extractDocumentFromDeltaModule } from './editor/quillAdapter.js';
+import { createManageImagesWindowController } from './ui/manageImagesWindow.js';
 import {
   layoutDocumentForCanvas as layoutDocumentForCanvasFromRenderer,
   calculateCanvasDimensions as calculateCanvasDimensionsFromRenderer,
@@ -135,7 +136,14 @@ const imageBorderTransformInputs = {
 const manageImagesOverlay = document.getElementById('manage-images-overlay');
 const closeManageImagesWindowButton = document.getElementById('close-manage-images-window');
 const manageImagesInput = document.getElementById('manage-images-input');
-const manageImagesList = document.getElementById('manage-images-list');
+const manageImagesRefreshInput = document.getElementById('manage-images-refresh-input');
+const manageImagesTree = document.getElementById('manage-images-tree');
+const manageImagesContextMenu = document.getElementById('manage-images-context-menu');
+const manageImagesImportButton = document.getElementById('manage-images-import');
+const manageImagesCreateFolderButton = document.getElementById('manage-images-create-folder');
+const manageImagesRefreshButton = document.getElementById('manage-images-refresh');
+const manageImagesRenameButton = document.getElementById('manage-images-rename');
+const manageImagesDeleteButton = document.getElementById('manage-images-delete');
 const manageImagesOkButton = document.getElementById('manage-images-ok');
 const manageImagesCancelButton = document.getElementById('manage-images-cancel');
 
@@ -612,8 +620,6 @@ function clearImageBorderSlot(slotState) {
 }
 
 const imageLibraryStore = createImageLibraryStore();
-let activeImageSlotSelection = null;
-let pendingSlotSelection = null;
 
 function getManagedImageById(imageId) {
   return imageLibraryStore.getImage(imageId);
@@ -688,90 +694,64 @@ function updateAllPieceButtonLabels() {
   });
 }
 
-async function addManagedImagesFromFileList(fileList) {
-  const files = Array.from(fileList || []).filter((file) => file?.type?.startsWith('image/'));
+function clearDeletedImageSlots(imageIds) {
+  const imageIdSet = new Set(imageIds);
 
-  for (const file of files) {
-    try {
-      const loadedImage = await loadImageFromFile(file);
-      imageLibraryStore.createImage({
-        name: file.name,
-        image: loadedImage,
-      });
-    } catch (error) {
-      console.error('Unable to load selected image.', error);
+  Object.values(imageBorderState.corners).forEach((slotState) => {
+    if (slotState.imageId && imageIdSet.has(slotState.imageId)) {
+      clearImageBorderSlot(slotState);
     }
-  }
+  });
 
-  renderManageImagesList();
+  Object.values(imageBorderState.sides).forEach((slotState) => {
+    if (slotState.imageId && imageIdSet.has(slotState.imageId)) {
+      clearImageBorderSlot(slotState);
+    }
+  });
+
+  updateAllPieceButtonLabels();
+  drawEditorToCanvas();
 }
 
-function renderManageImagesList() {
-  if (!manageImagesList) {
-    return;
-  }
+const manageImagesWindowController = createManageImagesWindowController({
+  store: imageLibraryStore,
+  loadImageFromFile,
+  elements: {
+    overlay: manageImagesOverlay,
+    closeButton: closeManageImagesWindowButton,
+    input: manageImagesInput,
+    refreshInput: manageImagesRefreshInput,
+    tree: manageImagesTree,
+    contextMenu: manageImagesContextMenu,
+    importButton: manageImagesImportButton,
+    createFolderButton: manageImagesCreateFolderButton,
+    refreshButton: manageImagesRefreshButton,
+    renameButton: manageImagesRenameButton,
+    deleteButton: manageImagesDeleteButton,
+    okButton: manageImagesOkButton,
+    cancelButton: manageImagesCancelButton,
+  },
+  onSelectionApplied: ({ slotType, slotName }, imageId) => {
+    assignManagedImageToSlot(slotType, slotName, imageId);
+    updatePieceButtonLabel(slotType, slotName);
+    drawEditorToCanvas();
+  },
+  onStoreChanged: () => {
+    updateAllPieceButtonLabels();
+  },
+  onImagesDeleted: clearDeletedImageSlots,
+});
 
-  manageImagesList.innerHTML = '';
-  imageLibraryStore.listAllImages().forEach((imageEntry) => {
-    const row = document.createElement('button');
-    row.type = 'button';
-    row.className = 'manage-image-item';
-    row.dataset.imageId = imageEntry.id;
-    row.textContent = imageEntry.name;
+function openManageImagesWindow(slotType = null, slotName = null) {
+  const initialImageId = slotType && slotName
+    ? (getImageBorderSlotState(slotType, slotName)?.imageId || null)
+    : null;
 
-    if (pendingSlotSelection === imageEntry.id) {
-      row.classList.add('active');
-    }
-
-    row.addEventListener('click', () => {
-      pendingSlotSelection = imageEntry.id;
-      manageImagesList.querySelectorAll('.manage-image-item').forEach((item) => item.classList.remove('active'));
-      row.classList.add('active');
-    });
-
-    row.addEventListener('dblclick', () => {
-      pendingSlotSelection = imageEntry.id;
-      applyManageImagesSelection();
-    });
-
-    manageImagesList.appendChild(row);
-  });
+  manageImagesWindowController.open({ slotType, slotName, initialImageId });
 }
 
 function closeManageImagesWindow() {
-  if (!manageImagesOverlay) {
-    return;
-  }
-
-  manageImagesOverlay.classList.add('hidden');
-  manageImagesOverlay.setAttribute('aria-hidden', 'true');
-  activeImageSlotSelection = null;
-  pendingSlotSelection = null;
-}
-
-function openManageImagesWindow(slotType = null, slotName = null) {
-  if (!manageImagesOverlay) {
-    return;
-  }
-
-  activeImageSlotSelection = slotType && slotName ? { slotType, slotName } : null;
-  pendingSlotSelection = activeImageSlotSelection
-    ? (getImageBorderSlotState(activeImageSlotSelection.slotType, activeImageSlotSelection.slotName)?.imageId || null)
-    : null;
-  renderManageImagesList();
-  manageImagesOverlay.classList.remove('hidden');
-  manageImagesOverlay.setAttribute('aria-hidden', 'false');
-}
-
-function applyManageImagesSelection() {
-  if (activeImageSlotSelection && pendingSlotSelection) {
-    assignManagedImageToSlot(activeImageSlotSelection.slotType, activeImageSlotSelection.slotName, pendingSlotSelection);
-
-    updatePieceButtonLabel(activeImageSlotSelection.slotType, activeImageSlotSelection.slotName);
-    drawEditorToCanvas();
-  }
-
-  closeManageImagesWindow();
+  manageImagesWindowController.close();
 }
 
 function updateImageBorderSlotInputsState(isImageModeActive) {
@@ -1836,39 +1816,6 @@ if (settingsOverlay) {
 }
 
 
-if (manageImagesInput) {
-  manageImagesInput.addEventListener('change', async () => {
-    await addManagedImagesFromFileList(manageImagesInput.files);
-    manageImagesInput.value = '';
-  });
-}
-
-if (closeManageImagesWindowButton) {
-  closeManageImagesWindowButton.addEventListener('click', () => {
-    closeManageImagesWindow();
-  });
-}
-
-if (manageImagesCancelButton) {
-  manageImagesCancelButton.addEventListener('click', () => {
-    closeManageImagesWindow();
-  });
-}
-
-if (manageImagesOkButton) {
-  manageImagesOkButton.addEventListener('click', () => {
-    applyManageImagesSelection();
-  });
-}
-
-if (manageImagesOverlay) {
-  manageImagesOverlay.addEventListener('click', (event) => {
-    if (event.target === manageImagesOverlay) {
-      closeManageImagesWindow();
-    }
-  });
-}
-
 if (darkModeToggle) {
   darkModeToggle.addEventListener('change', () => {
     applyDarkMode(darkModeToggle.checked);
@@ -1883,9 +1830,8 @@ window.addEventListener('keydown', (event) => {
     closeManageImagesWindow();
   }
 
-  if (event.key === 'Enter' && manageImagesOverlay && !manageImagesOverlay.classList.contains('hidden')) {
+  if (event.key === 'Enter' && manageImagesWindowController.handleEnterKey(event)) {
     event.preventDefault();
-    applyManageImagesSelection();
   }
 });
 

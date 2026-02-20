@@ -583,34 +583,160 @@ body.dark-mode .piece-select-button {
   text-overflow: ellipsis;
 }
 
-.manage-images-body {
-  display: grid;
-  grid-template-columns: 1fr;
+.manage-images-window {
+  width: min(96vw, 900px);
 }
 
-.manage-images-list {
-  min-height: 180px;
-  max-height: 280px;
-  overflow: auto;
-  display: grid;
-  gap: 0.35rem;
-  border: 1px solid #4b5563;
-  border-radius: 8px;
-  padding: 0.5rem;
+.color-window-body.manage-images-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 78vh;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
-.manage-image-item {
-  text-align: left;
+.manage-images-hidden-input {
+  display: none;
+}
+
+.manage-images-toolbar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.manage-images-toolbar button {
   border: 1px solid #5b616a;
   background: #1f2937;
   color: #f9fafb;
   border-radius: 6px;
-  padding: 0.4rem 0.5rem;
+  padding: 0.38rem 0.6rem;
   cursor: pointer;
 }
 
-.manage-image-item.active {
+.manage-images-toolbar button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.manage-images-content {
+  min-height: 320px;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+.manage-images-tree {
+  height: 100%;
+  min-height: 320px;
+  max-height: calc(78vh - 170px);
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  overflow-x: hidden;
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  padding: 0.4rem;
+  background: #111827;
+  box-sizing: border-box;
+}
+
+.manage-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #f9fafb;
+  text-align: left;
+  padding: 0.24rem 0.4rem;
+  cursor: pointer;
+  margin-bottom: 0.15rem;
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.manage-tree-row.active {
   border-color: #60a5fa;
+  background: #1e3a8a;
+}
+
+.manage-tree-toggle {
+  width: 1.3rem;
+  height: 1.3rem;
+  border: none;
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+  padding: 0;
+}
+
+.manage-tree-toggle:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.manage-tree-toggle-spacer {
+  width: 1.3rem;
+}
+
+.manage-tree-icon {
+  width: 1.25rem;
+  text-align: center;
+}
+
+.manage-tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manage-tree-rename-input {
+  flex: 1;
+  min-width: 160px;
+  border: 1px solid #6b7280;
+  border-radius: 5px;
+  background: #0f172a;
+  color: #f9fafb;
+  padding: 0.2rem 0.35rem;
+}
+
+.manage-images-body .dialog-action-row {
+  justify-content: flex-end;
+  margin-top: auto;
+}
+
+.manage-images-context-menu {
+  position: fixed;
+  z-index: 1300;
+  min-width: 190px;
+  padding: 0.3rem;
+  border-radius: 8px;
+  border: 1px solid #4b5563;
+  background: #111827;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.manage-images-context-action {
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #f9fafb;
+  padding: 0.35rem 0.45rem;
+  cursor: pointer;
+}
+
+.manage-images-context-action:hover {
   background: #1e3a8a;
 }
 
@@ -1222,4 +1348,25 @@ body.dark-mode .settings-window-header {
 
 .image-border-slot-group {
   overflow-x: clip;
+}
+
+
+.window-choice-overlay {
+  z-index: 1400;
+}
+
+.window-choice-dialog {
+  width: min(520px, 90vw);
+}
+
+.window-choice-body {
+  display: grid;
+  gap: 0.8rem;
+  padding: 14px;
+}
+
+.window-choice-message {
+  margin: 0;
+  color: #d1d5db;
+  white-space: pre-line;
 }

@@ -437,16 +437,25 @@
     </div>
 
     <div id="manage-images-overlay" class="color-window-overlay hidden" aria-hidden="true">
-      <div class="color-window" role="dialog" aria-modal="true" aria-labelledby="manage-images-title">
+      <div class="color-window manage-images-window" role="dialog" aria-modal="true" aria-labelledby="manage-images-title">
         <div class="color-window-header">
           <h2 id="manage-images-title">Manage Images</h2>
           <button type="button" id="close-manage-images-window" class="close-window-button" aria-label="Close manage images window">✕</button>
         </div>
         <div class="color-window-body manage-images-body">
-          <label class="inline-input" for="manage-images-input">Add images
-            <input type="file" id="manage-images-input" accept="image/*" multiple />
-          </label>
-          <div id="manage-images-list" class="manage-images-list" aria-label="Available images"></div>
+          <input type="file" id="manage-images-input" accept="image/*" multiple class="manage-images-hidden-input" />
+          <input type="file" id="manage-images-refresh-input" accept="image/*" class="manage-images-hidden-input" />
+          <div class="manage-images-toolbar" role="toolbar" aria-label="Manage images toolbar">
+            <button type="button" id="manage-images-import">🖼️ Import Image</button>
+            <button type="button" id="manage-images-create-folder">📁 Create Folder</button>
+            <button type="button" id="manage-images-refresh">🗘 Refresh from computer</button>
+            <button type="button" id="manage-images-rename">📝 Rename</button>
+            <button type="button" id="manage-images-delete" aria-label="Delete selected">🗑️</button>
+          </div>
+          <div class="manage-images-content">
+            <div id="manage-images-tree" class="manage-images-tree" aria-label="Images and folders tree"></div>
+          </div>
+          <div id="manage-images-context-menu" class="manage-images-context-menu hidden" role="menu" aria-label="Manage images context menu"></div>
           <div class="dialog-action-row">
             <button type="button" class="window-primary-button" id="manage-images-ok">OK</button>
             <button type="button" class="window-secondary-button" id="manage-images-cancel">Cancel</button>
