@@ -18,9 +18,16 @@ async function selectControlById(page, id) {
 async function enableImageBorderMode(page) {
   await page.goto('/');
   await page.locator('#enable-border').check();
-  await selectControlById(page, 'border-color-images');
 
-  await expect(page.locator('#image-border-controls')).toBeVisible();
+  const borderColorAccordion = page.locator('details[aria-label="Border color options"]');
+  await borderColorAccordion.evaluate((element) => {
+    if (!element.open) {
+      element.open = true;
+    }
+  });
+
+  await selectControlById(page, 'border-color-images');
+  await expect(page.locator('#image-border-controls')).not.toHaveClass(/hidden/);
 }
 
 async function openManageImagesForSlot(page, slotId) {
