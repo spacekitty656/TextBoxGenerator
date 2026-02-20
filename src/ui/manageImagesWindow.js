@@ -322,8 +322,10 @@ export function createManageImagesWindowController({
           name: file.name,
           parentId,
           image: loaded.image,
+          blob: loaded.blob,
           dataUrl: loaded.dataUrl,
           mimeType: loaded.mimeType,
+          byteSize: loaded.byteSize,
         });
         createdKeys.push(getEntityKey(createdImage));
       } catch (error) {
@@ -790,8 +792,10 @@ export function createManageImagesWindowController({
       const loaded = await loadImageFromFile(file);
       store.updateImage(targetImageId, {
         image: loaded.image,
+        blob: loaded.blob,
         dataUrl: loaded.dataUrl,
         mimeType: loaded.mimeType,
+        byteSize: loaded.byteSize,
         name: file.name,
       });
       onStoreChanged?.();
