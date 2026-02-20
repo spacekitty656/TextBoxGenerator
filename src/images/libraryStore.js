@@ -141,7 +141,14 @@ export function createImageLibraryStore(serializedState = null) {
     return true;
   }
 
-  function createImage({ name, parentId = ROOT_FOLDER_ID, orderIndex, image = null } = {}) {
+  function createImage({
+    name,
+    parentId = ROOT_FOLDER_ID,
+    orderIndex,
+    image = null,
+    dataUrl = null,
+    mimeType = null,
+  } = {}) {
     const resolvedParentId = ensureParentFolder(parentId);
     const entry = {
       id: nextId('image'),
@@ -150,6 +157,8 @@ export function createImageLibraryStore(serializedState = null) {
       parentId: resolvedParentId,
       orderIndex: 0,
       image,
+      dataUrl,
+      mimeType,
     };
 
     images.set(entry.id, entry);
@@ -170,6 +179,14 @@ export function createImageLibraryStore(serializedState = null) {
 
     if (Object.prototype.hasOwnProperty.call(updates, 'image')) {
       imageEntry.image = updates.image;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'dataUrl')) {
+      imageEntry.dataUrl = updates.dataUrl || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'mimeType')) {
+      imageEntry.mimeType = updates.mimeType || null;
     }
 
     return cloneImage(imageEntry);
@@ -260,6 +277,8 @@ export function createImageLibraryStore(serializedState = null) {
         name: imageEntry.name,
         parentId: imageEntry.parentId,
         orderIndex: imageEntry.orderIndex,
+        dataUrl: imageEntry.dataUrl || null,
+        mimeType: imageEntry.mimeType || null,
       })),
     };
   }
@@ -312,6 +331,8 @@ export function createImageLibraryStore(serializedState = null) {
         parentId: folders.has(imageEntry.parentId) ? imageEntry.parentId : ROOT_FOLDER_ID,
         orderIndex: Number.isFinite(imageEntry.orderIndex) ? Math.max(0, Math.floor(imageEntry.orderIndex)) : 0,
         image: null,
+        dataUrl: typeof imageEntry.dataUrl === 'string' ? imageEntry.dataUrl : null,
+        mimeType: typeof imageEntry.mimeType === 'string' ? imageEntry.mimeType : null,
       });
     });
 

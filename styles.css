@@ -599,6 +599,13 @@ body.dark-mode .piece-select-button {
   overflow: hidden;
 }
 
+.manage-images-description {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  color: #d1d5db;
+}
+
 .manage-images-hidden-input {
   display: none;
 }
@@ -626,7 +633,7 @@ body.dark-mode .piece-select-button {
 }
 
 .manage-images-content {
-  min-height: 320px;
+  min-height: 0;
   flex: 1;
   min-width: 0;
   width: 100%;
@@ -634,8 +641,7 @@ body.dark-mode .piece-select-button {
 
 .manage-images-tree {
   height: 100%;
-  min-height: 320px;
-  max-height: calc(78vh - 170px);
+  min-height: 240px;
   width: 100%;
   max-width: 100%;
   overflow: auto;
