@@ -1,6 +1,5 @@
 import { getAlignedStartX, getAlignmentWidth } from './layout.js';
 import {
-  getBorderConfig as getBorderConfigFromModule,
   getCanvasBackgroundConfig as getCanvasBackgroundConfigFromModule,
   getCanvasSizePaddingConfig as getCanvasSizePaddingConfigFromModule,
 } from './config.js';
@@ -41,11 +40,12 @@ import { createColorPickerView } from './ui/views/colorPickerView.js';
 import { createEditorView } from './ui/views/editorView.js';
 import { createManageImagesView } from './ui/views/manageImagesView.js';
 import { createSettingsView } from './ui/views/settingsView.js';
-import { createBorderController } from './controllers/borderController.js';
 import { createColorPickerController } from './controllers/colorPickerController.js';
 import { createEditorController } from './controllers/editorController.js';
 import { createManageImagesController } from './controllers/manageImagesController.js';
 import { createSettingsController } from './controllers/settingsController.js';
+import { createBorderState } from './features/border/borderState.js';
+import { createBorderUiController } from './features/border/borderUiController.js';
 
 const Quill = window.Quill;
 
@@ -107,8 +107,6 @@ const manageImagesRenameButton = manageImagesView.actions.renameButton;
 const manageImagesDeleteButton = manageImagesView.actions.deleteButton;
 const manageImagesOkButton = manageImagesView.window.okButton;
 const manageImagesCancelButton = manageImagesView.window.cancelButton;
-
-const insideOutColorInputs = [];
 
 const imageBorderState = {
   corners: {
@@ -565,67 +563,18 @@ function assignManagedImageToSlot(slotType, slotName, imageId) {
   });
 }
 
-function getPieceButton(slotType, slotName) {
-  return slotType === 'corners'
-    ? imageBorderCornerButtons[slotName]
-    : imageBorderSideButtons[slotName];
-}
-
-function toCompactPieceLabel(sourceName) {
-  if (!sourceName) {
-    return 'No image';
-  }
-
-  const trimmed = sourceName.trim();
-  const extensionIndex = trimmed.lastIndexOf('.');
-  const hasExtension = extensionIndex > 0;
-  const baseName = hasExtension ? trimmed.slice(0, extensionIndex) : trimmed;
-  const extension = hasExtension ? trimmed.slice(extensionIndex) : '';
-
-  const compactBase = baseName.length > 12
-    ? `${baseName.slice(0, 12)}…`
-    : baseName;
-
-  const compactExtension = extension.length > 6
-    ? extension.slice(0, 6)
-    : extension;
-
-  return `${compactBase}${compactExtension}`;
-}
-
-function updatePieceButtonLabel(slotType, slotName) {
-  const slotState = getImageBorderSlotState(slotType, slotName);
-  const button = getPieceButton(slotType, slotName);
-
-  if (!button || !slotState) {
-    return;
-  }
-
-  const imageEntry = slotState?.imageId ? getManagedImageById(slotState.imageId) : null;
-  const isBrokenReference = Boolean(slotState?.imageId && !imageEntry);
-  const sourceName = imageEntry?.name || '';
-
-  button.textContent = isBrokenReference ? '⚠ Missing image' : toCompactPieceLabel(sourceName);
-  button.title = isBrokenReference
-    ? 'Missing image reference. Reassign this piece.'
-    : (sourceName || 'Select image');
-  button.classList.toggle('piece-select-button-broken', isBrokenReference);
-}
-
-function updateAllPieceButtonLabels() {
-  Object.keys(imageBorderCornerButtons).forEach((slotName) => {
-    updatePieceButtonLabel('corners', slotName);
-  });
-
-  Object.keys(imageBorderSideButtons).forEach((slotName) => {
-    updatePieceButtonLabel('sides', slotName);
-  });
-}
-
-function clearDeletedImageSlots() {
-  updateAllPieceButtonLabels();
-  drawEditorToCanvas();
-}
+const borderState = createBorderState({
+  document,
+  insideOutColorList,
+  borderColorInsideOutRadio,
+  borderToggle,
+  imageBorderCornerButtons,
+  imageBorderSideButtons,
+  getImageBorderSlotState,
+  getManagedImageById,
+  syncLockedPaddingValues,
+  drawEditorToCanvas,
+});
 
 const manageImagesWindowController = createManageImagesWindowController({
   store: imageLibraryStore,
@@ -647,14 +596,14 @@ const manageImagesWindowController = createManageImagesWindowController({
   },
   onSelectionApplied: ({ slotType, slotName }, imageId) => {
     assignManagedImageToSlot(slotType, slotName, imageId);
-    updatePieceButtonLabel(slotType, slotName);
+    borderState.updatePieceButtonLabel(slotType, slotName);
     drawEditorToCanvas();
   },
   onStoreChanged: () => {
-    updateAllPieceButtonLabels();
+    borderState.updateAllPieceButtonLabels();
     persistImageLibrary();
   },
-  onImagesDeleted: clearDeletedImageSlots,
+  onImagesDeleted: borderState.clearDeletedImageSlots,
 });
 
 function openManageImagesWindow(slotType = null, slotName = null) {
@@ -667,148 +616,6 @@ function openManageImagesWindow(slotType = null, slotName = null) {
 
 function closeManageImagesWindow() {
   manageImagesController.close();
-}
-
-function updateImageBorderSlotInputsState(isImageModeActive) {
-  [
-    ...Object.values(imageBorderCornerButtons),
-    ...Object.values(imageBorderSideButtons),
-  ].forEach((input) => {
-    if (input) {
-      input.disabled = !isImageModeActive;
-    }
-  });
-
-  Object.values(imageBorderTransformInputs).forEach((group) => {
-    Object.values(group).forEach((controls) => {
-      controls.rotation.disabled = !isImageModeActive;
-      controls.flipX.disabled = !isImageModeActive;
-      controls.flipY.disabled = !isImageModeActive;
-      controls.clear.disabled = !isImageModeActive;
-    });
-  });
-
-}
-
-function registerInsideOutColorInput(input) {
-  input.addEventListener('input', () => {
-    syncLockedPaddingValues();
-    drawEditorToCanvas();
-  });
-}
-
-function updateInsideOutColorRowsState() {
-  const showInsideOutColors = borderColorInsideOutRadio.checked && borderToggle.checked;
-  const hasMinimumColors = insideOutColorInputs.length <= 1;
-
-  insideOutColorInputs.forEach((input, index) => {
-    const row = input.closest('.inside-out-color-row');
-    const indexLabel = row.querySelector('.inside-out-index');
-    const deleteButton = row.querySelector('.inside-out-delete');
-    const upButton = row.querySelector('.inside-out-up');
-    const downButton = row.querySelector('.inside-out-down');
-    const inputId = `inside-out-color-${index + 1}`;
-
-    row.setAttribute('for', inputId);
-    input.id = inputId;
-    indexLabel.textContent = String(index + 1);
-
-    input.disabled = !showInsideOutColors;
-    deleteButton.disabled = !showInsideOutColors || hasMinimumColors;
-    upButton.disabled = !showInsideOutColors || index === 0;
-    downButton.disabled = !showInsideOutColors || index === insideOutColorInputs.length - 1;
-  });
-}
-
-function createInsideOutColorRow(value = '#1f2937') {
-  const row = document.createElement('label');
-  row.className = 'inside-out-color-row';
-
-  const controls = document.createElement('div');
-  controls.className = 'inside-out-row-controls';
-
-  const deleteButton = document.createElement('button');
-  deleteButton.type = 'button';
-  deleteButton.className = 'inside-out-row-button inside-out-delete';
-  deleteButton.setAttribute('aria-label', 'Delete color');
-  deleteButton.textContent = '🗑️';
-
-  const downButton = document.createElement('button');
-  downButton.type = 'button';
-  downButton.className = 'inside-out-row-button inside-out-down';
-  downButton.setAttribute('aria-label', 'Move color down');
-  downButton.textContent = '↓';
-
-  const upButton = document.createElement('button');
-  upButton.type = 'button';
-  upButton.className = 'inside-out-row-button inside-out-up';
-  upButton.setAttribute('aria-label', 'Move color up');
-  upButton.textContent = '↑';
-
-  controls.append(deleteButton, downButton, upButton);
-
-  const rowNumber = document.createElement('span');
-  rowNumber.className = 'inside-out-index';
-
-  const colorInput = document.createElement('input');
-  colorInput.type = 'color';
-  colorInput.value = value;
-
-  deleteButton.addEventListener('click', () => {
-    const rowIndex = insideOutColorInputs.indexOf(colorInput);
-    if (rowIndex === -1) {
-      return;
-    }
-
-    insideOutColorInputs.splice(rowIndex, 1);
-    row.remove();
-    updateInsideOutColorRowsState();
-    drawEditorToCanvas();
-  });
-
-  upButton.addEventListener('click', () => {
-    const rowIndex = insideOutColorInputs.indexOf(colorInput);
-    if (rowIndex <= 0) {
-      return;
-    }
-
-    [insideOutColorInputs[rowIndex - 1], insideOutColorInputs[rowIndex]] = [
-      insideOutColorInputs[rowIndex],
-      insideOutColorInputs[rowIndex - 1],
-    ];
-
-    insideOutColorList.insertBefore(row, row.previousElementSibling);
-    updateInsideOutColorRowsState();
-    drawEditorToCanvas();
-  });
-
-  downButton.addEventListener('click', () => {
-    const rowIndex = insideOutColorInputs.indexOf(colorInput);
-    if (rowIndex < 0 || rowIndex >= insideOutColorInputs.length - 1) {
-      return;
-    }
-
-    [insideOutColorInputs[rowIndex], insideOutColorInputs[rowIndex + 1]] = [
-      insideOutColorInputs[rowIndex + 1],
-      insideOutColorInputs[rowIndex],
-    ];
-
-    insideOutColorList.insertBefore(row.nextElementSibling, row);
-    updateInsideOutColorRowsState();
-    drawEditorToCanvas();
-  });
-
-  registerInsideOutColorInput(colorInput);
-  row.append(controls, rowNumber, colorInput);
-  insideOutColorList.append(row);
-  insideOutColorInputs.push(colorInput);
-  updateInsideOutColorRowsState();
-}
-
-function addInsideOutColor() {
-  const outerMostColor = insideOutColorInputs[insideOutColorInputs.length - 1]?.value || '#1f2937';
-  createInsideOutColorRow(outerMostColor);
-  drawEditorToCanvas();
 }
 
 function triggerSaveImage() {
@@ -840,44 +647,8 @@ function syncImageLockedPaddingValues() {
   syncPaddingValues(imageCenterPaddingInput, imageSidePaddingControls, imageLockState, 50);
 }
 
-function resolveBorderColorMode() {
-  const modeRadios = [borderColorSolidRadio, borderColorInsideOutRadio, borderColorImagesRadio];
-  const selectedMode = modeRadios.find((radioInput) => radioInput?.checked)?.value;
-
-  if (selectedMode === 'inside-out' || selectedMode === 'images') {
-    return selectedMode;
-  }
-
-  return 'solid';
-}
-
 function getBorderConfig() {
-  return getBorderConfigFromModule({
-    enabled: borderToggle.checked,
-    borderWidthValue: borderWidthInput.value,
-    borderRadiusValue: borderRadiusInput.value,
-    colorMode: resolveBorderColorMode(),
-    color: borderColorInput.value,
-    insideOutColorValues: insideOutColorInputs.map((input) => input.value),
-    backgroundMode: borderBackgroundColorSolidRadio.checked ? 'solid' : 'transparent',
-    backgroundColor: borderBackgroundColorInput.value,
-    centerPaddingValue: centerPaddingInput.value,
-    lockState,
-    sidePaddingValues: {
-      top: sidePaddingControls.top.input.value,
-      right: sidePaddingControls.right.input.value,
-      bottom: sidePaddingControls.bottom.input.value,
-      left: sidePaddingControls.left.input.value,
-    },
-    imageBorder: {
-      corners: resolveRenderableImageBorderGroup(imageBorderState.corners, getManagedImageById),
-      sides: resolveRenderableImageBorderGroup(imageBorderState.sides, getManagedImageById),
-      sizingStrategy: imageBorderSizingModeInput?.value || 'auto',
-      sideMode: imageBorderRepeatModeInput?.value || 'stretch',
-    },
-    clampToPositiveNumber,
-    parsePaddingNumber,
-  });
+  return borderController.getBorderConfig();
 }
 
 function getCanvasBackgroundConfig() {
@@ -921,63 +692,6 @@ function updateEditorBackgroundColor(borderConfig, canvasBackgroundConfig) {
   }
 
   editorElement.style.backgroundColor = resolveEditorBackgroundColor(borderConfig, canvasBackgroundConfig);
-}
-
-function updateBorderControlsState() {
-  const enabled = borderToggle.checked;
-  borderOptions.classList.toggle('hidden', !enabled);
-  borderOptions.classList.toggle('disabled', !enabled);
-  borderOptions.setAttribute('aria-disabled', String(!enabled));
-
-  [
-    centerPaddingInput,
-    borderWidthInput,
-    borderRadiusInput,
-    borderColorSolidRadio,
-    borderColorInsideOutRadio,
-    borderColorImagesRadio,
-    borderColorInput,
-    borderBackgroundColorTransparentRadio,
-    borderBackgroundColorSolidRadio,
-    borderBackgroundColorInput,
-    insideOutAddColorButton,
-    imageBorderSizingModeInput,
-    imageBorderRepeatModeInput,
-    ...Object.values(sidePaddingControls).map((control) => control.lock),
-  ].forEach((element) => {
-    if (element) {
-      element.disabled = !enabled;
-    }
-  });
-
-  updateBorderColorModeUI();
-  syncLockedPaddingValues();
-}
-
-function updateBorderColorModeUI() {
-  const isBorderEnabled = borderToggle.checked;
-  const selectedMode = resolveBorderColorMode();
-  const solidModeActive = selectedMode === 'solid' && isBorderEnabled;
-  const showInsideOutColors = selectedMode === 'inside-out' && isBorderEnabled;
-  const showImageControls = selectedMode === 'images' && isBorderEnabled;
-
-  borderColorInput.disabled = !solidModeActive;
-  borderBackgroundColorInput.disabled = !(borderBackgroundColorSolidRadio.checked && isBorderEnabled);
-  syncColorPreviewButtons();
-  insideOutAddColorButton.disabled = !showInsideOutColors;
-  insideOutColors.classList.toggle('hidden', !showInsideOutColors);
-  imageBorderControls?.classList.toggle('hidden', !showImageControls);
-
-  if (imageBorderSizingModeInput) {
-    imageBorderSizingModeInput.disabled = !showImageControls;
-  }
-
-  if (imageBorderRepeatModeInput) {
-    imageBorderRepeatModeInput.disabled = !showImageControls;
-  }
-
-  updateImageBorderSlotInputsState(showImageControls);
-  updateInsideOutColorRowsState();
 }
 
 function updateCanvasBackgroundControlsState() {
@@ -1349,8 +1063,8 @@ function drawEditorToCanvas() {
   renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConfig, canvasSizePaddingConfig, maxContentWidth);
 }
 
-createInsideOutColorRow('#1f2937');
-createInsideOutColorRow('#9ca3af');
+borderState.createInsideOutColorRow('#1f2937');
+borderState.createInsideOutColorRow('#9ca3af');
 
 populateColorGrid(basicColorsGrid, basicColorPalette);
 populateColorGrid(customColorsGrid, customColorPalette);
@@ -1363,7 +1077,7 @@ const manageImagesController = createManageImagesController({
   },
 });
 
-const borderController = createBorderController({
+const borderController = createBorderUiController({
   elements: {
     imageSidePaddingControls,
     imageCenterPaddingInput,
@@ -1388,6 +1102,14 @@ const borderController = createBorderController({
     borderBackgroundColorSolidRadio,
     borderBackgroundColorInput,
     borderToggle,
+    borderOptions,
+    insideOutColors,
+    imageBorderControls,
+  },
+  borderState,
+  state: {
+    lockState,
+    imageBorderState,
   },
   actions: {
     toggleImageSideLock: (side) => {
@@ -1420,18 +1142,22 @@ const borderController = createBorderController({
     onImageBorderSlotCleared: (slotType, slotName) => {
       const slotState = getImageBorderSlotState(slotType, slotName);
       clearImageBorderSlot(slotState);
-      updatePieceButtonLabel(slotType, slotName);
+      borderState.updatePieceButtonLabel(slotType, slotName);
     },
-    addInsideOutColor,
-    updateBorderColorModeUI,
     updateCanvasBackgroundControlsState,
     syncColorPreviewButtons,
-    updateBorderControlsState,
     syncColorPickerUI,
+    syncLockedPaddingValues,
   },
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
     onStateChanged: null,
+  },
+  helpers: {
+    resolveRenderableImageBorderGroup,
+    getManagedImageById,
+    clampToPositiveNumber,
+    parsePaddingNumber,
   },
 });
 
@@ -1554,15 +1280,15 @@ if (appVersionBadge) {
 syncColorPickerUI();
 syncColorPreviewButtons();
 applySavedSettings();
-updateAllPieceButtonLabels();
+borderState.updateAllPieceButtonLabels();
 
 imageLibraryService.init(imageLibraryStore).then(() => imageLibraryService.hydrateImages(imageLibraryStore)).then(() => {
-  updateAllPieceButtonLabels();
+  borderState.updateAllPieceButtonLabels();
   drawEditorToCanvas();
 });
 
 
-updateBorderControlsState();
+borderController.updateBorderControlsState();
 syncImageLockedPaddingValues();
 updateCanvasBackgroundControlsState();
 syncEditorWrapMode();
