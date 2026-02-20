@@ -27,13 +27,11 @@ import {
 } from './border/imageBorderState.js';
 import { createImageLibraryStore } from './images/libraryStore.js';
 import { createImageLibraryService } from './images/imageLibraryService.js';
-import { createQuillEditor, extractDocumentFromDelta as extractDocumentFromDeltaModule } from './editor/quillAdapter.js';
+import { createQuillEditor } from './editor/quillAdapter.js';
+import { createDeltaAdapter } from './editor/deltaAdapter.js';
 import { createManageImagesWindowController } from './ui/manageImagesWindow.js';
-import {
-  layoutDocumentForCanvas as layoutDocumentForCanvasFromRenderer,
-  calculateCanvasDimensions as calculateCanvasDimensionsFromRenderer,
-} from './render/canvasRenderer.js';
 import { createCanvasPainter } from './render/canvasPainter.js';
+import { createBackgroundRectHeightForFont, createLayoutAdapter } from './render/layoutAdapter.js';
 import { createRenderOrchestrator } from './render/renderOrchestrator.js';
 import { createBorderControlsView } from './ui/views/borderControlsView.js';
 import { createColorPickerView } from './ui/views/colorPickerView.js';
@@ -453,32 +451,6 @@ const QuillFont = Quill.import('formats/font');
 QuillFont.whitelist = FONT_WHITELIST;
 Quill.register(QuillFont, true);
 
-const FONT_MAP = {
-  sansserif: 'Arial, Helvetica, sans-serif',
-  serif: 'Georgia, "Times New Roman", serif',
-  monospace: '"Courier New", Courier, monospace',
-  pressstart2p: '"Press Start 2P", "Courier New", monospace',
-};
-
-const SIZE_MAP = {
-  small: 14,
-  normal: 18,
-  large: 24,
-  huge: 32,
-};
-
-const backgroundMetricsHeightCache = new Map();
-
-const DEFAULT_STYLE = {
-  bold: false,
-  italic: false,
-  underline: false,
-  color: '#111827',
-  background: null,
-  font: 'sansserif',
-  size: 'normal',
-};
-
 const quill = createQuillEditor(Quill, {
   'open-color-window': openColorWindow,
   'open-background-color-window': openBackgroundColorWindow,
@@ -699,54 +671,6 @@ function updateCanvasBackgroundControlsState() {
   syncColorPreviewButtons();
 }
 
-function getCanvasStyle(attributes = {}) {
-  const merged = { ...DEFAULT_STYLE, ...attributes };
-  const fontSize = SIZE_MAP[merged.size] || Number.parseInt(merged.size, 10) || SIZE_MAP.normal;
-  const fontFamily = FONT_MAP[merged.font] || merged.font || FONT_MAP.sansserif;
-
-  return {
-    bold: Boolean(merged.bold),
-    italic: Boolean(merged.italic),
-    underline: Boolean(merged.underline),
-    color: merged.color || DEFAULT_STYLE.color,
-    background: typeof merged.background === 'string' && merged.background.trim() ? merged.background : null,
-    fontSize,
-    fontFamily,
-  };
-}
-
-
-function getBackgroundRectHeightForFont(font, fallbackFontSize) {
-  if (backgroundMetricsHeightCache.has(font)) {
-    return backgroundMetricsHeightCache.get(font);
-  }
-
-  context.font = font;
-  const metrics = context.measureText('Mg');
-  const actualAscent = metrics.actualBoundingBoxAscent ?? fallbackFontSize * 0.8;
-  const actualDescent = metrics.actualBoundingBoxDescent ?? fallbackFontSize * 0.2;
-  const height = Math.max(1, actualAscent + actualDescent);
-  backgroundMetricsHeightCache.set(font, height);
-  return height;
-}
-
-function buildCanvasFont(style) {
-  const segments = [];
-
-  if (style.italic) {
-    segments.push('italic');
-  }
-
-  if (style.bold) {
-    segments.push('700');
-  }
-
-  segments.push(`${style.fontSize}px`);
-  segments.push(style.fontFamily);
-
-  return segments.join(' ');
-}
-
 function drawEditorToCanvas() {
   renderOrchestrator.render();
 }
@@ -852,7 +776,7 @@ const borderController = createBorderUiController({
 const canvasPainter = createCanvasPainter({
   context,
   canvas,
-  getBackgroundRectHeightForFont,
+  getBackgroundRectHeightForFont: createBackgroundRectHeightForFont({ context }),
   drawImageBorder: (borderConfig, borderX, borderY, borderRectWidth, borderRectHeight, drawRoundedRectPath) => drawImageBorderModule({
     context,
     borderConfig,
@@ -863,6 +787,13 @@ const canvasPainter = createCanvasPainter({
     drawRoundedRectPath,
   }),
 });
+
+const layoutAdapter = createLayoutAdapter({
+  context,
+  measureRenderedVerticalBounds: canvasPainter.measureRenderedVerticalBounds,
+});
+
+const deltaAdapter = createDeltaAdapter();
 
 const renderOrchestrator = createRenderOrchestrator({
   quill: {
@@ -879,27 +810,8 @@ const renderOrchestrator = createRenderOrchestrator({
   maxImageWidthInput,
   baseCanvasContentWidth: BASE_CANVAS_CONTENT_WIDTH,
   clampToPositiveNumber,
-  renderer: {
-    layoutDocumentForCanvas: (lines, maxWidth, wrapEnabled) => layoutDocumentForCanvasFromRenderer(lines, maxWidth, wrapEnabled, {
-      getCanvasStyle,
-      buildCanvasFont,
-      defaultFontSize: SIZE_MAP.normal,
-      measureText: (textValue, font) => {
-        context.font = font;
-        return context.measureText(textValue).width;
-      },
-    }),
-    calculateCanvasDimensions: (laidOutLines, borderConfig, canvasSizePaddingConfig, maxContentWidth) => calculateCanvasDimensionsFromRenderer(
-      laidOutLines,
-      borderConfig,
-      canvasSizePaddingConfig,
-      maxContentWidth,
-      { measureRenderedVerticalBounds: canvasPainter.measureRenderedVerticalBounds },
-    ),
-  },
-  editor: {
-    extractDocumentFromDelta: (delta) => extractDocumentFromDeltaModule(delta),
-  },
+  renderer: layoutAdapter,
+  editor: deltaAdapter,
 });
 
 const colorPickerController = createColorPickerController({
