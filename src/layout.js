@@ -101,7 +101,14 @@ export function calculateCanvasDimensions(
     measureRenderedVerticalBounds,
   } = dependencies;
   const borderWidth = borderConfig.enabled ? borderConfig.width : 0;
-  const borderStrokeOverflow = borderConfig.enabled ? borderWidth / 2 : 0;
+  const usesImageBorder = borderConfig.enabled && borderConfig.colorMode === 'images';
+  const borderStrokeOverflow = borderConfig.enabled && !usesImageBorder ? borderWidth / 2 : 0;
+  const borderInset = borderConfig.enabled
+    ? (usesImageBorder ? borderWidth : borderWidth / 2)
+    : 0;
+  const borderSizeContribution = borderConfig.enabled
+    ? (usesImageBorder ? borderWidth * 2 : borderWidth)
+    : 0;
   const textPadding = borderConfig.enabled
     ? borderConfig.padding
     : { top: 0, right: 0, bottom: 0, left: 0 };
@@ -114,10 +121,10 @@ export function calculateCanvasDimensions(
   const verticalBounds = measureRenderedVerticalBounds(laidOutLines, textStartY);
 
   if (borderConfig.enabled) {
-    const borderX = renderedMinX - textPadding.left - borderWidth / 2;
-    const borderY = verticalBounds.minY - textPadding.top - borderWidth / 2;
-    const borderRectWidth = renderedMaxX - renderedMinX + textPadding.left + textPadding.right + borderWidth;
-    const borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderWidth;
+    const borderX = renderedMinX - textPadding.left - borderInset;
+    const borderY = verticalBounds.minY - textPadding.top - borderInset;
+    const borderRectWidth = renderedMaxX - renderedMinX + textPadding.left + textPadding.right + borderSizeContribution;
+    const borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderSizeContribution;
 
     return {
       width: Math.max(1, Math.ceil(borderX + borderRectWidth + borderStrokeOverflow + canvasSizePaddingConfig.right)),

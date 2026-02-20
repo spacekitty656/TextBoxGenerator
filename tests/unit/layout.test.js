@@ -185,6 +185,26 @@ describe('calculateCanvasDimensions', () => {
     expect(dimensions.width).toBe(248);
   });
 
+
+  it('treats image borders as fully outside the content when padding is zero', () => {
+    const dimensions = calculateCanvasDimensions(
+      [{ align: 'left', tokens: [], width: 100, lineHeight: 20 }],
+      {
+        enabled: true,
+        colorMode: 'images',
+        width: 6,
+        padding: { top: 0, right: 0, bottom: 0, left: 0 },
+      },
+      { top: 0, right: 0, bottom: 0, left: 0 },
+      200,
+      {
+        measureRenderedVerticalBounds: () => ({ minY: 0, maxY: 20 }),
+      },
+    );
+
+    expect(dimensions.width).toBe(112);
+  });
+
   it('still expands to rendered text width when border is disabled', () => {
     const dimensions = calculateCanvasDimensions(
       [{ align: 'center', tokens: [], width: 260, lineHeight: 20 }],

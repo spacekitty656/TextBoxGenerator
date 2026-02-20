@@ -1077,6 +1077,13 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
   context.textBaseline = 'top';
 
   const borderWidth = borderConfig.enabled ? borderConfig.width : 0;
+  const usesImageBorder = borderConfig.enabled && borderConfig.colorMode === 'images';
+  const borderInset = borderConfig.enabled
+    ? (usesImageBorder ? borderWidth : borderWidth / 2)
+    : 0;
+  const borderSizeContribution = borderConfig.enabled
+    ? (usesImageBorder ? borderWidth * 2 : borderWidth)
+    : 0;
   const textPadding = borderConfig.enabled
     ? borderConfig.padding
     : { top: 0, right: 0, bottom: 0, left: 0 };
@@ -1096,10 +1103,10 @@ function renderDocumentToCanvas(laidOutLines, borderConfig, canvasBackgroundConf
   let borderRectHeight = 0;
 
   if (borderConfig.enabled) {
-    borderX = renderedMinX - textPadding.left - borderWidth / 2;
-    borderY = verticalBounds.minY - textPadding.top - borderWidth / 2;
-    borderRectWidth = renderedMaxX - renderedMinX + textPadding.left + textPadding.right + borderWidth;
-    borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderWidth;
+    borderX = renderedMinX - textPadding.left - borderInset;
+    borderY = verticalBounds.minY - textPadding.top - borderInset;
+    borderRectWidth = renderedMaxX - renderedMinX + textPadding.left + textPadding.right + borderSizeContribution;
+    borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderSizeContribution;
 
     if (borderConfig.backgroundMode === 'solid') {
       const fillInset = borderWidth / 2;
