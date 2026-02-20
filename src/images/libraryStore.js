@@ -146,8 +146,12 @@ export function createImageLibraryStore(serializedState = null) {
     parentId = ROOT_FOLDER_ID,
     orderIndex,
     image = null,
+    blob = null,
     dataUrl = null,
     mimeType = null,
+    byteSize = null,
+    blobId = null,
+    storageKey = null,
   } = {}) {
     const resolvedParentId = ensureParentFolder(parentId);
     const entry = {
@@ -157,8 +161,12 @@ export function createImageLibraryStore(serializedState = null) {
       parentId: resolvedParentId,
       orderIndex: 0,
       image,
+      blob,
       dataUrl,
       mimeType,
+      byteSize: Number.isFinite(byteSize) ? Math.max(0, Math.floor(byteSize)) : null,
+      blobId: blobId || storageKey || null,
+      storageKey: storageKey || blobId || null,
     };
 
     images.set(entry.id, entry);
@@ -181,12 +189,29 @@ export function createImageLibraryStore(serializedState = null) {
       imageEntry.image = updates.image;
     }
 
+    if (Object.prototype.hasOwnProperty.call(updates, 'blob')) {
+      imageEntry.blob = updates.blob || null;
+    }
+
     if (Object.prototype.hasOwnProperty.call(updates, 'dataUrl')) {
       imageEntry.dataUrl = updates.dataUrl || null;
     }
 
     if (Object.prototype.hasOwnProperty.call(updates, 'mimeType')) {
       imageEntry.mimeType = updates.mimeType || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'byteSize')) {
+      imageEntry.byteSize = Number.isFinite(updates.byteSize)
+        ? Math.max(0, Math.floor(updates.byteSize))
+        : null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updates, 'blobId')
+      || Object.prototype.hasOwnProperty.call(updates, 'storageKey')) {
+      const resolvedBlobId = updates.blobId || updates.storageKey || null;
+      imageEntry.blobId = resolvedBlobId;
+      imageEntry.storageKey = resolvedBlobId;
     }
 
     return cloneImage(imageEntry);
@@ -279,6 +304,9 @@ export function createImageLibraryStore(serializedState = null) {
         orderIndex: imageEntry.orderIndex,
         dataUrl: imageEntry.dataUrl || null,
         mimeType: imageEntry.mimeType || null,
+        byteSize: Number.isFinite(imageEntry.byteSize) ? imageEntry.byteSize : null,
+        blobId: imageEntry.blobId || imageEntry.storageKey || null,
+        storageKey: imageEntry.storageKey || imageEntry.blobId || null,
       })),
     };
   }
@@ -331,8 +359,14 @@ export function createImageLibraryStore(serializedState = null) {
         parentId: folders.has(imageEntry.parentId) ? imageEntry.parentId : ROOT_FOLDER_ID,
         orderIndex: Number.isFinite(imageEntry.orderIndex) ? Math.max(0, Math.floor(imageEntry.orderIndex)) : 0,
         image: null,
+        blob: imageEntry.blob instanceof Blob ? imageEntry.blob : null,
         dataUrl: typeof imageEntry.dataUrl === 'string' ? imageEntry.dataUrl : null,
         mimeType: typeof imageEntry.mimeType === 'string' ? imageEntry.mimeType : null,
+        byteSize: Number.isFinite(imageEntry.byteSize)
+          ? Math.max(0, Math.floor(imageEntry.byteSize))
+          : null,
+        blobId: imageEntry.blobId || imageEntry.storageKey || null,
+        storageKey: imageEntry.storageKey || imageEntry.blobId || null,
       });
     });
 

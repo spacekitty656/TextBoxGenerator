@@ -25,9 +25,13 @@ import {
 } from './border/imageBorder.js';
 import { createImageLibraryStore } from './images/libraryStore.js';
 import {
-  persistImageLibrary as persistImageLibraryModule,
-  restoreImageLibrarySnapshot,
+  IMAGE_LIBRARY_STORAGE_KEY,
 } from './images/libraryPersistence.js';
+import {
+  migrateLegacyImageLibraryToIndexedDb,
+  persistImageLibraryToIndexedDb,
+  restoreImageLibraryFromIndexedDb,
+} from './images/libraryPersistenceIndexedDb.js';
 import { createQuillEditor, extractDocumentFromDelta as extractDocumentFromDeltaModule } from './editor/quillAdapter.js';
 import { createManageImagesWindowController } from './ui/manageImagesWindow.js';
 import {
@@ -467,7 +471,9 @@ function applySavedSettings() {
 }
 
 function persistImageLibrary() {
-  persistImageLibraryModule(window.localStorage, imageLibraryStore);
+  persistImageLibraryToIndexedDb(imageLibraryStore).catch((error) => {
+    console.warn('Unable to persist image library to IndexedDB.', error);
+  });
 }
 
 
@@ -598,15 +604,6 @@ function parsePaddingNumber(value, fallback = 0) {
   return parsed;
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Unable to read image data.'));
-    reader.readAsDataURL(file);
-  });
-}
-
 function loadImageFromSourceUrl(sourceUrl) {
   return new Promise((resolve, reject) => {
     const imageElement = new Image();
@@ -638,14 +635,12 @@ async function loadImageFromFile(file) {
     throw new Error('Please choose a valid image file.');
   }
 
-  const [image, dataUrl] = await Promise.all([
-    toDrawableImageFromBlob(file),
-    readFileAsDataUrl(file),
-  ]);
+  const image = await toDrawableImageFromBlob(file);
 
   return {
     image,
-    dataUrl,
+    blob: file,
+    byteSize: file.size,
     mimeType: file.type || null,
   };
 }
@@ -654,12 +649,14 @@ async function restoreImageLibraryContentFromPersistence(store) {
   const images = store.listAllImages();
 
   await Promise.all(images.map(async (entry) => {
-    if (!entry.dataUrl) {
+    if (!entry.blob && !entry.dataUrl) {
       return;
     }
 
     try {
-      const restoredImage = await loadImageFromSourceUrl(entry.dataUrl);
+      const restoredImage = entry.blob
+        ? await toDrawableImageFromBlob(entry.blob)
+        : await loadImageFromSourceUrl(entry.dataUrl);
       store.updateImage(entry.id, { image: restoredImage });
     } catch (error) {
       console.warn('Unable to restore persisted image content.', error);
@@ -679,8 +676,24 @@ function clearImageBorderSlot(slotState) {
   slotState.imageId = null;
 }
 
-const persistedImageLibrary = restoreImageLibrarySnapshot(window.localStorage);
-const imageLibraryStore = createImageLibraryStore(persistedImageLibrary);
+const imageLibraryStore = createImageLibraryStore();
+
+async function initializeImageLibrary() {
+  try {
+    const indexedDbLibrary = await restoreImageLibraryFromIndexedDb();
+    if (indexedDbLibrary) {
+      imageLibraryStore.deserialize(indexedDbLibrary);
+      return;
+    }
+
+    await migrateLegacyImageLibraryToIndexedDb(imageLibraryStore, {
+      storage: window.localStorage,
+      storageKey: IMAGE_LIBRARY_STORAGE_KEY,
+    });
+  } catch (error) {
+    console.warn('Unable to initialize image library persistence.', error);
+  }
+}
 
 function getManagedImageById(imageId) {
   return imageLibraryStore.getImage(imageId);
@@ -1910,7 +1923,7 @@ syncColorPreviewButtons();
 applySavedSettings();
 updateAllPieceButtonLabels();
 
-restoreImageLibraryContentFromPersistence(imageLibraryStore).then(() => {
+initializeImageLibrary().then(() => restoreImageLibraryContentFromPersistence(imageLibraryStore)).then(() => {
   updateAllPieceButtonLabels();
   drawEditorToCanvas();
 });
