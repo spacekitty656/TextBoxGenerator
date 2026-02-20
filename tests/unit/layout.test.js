@@ -205,6 +205,27 @@ describe('calculateCanvasDimensions', () => {
     expect(dimensions.width).toBe(112);
   });
 
+
+  it('avoids an extra trailing pixel from floating-point precision noise', () => {
+    const dimensions = calculateCanvasDimensions(
+      [{ align: 'left', tokens: [], width: 100.0000000001, lineHeight: 20 }],
+      {
+        enabled: true,
+        colorMode: 'images',
+        width: 6,
+        padding: { top: 0, right: 0, bottom: 0, left: 0 },
+      },
+      { top: 0, right: 0, bottom: 0, left: 0 },
+      200,
+      {
+        measureRenderedVerticalBounds: () => ({ minY: 0, maxY: 20.0000000001 }),
+      },
+    );
+
+    expect(dimensions.width).toBe(112);
+    expect(dimensions.height).toBe(26);
+  });
+
   it('still expands to rendered text width when border is disabled', () => {
     const dimensions = calculateCanvasDimensions(
       [{ align: 'center', tokens: [], width: 260, lineHeight: 20 }],

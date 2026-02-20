@@ -101,6 +101,7 @@ export function calculateCanvasDimensions(
     measureRenderedVerticalBounds,
   } = dependencies;
   const borderWidth = borderConfig.enabled ? borderConfig.width : 0;
+  const CANVAS_SIZE_EPSILON = 1e-6;
   const usesImageBorder = borderConfig.enabled && borderConfig.colorMode === 'images';
   const borderStrokeOverflow = borderConfig.enabled && !usesImageBorder ? borderWidth / 2 : 0;
   const borderInset = borderConfig.enabled
@@ -127,13 +128,13 @@ export function calculateCanvasDimensions(
     const borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderSizeContribution;
 
     return {
-      width: Math.max(1, Math.ceil(borderX + borderRectWidth + borderStrokeOverflow + canvasSizePaddingConfig.right)),
-      height: Math.max(1, Math.ceil(borderY + borderRectHeight + borderStrokeOverflow + canvasSizePaddingConfig.bottom)),
+      width: Math.max(1, Math.ceil(borderX + borderRectWidth + borderStrokeOverflow + canvasSizePaddingConfig.right - CANVAS_SIZE_EPSILON)),
+      height: Math.max(1, Math.ceil(borderY + borderRectHeight + borderStrokeOverflow + canvasSizePaddingConfig.bottom - CANVAS_SIZE_EPSILON)),
     };
   }
 
   return {
-    width: Math.max(1, Math.ceil(renderedMaxX + canvasSizePaddingConfig.right)),
-    height: Math.max(1, Math.ceil(verticalBounds.maxY + canvasSizePaddingConfig.bottom)),
+    width: Math.max(1, Math.ceil(renderedMaxX + canvasSizePaddingConfig.right - CANVAS_SIZE_EPSILON)),
+    height: Math.max(1, Math.ceil(verticalBounds.maxY + canvasSizePaddingConfig.bottom - CANVAS_SIZE_EPSILON)),
   };
 }
