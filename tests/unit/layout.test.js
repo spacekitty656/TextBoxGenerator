@@ -206,9 +206,9 @@ describe('calculateCanvasDimensions', () => {
   });
 
 
-  it('avoids an extra trailing pixel from floating-point precision noise', () => {
+  it('avoids an extra trailing pixel from image-border floating-point precision noise', () => {
     const dimensions = calculateCanvasDimensions(
-      [{ align: 'left', tokens: [], width: 100.0000000001, lineHeight: 20 }],
+      [{ align: 'left', tokens: [], width: 100.0004, lineHeight: 20 }],
       {
         enabled: true,
         colorMode: 'images',
@@ -218,7 +218,7 @@ describe('calculateCanvasDimensions', () => {
       { top: 0, right: 0, bottom: 0, left: 0 },
       200,
       {
-        measureRenderedVerticalBounds: () => ({ minY: 0, maxY: 20.0000000001 }),
+        measureRenderedVerticalBounds: () => ({ minY: 0, maxY: 20.0004 }),
       },
     );
 

@@ -101,7 +101,6 @@ export function calculateCanvasDimensions(
     measureRenderedVerticalBounds,
   } = dependencies;
   const borderWidth = borderConfig.enabled ? borderConfig.width : 0;
-  const CANVAS_SIZE_EPSILON = 1e-6;
   const usesImageBorder = borderConfig.enabled && borderConfig.colorMode === 'images';
   const borderStrokeOverflow = borderConfig.enabled && !usesImageBorder ? borderWidth / 2 : 0;
   const borderInset = borderConfig.enabled
@@ -121,6 +120,17 @@ export function calculateCanvasDimensions(
   const renderedMaxX = laidOutLines.reduce((maxX, line, index) => Math.max(maxX, lineStartPositions[index] + line.width), renderedMinX);
   const verticalBounds = measureRenderedVerticalBounds(laidOutLines, textStartY);
 
+  const ceilWithTolerance = (value) => {
+    if (usesImageBorder) {
+      const nearestInteger = Math.round(value);
+      if (Math.abs(value - nearestInteger) <= 1e-3) {
+        return nearestInteger;
+      }
+    }
+
+    return Math.ceil(value);
+  };
+
   if (borderConfig.enabled) {
     const borderX = renderedMinX - textPadding.left - borderInset;
     const borderY = verticalBounds.minY - textPadding.top - borderInset;
@@ -128,13 +138,13 @@ export function calculateCanvasDimensions(
     const borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderSizeContribution;
 
     return {
-      width: Math.max(1, Math.ceil(borderX + borderRectWidth + borderStrokeOverflow + canvasSizePaddingConfig.right - CANVAS_SIZE_EPSILON)),
-      height: Math.max(1, Math.ceil(borderY + borderRectHeight + borderStrokeOverflow + canvasSizePaddingConfig.bottom - CANVAS_SIZE_EPSILON)),
+      width: Math.max(1, ceilWithTolerance(borderX + borderRectWidth + borderStrokeOverflow + canvasSizePaddingConfig.right)),
+      height: Math.max(1, ceilWithTolerance(borderY + borderRectHeight + borderStrokeOverflow + canvasSizePaddingConfig.bottom)),
     };
   }
 
   return {
-    width: Math.max(1, Math.ceil(renderedMaxX + canvasSizePaddingConfig.right - CANVAS_SIZE_EPSILON)),
-    height: Math.max(1, Math.ceil(verticalBounds.maxY + canvasSizePaddingConfig.bottom - CANVAS_SIZE_EPSILON)),
+    width: Math.max(1, ceilWithTolerance(renderedMaxX + canvasSizePaddingConfig.right)),
+    height: Math.max(1, ceilWithTolerance(verticalBounds.maxY + canvasSizePaddingConfig.bottom)),
   };
 }
