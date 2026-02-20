@@ -24,6 +24,10 @@ import {
   getImageBorderSlotState as getImageBorderSlotStateModule,
 } from './border/imageBorder.js';
 import { createImageLibraryStore } from './images/libraryStore.js';
+import {
+  persistImageLibrary as persistImageLibraryModule,
+  restoreImageLibrarySnapshot,
+} from './images/libraryPersistence.js';
 import { createQuillEditor, extractDocumentFromDelta as extractDocumentFromDeltaModule } from './editor/quillAdapter.js';
 import { createManageImagesWindowController } from './ui/manageImagesWindow.js';
 import {
@@ -462,6 +466,10 @@ function applySavedSettings() {
   });
 }
 
+function persistImageLibrary() {
+  persistImageLibraryModule(window.localStorage, imageLibraryStore);
+}
+
 
 function panelHasVerticalScrollbar(panelElement) {
   if (!panelElement) {
@@ -590,21 +598,73 @@ function parsePaddingNumber(value, fallback = 0) {
   return parsed;
 }
 
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Unable to read image data.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImageFromSourceUrl(sourceUrl) {
+  return new Promise((resolve, reject) => {
+    const imageElement = new Image();
+    imageElement.onload = () => resolve(imageElement);
+    imageElement.onerror = () => reject(new Error('Unable to load image.'));
+    imageElement.src = sourceUrl;
+  });
+}
+
+async function toDrawableImageFromBlob(blob) {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      return await createImageBitmap(blob);
+    } catch (error) {
+      // Fall back to <img> based loading.
+    }
+  }
+
+  const objectUrl = URL.createObjectURL(blob);
+  try {
+    return await loadImageFromSourceUrl(objectUrl);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 async function loadImageFromFile(file) {
   if (!file || !file.type || !file.type.startsWith('image/')) {
     throw new Error('Please choose a valid image file.');
   }
 
-  if (typeof createImageBitmap === 'function') {
-    return createImageBitmap(file);
-  }
+  const [image, dataUrl] = await Promise.all([
+    toDrawableImageFromBlob(file),
+    readFileAsDataUrl(file),
+  ]);
 
-  return new Promise((resolve, reject) => {
-    const imageElement = new Image();
-    imageElement.onload = () => resolve(imageElement);
-    imageElement.onerror = () => reject(new Error('Unable to load image.'));
-    imageElement.src = URL.createObjectURL(file);
-  });
+  return {
+    image,
+    dataUrl,
+    mimeType: file.type || null,
+  };
+}
+
+async function restoreImageLibraryContentFromPersistence(store) {
+  const images = store.listAllImages();
+
+  await Promise.all(images.map(async (entry) => {
+    if (!entry.dataUrl) {
+      return;
+    }
+
+    try {
+      const restoredImage = await loadImageFromSourceUrl(entry.dataUrl);
+      store.updateImage(entry.id, { image: restoredImage });
+    } catch (error) {
+      console.warn('Unable to restore persisted image content.', error);
+    }
+  }));
 }
 
 function getImageBorderSlotState(slotType, slotName) {
@@ -619,7 +679,8 @@ function clearImageBorderSlot(slotState) {
   slotState.imageId = null;
 }
 
-const imageLibraryStore = createImageLibraryStore();
+const persistedImageLibrary = restoreImageLibrarySnapshot(window.localStorage);
+const imageLibraryStore = createImageLibraryStore(persistedImageLibrary);
 
 function getManagedImageById(imageId) {
   return imageLibraryStore.getImage(imageId);
@@ -738,6 +799,7 @@ const manageImagesWindowController = createManageImagesWindowController({
   },
   onStoreChanged: () => {
     updateAllPieceButtonLabels();
+    persistImageLibrary();
   },
   onImagesDeleted: clearDeletedImageSlots,
 });
@@ -1843,6 +1905,16 @@ syncColorPickerUI();
 syncColorPreviewButtons();
 applySavedSettings();
 updateAllPieceButtonLabels();
+
+restoreImageLibraryContentFromPersistence(imageLibraryStore).then(() => {
+  updateAllPieceButtonLabels();
+  drawEditorToCanvas();
+});
+
+window.addEventListener('beforeunload', () => {
+  persistSettings();
+  persistImageLibrary();
+});
 
 updateBorderControlsState();
 syncImageLockedPaddingValues();

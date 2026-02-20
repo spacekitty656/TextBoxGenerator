@@ -40,7 +40,7 @@ describe('image library store', () => {
     const folderA = store.createFolder({ name: 'A' });
     const folderB = store.createFolder({ name: 'B', orderIndex: 0 });
 
-    const img1 = store.createImage({ name: 'one.png', parentId: folderA.id });
+    const img1 = store.createImage({ name: 'one.png', parentId: folderA.id, dataUrl: 'data:image/png;base64,AAA', mimeType: 'image/png' });
     const img2 = store.createImage({ name: 'two.png', parentId: folderA.id, orderIndex: 0 });
 
     const serialized = store.serialize();
@@ -51,5 +51,9 @@ describe('image library store', () => {
 
     const folderAChildren = restored.listChildren(folderA.id);
     expect(folderAChildren.images.map((image) => image.id)).toEqual([img2.id, img1.id]);
+    expect(restored.getImage(img1.id)).toMatchObject({
+      dataUrl: 'data:image/png;base64,AAA',
+      mimeType: 'image/png',
+    });
   });
 });

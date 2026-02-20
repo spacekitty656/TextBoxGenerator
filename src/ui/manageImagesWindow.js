@@ -304,7 +304,13 @@ export function createManageImagesWindowController({
     for (const file of files) {
       try {
         const loaded = await loadImageFromFile(file);
-        store.createImage({ name: file.name, parentId, image: loaded });
+        store.createImage({
+          name: file.name,
+          parentId,
+          image: loaded.image,
+          dataUrl: loaded.dataUrl,
+          mimeType: loaded.mimeType,
+        });
       } catch (error) {
         console.error('Unable to import selected image.', error);
       }
@@ -721,7 +727,12 @@ export function createManageImagesWindowController({
 
     try {
       const loaded = await loadImageFromFile(file);
-      store.updateImage(targetImageId, { image: loaded, name: file.name });
+      store.updateImage(targetImageId, {
+        image: loaded.image,
+        dataUrl: loaded.dataUrl,
+        mimeType: loaded.mimeType,
+        name: file.name,
+      });
       onStoreChanged?.();
       render();
     } catch (error) {
