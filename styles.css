@@ -545,11 +545,10 @@ body.dark-mode .piece-select-button {
 
 .image-border-slot-row {
   display: grid;
-  grid-template-columns: 110px 180px 62px 50px 50px 34px;
-  column-gap: 0.22rem;
+  grid-template-columns: minmax(72px, 1fr) minmax(96px, 1.35fr) 52px 38px 38px 30px;
+  column-gap: 0.16rem;
   row-gap: 0.35rem;
   align-items: center;
-  justify-content: start;
 }
 
 .image-border-slot-row select,
@@ -567,17 +566,16 @@ body.dark-mode .piece-select-button {
 
 .image-border-slot-header {
   display: grid;
-  grid-template-columns: 110px 180px 62px 50px 50px 34px;
-  column-gap: 0.22rem;
+  grid-template-columns: minmax(72px, 1fr) minmax(96px, 1.35fr) 52px 38px 38px 30px;
+  column-gap: 0.16rem;
   row-gap: 0.35rem;
-  justify-content: start;
   font-size: 0.75rem;
   font-weight: 700;
   color: #6b7280;
 }
 
 .piece-select-button {
-  width: 180px;
+  width: 100%;
   text-align: left;
   padding: 0 0.45rem;
   white-space: nowrap;
@@ -1218,6 +1216,10 @@ body.dark-mode .settings-window-header {
 }
 
 .image-border-slot-row select[id$='-rotation'] {
-  width: 62px;
-  min-width: 62px;
+  width: 52px;
+  min-width: 52px;
+}
+
+.image-border-slot-group {
+  overflow-x: clip;
 }

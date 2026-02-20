@@ -655,6 +655,28 @@ function getPieceButton(slotType, slotName) {
     : imageBorderSideButtons[slotName];
 }
 
+function toCompactPieceLabel(sourceName) {
+  if (!sourceName) {
+    return 'No image';
+  }
+
+  const trimmed = sourceName.trim();
+  const extensionIndex = trimmed.lastIndexOf('.');
+  const hasExtension = extensionIndex > 0;
+  const baseName = hasExtension ? trimmed.slice(0, extensionIndex) : trimmed;
+  const extension = hasExtension ? trimmed.slice(extensionIndex) : '';
+
+  const compactBase = baseName.length > 12
+    ? `${baseName.slice(0, 12)}…`
+    : baseName;
+
+  const compactExtension = extension.length > 6
+    ? extension.slice(0, 6)
+    : extension;
+
+  return `${compactBase}${compactExtension}`;
+}
+
 function updatePieceButtonLabel(slotType, slotName) {
   const slotState = getImageBorderSlotState(slotType, slotName);
   const button = getPieceButton(slotType, slotName);
@@ -663,7 +685,7 @@ function updatePieceButtonLabel(slotType, slotName) {
     return;
   }
 
-  button.textContent = slotState.sourceName || 'No image';
+  button.textContent = toCompactPieceLabel(slotState.sourceName);
   button.title = slotState.sourceName || 'Select image';
 }
 
