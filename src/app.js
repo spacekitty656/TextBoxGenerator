@@ -1895,6 +1895,10 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && manageImagesWindowController.handleEnterKey(event)) {
     event.preventDefault();
   }
+
+  if (event.key === 'Delete' && manageImagesWindowController.handleDeleteKey(event)) {
+    event.preventDefault();
+  }
 });
 
 if (appVersionBadge) {

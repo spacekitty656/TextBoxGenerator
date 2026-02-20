@@ -708,6 +708,24 @@ export function createManageImagesWindowController({
     return true;
   }
 
+  function handleDeleteKey(event = null) {
+    if (!state.isOpen) {
+      return false;
+    }
+
+    const target = event?.target;
+    if (state.editor || target?.closest?.('.manage-tree-rename-input')) {
+      return false;
+    }
+
+    if (elements.deleteButton.disabled) {
+      return false;
+    }
+
+    elements.deleteButton.click();
+    return true;
+  }
+
   elements.tree.addEventListener('dragover', (event) => {
     if (state.editor) {
       return;
@@ -800,5 +818,6 @@ export function createManageImagesWindowController({
     close,
     render,
     handleEnterKey,
+    handleDeleteKey,
   };
 }

@@ -118,4 +118,26 @@ describe('manage images window', () => {
     updatedFolderRow.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     expect(elements.tree.textContent).toContain('Nested');
   });
+
+  it('triggers delete action on Delete key when selection exists', () => {
+    const store = createImageLibraryStore();
+    const image = store.createImage({ name: 'Delete Me' });
+    const elements = createElements();
+    const controller = createManageImagesWindowController({
+      store,
+      elements,
+      loadImageFromFile: vi.fn(),
+    });
+
+    controller.open();
+
+    const imageRow = elements.tree.querySelector(`[data-entity-key="image:${image.id}"]`);
+    imageRow.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    const clickSpy = vi.spyOn(elements.deleteButton, 'click');
+    const handled = controller.handleDeleteKey(new KeyboardEvent('keydown', { key: 'Delete' }));
+
+    expect(handled).toBe(true);
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+  });
 });
