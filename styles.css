@@ -599,7 +599,7 @@ body.dark-mode .piece-select-button {
 .manage-images-toolbar {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
 }
@@ -628,10 +628,12 @@ body.dark-mode .piece-select-button {
   min-height: 320px;
   max-height: calc(78vh - 170px);
   overflow: auto;
+  overflow-x: hidden;
   border: 1px solid #4b5563;
   border-radius: 8px;
   padding: 0.4rem;
   background: #111827;
+  box-sizing: border-box;
 }
 
 .manage-tree-row {
@@ -645,6 +647,9 @@ body.dark-mode .piece-select-button {
   padding: 0.24rem 0.4rem;
   cursor: pointer;
   margin-bottom: 0.15rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 
 .manage-tree-row.active {
@@ -1331,4 +1336,25 @@ body.dark-mode .settings-window-header {
 
 .image-border-slot-group {
   overflow-x: clip;
+}
+
+
+.window-choice-overlay {
+  z-index: 1400;
+}
+
+.window-choice-dialog {
+  width: min(520px, 90vw);
+}
+
+.window-choice-body {
+  display: grid;
+  gap: 0.8rem;
+  padding: 14px;
+}
+
+.window-choice-message {
+  margin: 0;
+  color: #d1d5db;
+  white-space: pre-line;
 }

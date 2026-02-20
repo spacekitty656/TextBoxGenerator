@@ -1,3 +1,5 @@
+import { openWindowChoiceDialog } from './windowDialog.js';
+
 const NEW_FOLDER_ROW_KEY = '__new-folder__';
 
 function getEntityKey(entity) {
@@ -335,7 +337,7 @@ export function createManageImagesWindowController({
     store.restoreSnapshot(snapshot);
   }
 
-  function requestDelete() {
+  async function requestDelete() {
     const selections = state.selectedKeys.map(getEntityByKey).filter(Boolean);
     if (!selections.length) {
       return;
@@ -345,11 +347,16 @@ export function createManageImagesWindowController({
     const selectedFolders = selections.filter((entry) => entry.type === 'folder' && entry.id !== store.ROOT_FOLDER_ID);
 
     if (selectedImages.length) {
-      const confirmed = window.confirm(
-        'Deleting image(s) may break references in border slots. Consider using Refresh instead. Continue?',
-      );
+      const response = await openWindowChoiceDialog({
+        title: 'Delete Image',
+        message: 'Deleting image(s) may break references in border slots. Consider using Refresh instead. Continue?',
+        buttons: [
+          { label: 'Delete Image(s)', value: 'delete', variant: 'primary' },
+          { label: 'Cancel', value: 'cancel', variant: 'secondary' },
+        ],
+      });
 
-      if (!confirmed) {
+      if (response !== 'delete') {
         return;
       }
     }
@@ -358,18 +365,23 @@ export function createManageImagesWindowController({
       store.deleteImage(imageEntry.id);
     });
 
-    selectedFolders.forEach((folder) => {
-      const response = window.prompt(
-        `Delete folder "${folder.name}"\n1) Delete Folder and Children\n2) Delete Folder and move Children to Parent\n3) Cancel`,
-        '3',
-      );
+    for (const folder of selectedFolders) {
+      const response = await openWindowChoiceDialog({
+        title: `Delete Folder: ${folder.name}`,
+        message: 'Choose how to handle this folder and its children.',
+        buttons: [
+          { label: 'Delete Folder and Children', value: 'delete', variant: 'primary' },
+          { label: 'Delete Folder and move Children to Parent', value: 'move', variant: 'secondary' },
+          { label: 'Cancel', value: 'cancel', variant: 'secondary' },
+        ],
+      });
 
-      if (response === '1') {
+      if (response === 'delete') {
         deleteFolderWithStrategy(folder, 'delete');
-      } else if (response === '2') {
+      } else if (response === 'move') {
         deleteFolderWithStrategy(folder, 'move');
       }
-    });
+    }
 
     onImagesDeleted?.(selectedImages.map((entry) => entry.id));
     setSelection([]);
@@ -423,8 +435,9 @@ export function createManageImagesWindowController({
     rows.forEach((entry) => {
       const row = document.createElement('div');
       const key = entry.key || getEntityKey(entry);
-      const folderChildren = entry.type === 'folder' && !entry.synthetic ? store.listChildren(entry.id).folders : [];
-      const hasFolderChildren = folderChildren.length > 0;
+      const folderChildren = entry.type === 'folder' && !entry.synthetic ? store.listChildren(entry.id) : null;
+      const hasFolderChildren = Boolean(folderChildren)
+        && (folderChildren.folders.length + folderChildren.images.length) > 0;
       const isCollapsed = entry.type === 'folder' && !entry.synthetic && state.collapsedFolderIds.has(entry.id);
       const isSelected = state.selectedKeys.includes(key);
       const isRenameEditing = state.editor?.mode === 'rename' && state.editor.key === key;
@@ -493,8 +506,10 @@ export function createManageImagesWindowController({
 
       if (isEditing) {
         const renameInput = row.querySelector('.manage-tree-rename-input');
-        renameInput?.focus();
-        renameInput?.select();
+        requestAnimationFrame(() => {
+          renameInput?.focus();
+          renameInput?.select();
+        });
 
         const commitRenameAndClose = () => {
           state.editor = {
