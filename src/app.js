@@ -138,7 +138,6 @@ const closeManageImagesWindowButton = document.getElementById('close-manage-imag
 const manageImagesInput = document.getElementById('manage-images-input');
 const manageImagesRefreshInput = document.getElementById('manage-images-refresh-input');
 const manageImagesTree = document.getElementById('manage-images-tree');
-const manageImagesList = document.getElementById('manage-images-list');
 const manageImagesContextMenu = document.getElementById('manage-images-context-menu');
 const manageImagesImportButton = document.getElementById('manage-images-import');
 const manageImagesCreateFolderButton = document.getElementById('manage-images-create-folder');
@@ -723,7 +722,6 @@ const manageImagesWindowController = createManageImagesWindowController({
     input: manageImagesInput,
     refreshInput: manageImagesRefreshInput,
     tree: manageImagesTree,
-    list: manageImagesList,
     contextMenu: manageImagesContextMenu,
     importButton: manageImagesImportButton,
     createFolderButton: manageImagesCreateFolderButton,

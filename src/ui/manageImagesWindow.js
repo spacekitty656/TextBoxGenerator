@@ -26,12 +26,11 @@ export function createManageImagesWindowController({
   const state = {
     isOpen: false,
     activeSlot: null,
-    currentFolderId: store.ROOT_FOLDER_ID,
     selectedKeys: [],
     lastSelectedKey: null,
     collapsedFolderIds: new Set(),
-    contextMenuTarget: null,
     draggedKey: null,
+    editingKey: null,
   };
 
   function listEntities(parentId) {
@@ -52,12 +51,6 @@ export function createManageImagesWindowController({
     return null;
   }
 
-  function hideContextMenu() {
-    elements.contextMenu.classList.add('hidden');
-    elements.contextMenu.innerHTML = '';
-    state.contextMenuTarget = null;
-  }
-
   function isMultiSelection() {
     return state.selectedKeys.length > 1;
   }
@@ -68,6 +61,34 @@ export function createManageImagesWindowController({
     }
 
     return getEntityByKey(state.selectedKeys[0]);
+  }
+
+  function buildVisibleTree() {
+    const rows = [];
+
+    function walk(folderId, depth) {
+      listEntities(folderId).forEach((entry) => {
+        rows.push({ ...entry, depth });
+
+        if (entry.type === 'folder' && !state.collapsedFolderIds.has(entry.id)) {
+          walk(entry.id, depth + 1);
+        }
+      });
+    }
+
+    const root = store.getRootFolder();
+    if (root) {
+      rows.push({ ...root, depth: 0 });
+      if (!state.collapsedFolderIds.has(root.id)) {
+        walk(root.id, 1);
+      }
+    }
+
+    return rows;
+  }
+
+  function getVisibleKeys() {
+    return buildVisibleTree().map((entry) => getEntityKey(entry));
   }
 
   function syncToolbarState() {
@@ -84,7 +105,7 @@ export function createManageImagesWindowController({
     });
 
     const inSlotMode = Boolean(state.activeSlot);
-    elements.okButton.disabled = inSlotMode && (!isImage || isMultiSelection());
+    elements.okButton.disabled = Boolean(singleSelection?.type === 'folder') || (inSlotMode && (!isImage || isMultiSelection()));
   }
 
   function setSelection(keys, lastKey = null) {
@@ -94,16 +115,12 @@ export function createManageImagesWindowController({
     syncToolbarState();
   }
 
-  function getCurrentFolderLinearKeys() {
-    return listEntities(state.currentFolderId).map((entry) => getEntityKey(entry));
-  }
-
   function applyClickSelection(key, event = {}) {
     const { ctrlKey = false, metaKey = false, shiftKey = false } = event;
     const toggleSelection = ctrlKey || metaKey;
 
     if (shiftKey && state.lastSelectedKey) {
-      const orderedKeys = getCurrentFolderLinearKeys();
+      const orderedKeys = getVisibleKeys();
       const start = orderedKeys.indexOf(state.lastSelectedKey);
       const end = orderedKeys.indexOf(key);
 
@@ -124,73 +141,6 @@ export function createManageImagesWindowController({
     }
 
     setSelection([key], key);
-  }
-
-  function renderTreeNode(folder, depth = 0) {
-    const row = document.createElement('button');
-    row.type = 'button';
-    row.className = 'manage-tree-item';
-    row.dataset.folderId = folder.id;
-    row.style.paddingLeft = `${depth * 14 + 8}px`;
-
-    const childFolders = store.listChildren(folder.id).folders;
-    const isCollapsed = state.collapsedFolderIds.has(folder.id);
-    const chevron = childFolders.length ? (isCollapsed ? '▸' : '▾') : '•';
-    row.innerHTML = `<span class="manage-tree-chevron">${chevron}</span><span>${escapeHtml(folder.name)}</span>`;
-
-    if (folder.id === state.currentFolderId) {
-      row.classList.add('active');
-    }
-
-    row.addEventListener('click', (event) => {
-      event.stopPropagation();
-      state.currentFolderId = folder.id;
-      render();
-    });
-
-    row.addEventListener('dblclick', (event) => {
-      event.stopPropagation();
-      if (!childFolders.length) {
-        return;
-      }
-
-      if (isCollapsed) {
-        state.collapsedFolderIds.delete(folder.id);
-      } else {
-        state.collapsedFolderIds.add(folder.id);
-      }
-
-      renderTree();
-    });
-
-    row.addEventListener('contextmenu', (event) => {
-      event.preventDefault();
-      setSelection([getEntityKey(folder)]);
-      showContextMenu(event.clientX, event.clientY, folder);
-      renderList();
-      renderTree();
-    });
-
-    const fragment = document.createDocumentFragment();
-    fragment.appendChild(row);
-
-    if (!isCollapsed) {
-      childFolders.forEach((childFolder) => {
-        fragment.appendChild(renderTreeNode(childFolder, depth + 1));
-      });
-    }
-
-    return fragment;
-  }
-
-  function renderTree() {
-    elements.tree.innerHTML = '';
-    const rootFolder = store.getRootFolder();
-    if (!rootFolder) {
-      return;
-    }
-
-    elements.tree.appendChild(renderTreeNode(rootFolder));
   }
 
   function canDropToFolder(folderId) {
@@ -226,102 +176,20 @@ export function createManageImagesWindowController({
     render();
   }
 
-  function createMenuItem(label, action) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'manage-images-context-action';
-    button.role = 'menuitem';
-    button.textContent = label;
-    button.addEventListener('click', () => {
-      hideContextMenu();
-      action();
-    });
-    return button;
-  }
-
-  function showContextMenu(x, y, entity) {
-    state.contextMenuTarget = entity;
-    elements.contextMenu.innerHTML = '';
-
-    if (entity.type === 'image') {
-      elements.contextMenu.append(
-        createMenuItem('Refresh', () => requestRefresh()),
-        createMenuItem('Rename', () => requestRename()),
-        createMenuItem('Delete', () => requestDelete()),
-      );
-    } else {
-      elements.contextMenu.append(
-        createMenuItem('Rename', () => requestRename()),
-        createMenuItem('Delete', () => requestDelete()),
-      );
+  function getPreferredParentFolderId() {
+    const selected = getSingleSelection();
+    if (!selected) {
+      return store.ROOT_FOLDER_ID;
     }
 
-    elements.contextMenu.style.left = `${x}px`;
-    elements.contextMenu.style.top = `${y}px`;
-    elements.contextMenu.classList.remove('hidden');
+    if (selected.type === 'folder') {
+      return selected.id;
+    }
+
+    return selected.parentId || store.ROOT_FOLDER_ID;
   }
 
-  function renderList() {
-    elements.list.innerHTML = '';
-
-    listEntities(state.currentFolderId).forEach((entry) => {
-      const key = getEntityKey(entry);
-      const row = document.createElement('div');
-      row.className = 'manage-entity-item';
-      row.dataset.entityKey = key;
-      row.draggable = true;
-      row.innerHTML = `<span class="manage-entity-type">${entry.type === 'folder' ? '📁' : '🖼️'}</span><span>${escapeHtml(entry.name)}</span>`;
-
-      if (state.selectedKeys.includes(key)) {
-        row.classList.add('active');
-      }
-
-      row.addEventListener('click', (event) => {
-        applyClickSelection(key, event);
-        renderList();
-      });
-
-      if (entry.type === 'folder') {
-        row.addEventListener('dblclick', () => {
-          state.currentFolderId = entry.id;
-          render();
-        });
-      }
-
-      row.addEventListener('contextmenu', (event) => {
-        event.preventDefault();
-        applyClickSelection(key, event);
-        renderList();
-        showContextMenu(event.clientX, event.clientY, entry);
-      });
-
-      row.addEventListener('dragstart', () => {
-        state.draggedKey = key;
-      });
-
-      row.addEventListener('dragover', (event) => {
-        event.preventDefault();
-      });
-
-      row.addEventListener('drop', (event) => {
-        event.preventDefault();
-
-        if (entry.type === 'folder' && state.draggedKey !== key) {
-          moveDraggedEntity(entry.id);
-          return;
-        }
-
-        const targetParentId = state.currentFolderId;
-        const order = listEntities(state.currentFolderId).findIndex((item) => item.id === entry.id);
-        moveDraggedEntity(targetParentId, order);
-      });
-
-      elements.list.appendChild(row);
-    });
-
-  }
-
-  async function addImagesFromFiles(fileList, parentId = state.currentFolderId) {
+  async function addImagesFromFiles(fileList, parentId = getPreferredParentFolderId()) {
     const files = Array.from(fileList || []).filter((file) => file?.type?.startsWith('image/'));
 
     for (const file of files) {
@@ -343,29 +211,46 @@ export function createManageImagesWindowController({
       return;
     }
 
-    store.createFolder({ name: name.trim() || 'Untitled Folder', parentId: state.currentFolderId });
+    store.createFolder({
+      name: name.trim() || 'Untitled Folder',
+      parentId: getPreferredParentFolderId(),
+    });
     onStoreChanged?.();
     render();
   }
 
-  function requestRename() {
+  function commitInlineRename(key, nameValue) {
+    const entity = getEntityByKey(key);
+    if (!entity || entity.id === store.ROOT_FOLDER_ID) {
+      return;
+    }
+
+    const nextName = String(nameValue || '').trim();
+    if (!nextName) {
+      return;
+    }
+
+    if (entity.type === 'folder') {
+      store.updateFolder(entity.id, { name: nextName });
+    } else {
+      store.updateImage(entity.id, { name: nextName });
+    }
+
+    onStoreChanged?.();
+  }
+
+  function startInlineRename() {
     const selected = getSingleSelection();
     if (!selected || selected.id === store.ROOT_FOLDER_ID) {
       return;
     }
 
-    const nextName = window.prompt('Rename to:', selected.name);
-    if (!nextName) {
-      return;
-    }
+    state.editingKey = getEntityKey(selected);
+    render();
+  }
 
-    if (selected.type === 'folder') {
-      store.updateFolder(selected.id, { name: nextName.trim() || selected.name });
-    } else {
-      store.updateImage(selected.id, { name: nextName.trim() || selected.name });
-    }
-
-    onStoreChanged?.();
+  function stopInlineRename() {
+    state.editingKey = null;
     render();
   }
 
@@ -444,6 +329,164 @@ export function createManageImagesWindowController({
     render();
   }
 
+  function createMenuItem(label, action) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'manage-images-context-action';
+    button.role = 'menuitem';
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      hideContextMenu();
+      action();
+    });
+    return button;
+  }
+
+  function hideContextMenu() {
+    elements.contextMenu.classList.add('hidden');
+    elements.contextMenu.innerHTML = '';
+  }
+
+  function showContextMenu(x, y, entity) {
+    elements.contextMenu.innerHTML = '';
+
+    if (entity.type === 'image') {
+      elements.contextMenu.append(
+        createMenuItem('Refresh', () => requestRefresh()),
+        createMenuItem('Rename', () => startInlineRename()),
+        createMenuItem('Delete', () => requestDelete()),
+      );
+    } else {
+      elements.contextMenu.append(
+        createMenuItem('Rename', () => startInlineRename()),
+        createMenuItem('Delete', () => requestDelete()),
+      );
+    }
+
+    elements.contextMenu.style.left = `${x}px`;
+    elements.contextMenu.style.top = `${y}px`;
+    elements.contextMenu.classList.remove('hidden');
+  }
+
+  function renderTree() {
+    const rows = buildVisibleTree();
+    elements.tree.innerHTML = '';
+
+    rows.forEach((entry) => {
+      const row = document.createElement('div');
+      const key = getEntityKey(entry);
+      const hasFolderChildren = entry.type === 'folder' && store.listChildren(entry.id).folders.length > 0;
+      const isCollapsed = entry.type === 'folder' && state.collapsedFolderIds.has(entry.id);
+
+      row.className = 'manage-tree-row';
+      row.dataset.entityKey = key;
+      row.draggable = entry.id !== store.ROOT_FOLDER_ID;
+      row.style.paddingLeft = `${entry.depth * 18 + 8}px`;
+
+      if (state.selectedKeys.includes(key)) {
+        row.classList.add('active');
+      }
+
+      const chevron = entry.type === 'folder'
+        ? `<button type="button" class="manage-tree-toggle" aria-label="Toggle folder" ${hasFolderChildren ? '' : 'disabled'}>${hasFolderChildren ? (isCollapsed ? '▸' : '▾') : '•'}</button>`
+        : '<span class="manage-tree-toggle-spacer"></span>';
+
+      const icon = entry.type === 'folder' ? '📁' : '🖼️';
+      const isEditing = state.editingKey === key;
+      const nameMarkup = isEditing
+        ? `<input type="text" class="manage-tree-rename-input" value="${escapeHtml(entry.name)}" />`
+        : `<span class="manage-tree-name">${escapeHtml(entry.name)}</span>`;
+
+      row.innerHTML = `${chevron}<span class="manage-tree-icon">${icon}</span>${nameMarkup}`;
+
+      row.addEventListener('click', (event) => {
+        if (event.target.closest('.manage-tree-toggle')) {
+          return;
+        }
+
+        applyClickSelection(key, event);
+        renderTree();
+      });
+
+      row.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+        applyClickSelection(key, event);
+        renderTree();
+        showContextMenu(event.clientX, event.clientY, entry);
+      });
+
+      if (entry.type === 'folder') {
+        const toggleButton = row.querySelector('.manage-tree-toggle');
+        toggleButton?.addEventListener('click', (event) => {
+          event.stopPropagation();
+          if (!hasFolderChildren) {
+            return;
+          }
+
+          if (isCollapsed) {
+            state.collapsedFolderIds.delete(entry.id);
+          } else {
+            state.collapsedFolderIds.add(entry.id);
+          }
+
+          renderTree();
+        });
+      }
+
+      if (isEditing) {
+        const renameInput = row.querySelector('.manage-tree-rename-input');
+        renameInput?.focus();
+        renameInput?.select();
+
+        const commitRenameAndClose = () => {
+          commitInlineRename(key, renameInput.value);
+          state.editingKey = null;
+          render();
+        };
+
+        renameInput?.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            commitRenameAndClose();
+          }
+
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            stopInlineRename();
+          }
+        });
+
+        renameInput?.addEventListener('blur', () => {
+          commitRenameAndClose();
+        });
+      }
+
+      row.addEventListener('dragstart', () => {
+        state.draggedKey = key;
+      });
+
+      row.addEventListener('dragover', (event) => {
+        event.preventDefault();
+      });
+
+      row.addEventListener('drop', (event) => {
+        event.preventDefault();
+
+        if (entry.type === 'folder' && state.draggedKey !== key) {
+          moveDraggedEntity(entry.id);
+          return;
+        }
+
+        const targetParentId = entry.parentId || store.ROOT_FOLDER_ID;
+        moveDraggedEntity(targetParentId, entry.orderIndex);
+      });
+
+      elements.tree.appendChild(row);
+    });
+
+    syncToolbarState();
+  }
+
   function applySelection() {
     if (!state.activeSlot) {
       close();
@@ -461,7 +504,6 @@ export function createManageImagesWindowController({
 
   function render() {
     renderTree();
-    renderList();
     syncToolbarState();
   }
 
@@ -474,11 +516,7 @@ export function createManageImagesWindowController({
 
     if (initialImageId) {
       const key = `image:${initialImageId}`;
-      const imageEntry = store.getImage(initialImageId);
-      if (imageEntry) {
-        state.currentFolderId = imageEntry.parentId || store.ROOT_FOLDER_ID;
-        setSelection([key], key);
-      }
+      setSelection([key], key);
     } else {
       setSelection([]);
     }
@@ -489,6 +527,7 @@ export function createManageImagesWindowController({
   function close() {
     state.isOpen = false;
     state.activeSlot = null;
+    state.editingKey = null;
     hideContextMenu();
     elements.overlay.classList.add('hidden');
     elements.overlay.setAttribute('aria-hidden', 'true');
@@ -504,18 +543,18 @@ export function createManageImagesWindowController({
     return true;
   }
 
-  elements.list.addEventListener('dragover', (event) => {
+  elements.tree.addEventListener('dragover', (event) => {
     event.preventDefault();
   });
 
-  elements.list.addEventListener('drop', (event) => {
+  elements.tree.addEventListener('drop', (event) => {
     event.preventDefault();
-    moveDraggedEntity(state.currentFolderId);
+    moveDraggedEntity(store.ROOT_FOLDER_ID);
   });
 
   elements.importButton.addEventListener('click', () => elements.input.click());
   elements.createFolderButton.addEventListener('click', requestCreateFolder);
-  elements.renameButton.addEventListener('click', requestRename);
+  elements.renameButton.addEventListener('click', startInlineRename);
   elements.refreshButton.addEventListener('click', requestRefresh);
   elements.deleteButton.addEventListener('click', requestDelete);
   elements.okButton.addEventListener('click', applySelection);
