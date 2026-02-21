@@ -18,7 +18,11 @@ export function createEditorController({ elements, quill, actions, callbacks }) 
       closeColorWindow,
       closeSettingsWindow,
       closeManageImagesWindow,
+      closeLoadBorderTemplateWindow,
+      closeSaveBorderTemplateWindow,
       handleManageImagesEnter,
+      handleLoadBorderTemplateEnter,
+      handleSaveBorderTemplateEnter,
       handleManageImagesDelete,
       persistSettings,
       persistImageLibrary,
@@ -58,9 +62,15 @@ export function createEditorController({ elements, quill, actions, callbacks }) 
         closeColorWindow();
         closeSettingsWindow();
         closeManageImagesWindow();
+        closeLoadBorderTemplateWindow();
+        closeSaveBorderTemplateWindow();
       }
 
-      if (event.key === 'Enter' && handleManageImagesEnter(event)) {
+      if (event.key === 'Enter' && (
+        handleManageImagesEnter(event)
+        || handleLoadBorderTemplateEnter(event)
+        || handleSaveBorderTemplateEnter(event)
+      )) {
         event.preventDefault();
       }
 

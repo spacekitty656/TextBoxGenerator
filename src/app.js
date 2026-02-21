@@ -37,6 +37,8 @@ import { createBorderControlsView } from './ui/views/borderControlsView.js';
 import { createColorPickerView } from './ui/views/colorPickerView.js';
 import { createEditorView } from './ui/views/editorView.js';
 import { createManageImagesView } from './ui/views/manageImagesView.js';
+import { createLoadBorderTemplateView } from './ui/views/loadBorderTemplateView.js';
+import { createSaveBorderTemplateView } from './ui/views/saveBorderTemplateView.js';
 import { createSettingsView } from './ui/views/settingsView.js';
 import { createColorPickerController } from './controllers/colorPickerController.js';
 import { createEditorController } from './controllers/editorController.js';
@@ -44,6 +46,7 @@ import { createManageImagesController } from './controllers/manageImagesControll
 import { createSettingsController } from './controllers/settingsController.js';
 import { createBorderState } from './features/border/borderState.js';
 import { createBorderUiController } from './features/border/borderUiController.js';
+import { createBorderTemplateFeature } from './features/border/borderTemplateFeature.js';
 
 const Quill = window.Quill;
 
@@ -51,6 +54,8 @@ const editorView = createEditorView(document);
 const settingsView = createSettingsView(document);
 const borderControlsView = createBorderControlsView(document);
 const manageImagesView = createManageImagesView(document);
+const loadBorderTemplateView = createLoadBorderTemplateView(document);
+const saveBorderTemplateView = createSaveBorderTemplateView(document);
 const colorPickerView = createColorPickerView(document);
 
 const canvas = editorView.canvas.preview;
@@ -72,6 +77,8 @@ const borderToggle = borderControlsView.toggles.borderToggle;
 const borderOptions = borderControlsView.toggles.borderOptions;
 const borderWidthInput = borderControlsView.borderStyle.widthInput;
 const borderRadiusInput = borderControlsView.borderStyle.radiusInput;
+const borderTemplateLoadButton = borderControlsView.borderStyle.templateLoadButton;
+const borderTemplateSaveAsButton = borderControlsView.borderStyle.templateSaveAsButton;
 const borderColorSolidRadio = borderControlsView.colorModes.borderColorSolidRadio;
 const borderColorInsideOutRadio = borderControlsView.colorModes.borderColorInsideOutRadio;
 const borderColorImagesRadio = borderControlsView.colorModes.borderColorImagesRadio;
@@ -105,6 +112,7 @@ const manageImagesRenameButton = manageImagesView.actions.renameButton;
 const manageImagesDeleteButton = manageImagesView.actions.deleteButton;
 const manageImagesOkButton = manageImagesView.window.okButton;
 const manageImagesCancelButton = manageImagesView.window.cancelButton;
+
 
 const imageBorderState = {
   corners: {
@@ -578,6 +586,17 @@ const manageImagesWindowController = createManageImagesWindowController({
   onImagesDeleted: borderState.clearDeletedImageSlots,
 });
 
+const borderTemplateFeature = createBorderTemplateFeature({
+  loadBorderTemplateView,
+  saveBorderTemplateView,
+  onTemplateLoaded: () => {
+    drawEditorToCanvas();
+  },
+  onTemplateSaved: () => {
+    drawEditorToCanvas();
+  },
+});
+
 function openManageImagesWindow(slotType = null, slotName = null) {
   const initialImageId = slotType && slotName
     ? (getImageBorderSlotState(slotType, slotName)?.imageId || null)
@@ -589,6 +608,23 @@ function openManageImagesWindow(slotType = null, slotName = null) {
 function closeManageImagesWindow() {
   manageImagesController.close();
 }
+
+function openLoadBorderTemplateWindow() {
+  borderTemplateFeature.openLoadWindow();
+}
+
+function closeLoadBorderTemplateWindow() {
+  borderTemplateFeature.closeLoadWindow();
+}
+
+function openSaveBorderTemplateWindow() {
+  borderTemplateFeature.openSaveWindow();
+}
+
+function closeSaveBorderTemplateWindow() {
+  borderTemplateFeature.closeSaveWindow();
+}
+
 
 function triggerSaveImage() {
   saveButton.click();
@@ -697,6 +733,8 @@ const borderController = createBorderUiController({
     centerPaddingInput,
     borderWidthInput,
     borderRadiusInput,
+    templateLoadButton: borderTemplateLoadButton,
+    templateSaveAsButton: borderTemplateSaveAsButton,
     imageBorderCornerButtons,
     imageBorderSideButtons,
     imageBorderTransformInputs,
@@ -743,6 +781,8 @@ const borderController = createBorderUiController({
     openManageImagesWindow: (slotType, slotName) => {
       openManageImagesWindow(slotType, slotName);
     },
+    openLoadBorderTemplateWindow,
+    openSaveBorderTemplateWindow,
     onImageBorderTransformChanged: (slotType, slotName, key, value) => {
       const slotState = getImageBorderSlotState(slotType, slotName);
       if (!slotState) {
@@ -909,7 +949,11 @@ const editorController = createEditorController({
     closeColorWindow,
     closeSettingsWindow,
     closeManageImagesWindow,
+    closeLoadBorderTemplateWindow,
+    closeSaveBorderTemplateWindow,
     handleManageImagesEnter: (event) => manageImagesController.handleEnterKey(event),
+    handleLoadBorderTemplateEnter: (event) => borderTemplateFeature.handleLoadEnterKey(event),
+    handleSaveBorderTemplateEnter: (event) => borderTemplateFeature.handleSaveEnterKey(event),
     handleManageImagesDelete: (event) => manageImagesController.handleDeleteKey(event),
     persistSettings,
     persistImageLibrary,
