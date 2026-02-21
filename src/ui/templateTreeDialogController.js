@@ -405,6 +405,23 @@ export function createTemplateTreeDialogController({
     elements.contextMenu.innerHTML = '';
   }
 
+  function clearDragHoverClasses() {
+    elements.tree.querySelectorAll('.manage-tree-row').forEach((row) => {
+      row.classList.remove('manage-tree-drop-before', 'manage-tree-drop-after', 'manage-tree-drop-inside');
+    });
+  }
+
+  function applyDragHoverClasses() {
+    clearDragHoverClasses();
+
+    if (!state.dragHover?.targetKey || !state.dragHover?.mode) {
+      return;
+    }
+
+    const targetRow = elements.tree.querySelector(`[data-entity-key="${state.dragHover.targetKey}"]`);
+    targetRow?.classList.add(`manage-tree-drop-${state.dragHover.mode}`);
+  }
+
   function renderContextMenu(x, y) {
     const selected = getSingleSelection();
     if (!selected || selected.id === store.ROOT_FOLDER_ID || selected.immutable) {
@@ -468,10 +485,6 @@ export function createTemplateTreeDialogController({
       const isDraggable = !entry.synthetic && entry.id !== store.ROOT_FOLDER_ID && !entry.immutable && !state.editor;
       row.draggable = isDraggable;
 
-      if (state.dragHover?.targetKey === entry.key && state.dragHover?.mode) {
-        row.classList.add(`manage-tree-drop-${state.dragHover.mode}`);
-      }
-
       row.addEventListener('dragstart', (event) => {
         if (!isDraggable) {
           event.preventDefault();
@@ -479,15 +492,18 @@ export function createTemplateTreeDialogController({
         }
 
         state.draggedKey = entry.key;
+        state.dragHover = null;
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData('text/plain', entry.key);
         row.classList.add('manage-tree-row-dragging');
+        clearDragHoverClasses();
       });
 
       row.addEventListener('dragend', () => {
+        row.classList.remove('manage-tree-row-dragging');
         state.draggedKey = null;
         state.dragHover = null;
-        renderTree();
+        clearDragHoverClasses();
       });
 
       row.addEventListener('dragover', (event) => {
@@ -499,18 +515,27 @@ export function createTemplateTreeDialogController({
         const placement = resolveDropPlacement(entry, event.clientY);
 
         if (!isValidDropTarget(source, entry, placement.mode)) {
+          if (state.dragHover) {
+            state.dragHover = null;
+            clearDragHoverClasses();
+          }
           return;
         }
 
         event.preventDefault();
+
+        if (state.dragHover?.targetKey === placement.targetKey && state.dragHover?.mode === placement.mode) {
+          return;
+        }
+
         state.dragHover = placement;
-        renderTree();
+        applyDragHoverClasses();
       });
 
       row.addEventListener('dragleave', (event) => {
         if (!row.contains(event.relatedTarget) && state.dragHover?.targetKey === entry.key) {
           state.dragHover = null;
-          renderTree();
+          clearDragHoverClasses();
         }
       });
 
@@ -531,7 +556,7 @@ export function createTemplateTreeDialogController({
         state.dragHover = null;
 
         if (!moved) {
-          renderTree();
+          clearDragHoverClasses();
           return;
         }
 
@@ -663,6 +688,7 @@ export function createTemplateTreeDialogController({
     state.editor = null;
     state.draggedKey = null;
     state.dragHover = null;
+    clearDragHoverClasses();
     setSelection(null);
     hideContextMenu();
     elements.overlay.classList.add('hidden');
