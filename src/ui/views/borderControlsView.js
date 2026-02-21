@@ -16,6 +16,8 @@ export function createBorderControlsView(documentRef) {
       maxImageWidthInput: getRequiredElementById(documentRef, 'max-image-width'),
     },
     borderStyle: {
+      templateLoadButton: getRequiredElementById(documentRef, 'border-template-load'),
+      templateSaveAsButton: getRequiredElementById(documentRef, 'border-template-save-as'),
       widthInput: getRequiredElementById(documentRef, 'border-width'),
       radiusInput: getRequiredElementById(documentRef, 'border-radius'),
       borderColorInput: getRequiredElementById(documentRef, 'border-color-input'),
