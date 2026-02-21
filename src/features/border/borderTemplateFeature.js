@@ -19,12 +19,14 @@ export function createBorderTemplateFeature({
   loadBorderTemplateView,
   saveBorderTemplateView,
   getTemplatePayload = () => null,
+  applyTemplatePayload,
   onTemplateLoaded,
   onTemplateSaved,
 }) {
   const store = createTemplateLibraryStore();
   const state = {
-    activeTemplateId: DEFAULT_BORDER_TEMPLATE_ID,
+    loadedTemplateId: DEFAULT_BORDER_TEMPLATE_ID,
+    isDirty: false,
   };
 
   async function persistLibrary() {
@@ -44,14 +46,32 @@ export function createBorderTemplateFeature({
     return template?.type === 'template' && template.templateClass === BORDER_TEMPLATE_CLASS;
   }
 
-  function setActiveTemplate(templateId, { shouldNotify = true } = {}) {
+  function markDirty() {
+    state.isDirty = true;
+  }
+
+  function resetDirty() {
+    state.isDirty = false;
+  }
+
+  function getLoadedTemplate() {
+    return store.getTemplate(state.loadedTemplateId);
+  }
+
+  function setLoadedTemplate(templateId, { shouldApply = false, shouldNotify = true } = {}) {
     const template = store.getTemplate(templateId);
     if (!isValidBorderTemplate(template)) {
       return null;
     }
 
-    state.activeTemplateId = template.id;
+    state.loadedTemplateId = template.id;
     persistSelection(template.id);
+
+    if (shouldApply) {
+      applyTemplatePayload?.(template.data);
+    }
+
+    resetDirty();
 
     if (shouldNotify) {
       onTemplateLoaded?.(template);
@@ -77,7 +97,7 @@ export function createBorderTemplateFeature({
       persistLibrary();
     },
     onTemplateLoaded: (template) => {
-      setActiveTemplate(template?.id, { shouldNotify: true });
+      setLoadedTemplate(template?.id, { shouldApply: true, shouldNotify: true });
     },
   });
 
@@ -112,7 +132,7 @@ export function createBorderTemplateFeature({
         return;
       }
 
-      setActiveTemplate(updated.id, { shouldNotify: false });
+      setLoadedTemplate(updated.id, { shouldApply: false, shouldNotify: false });
       persistLibrary();
       onTemplateSaved?.(updated);
     },
@@ -135,19 +155,31 @@ export function createBorderTemplateFeature({
       : store.getTemplate(DEFAULT_BORDER_TEMPLATE_ID);
 
     if (templateToLoad) {
-      setActiveTemplate(templateToLoad.id, { shouldNotify: true });
+      setLoadedTemplate(templateToLoad.id, { shouldApply: true, shouldNotify: true });
     }
 
     await persistLibrary();
   }
 
+  function getSaveDialogSelectionTemplateId() {
+    if (state.loadedTemplateId && state.loadedTemplateId !== DEFAULT_BORDER_TEMPLATE_ID) {
+      return state.loadedTemplateId;
+    }
+
+    return null;
+  }
+
   return {
     init,
-    openLoadWindow: () => loadWindowController.open(),
+    openLoadWindow: () => loadWindowController.open({ selectedTemplateId: state.loadedTemplateId }),
     closeLoadWindow: () => loadWindowController.close(),
     handleLoadEnterKey: (event) => loadWindowController.handleEnterKey(event),
-    openSaveWindow: () => saveWindowController.open(),
+    openSaveWindow: () => saveWindowController.open({ selectedTemplateId: getSaveDialogSelectionTemplateId() }),
     closeSaveWindow: () => saveWindowController.close(),
     handleSaveEnterKey: (event) => saveWindowController.handleEnterKey(event),
+    markDirty,
+    getLoadedTemplateId: () => state.loadedTemplateId,
+    isDirty: () => state.isDirty,
+    getLoadedTemplate,
   };
 }

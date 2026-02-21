@@ -47,6 +47,7 @@ import { createSettingsController } from './controllers/settingsController.js';
 import { createBorderState } from './features/border/borderState.js';
 import { createBorderUiController } from './features/border/borderUiController.js';
 import { createBorderTemplateFeature } from './features/border/borderTemplateFeature.js';
+import { createBorderTemplateAdapterService } from './features/border/borderTemplateAdapterService.js';
 
 const Quill = window.Quill;
 
@@ -554,6 +555,7 @@ const borderState = createBorderState({
   getManagedImageById,
   syncLockedPaddingValues,
   drawEditorToCanvas,
+  onStateChanged: () => borderTemplateFeature.markDirty(),
 });
 
 const manageImagesWindowController = createManageImagesWindowController({
@@ -577,6 +579,7 @@ const manageImagesWindowController = createManageImagesWindowController({
   onSelectionApplied: ({ slotType, slotName }, imageId) => {
     assignManagedImageToSlot(slotType, slotName, imageId);
     borderState.updatePieceButtonLabel(slotType, slotName);
+    borderTemplateFeature.markDirty();
     drawEditorToCanvas();
   },
   onStoreChanged: () => {
@@ -584,18 +587,6 @@ const manageImagesWindowController = createManageImagesWindowController({
     persistImageLibrary();
   },
   onImagesDeleted: borderState.clearDeletedImageSlots,
-});
-
-const borderTemplateFeature = createBorderTemplateFeature({
-  loadBorderTemplateView,
-  saveBorderTemplateView,
-  getTemplatePayload: () => getBorderConfig(),
-  onTemplateLoaded: () => {
-    drawEditorToCanvas();
-  },
-  onTemplateSaved: () => {
-    drawEditorToCanvas();
-  },
 });
 
 function openManageImagesWindow(slotType = null, slotName = null) {
@@ -722,7 +713,7 @@ const manageImagesController = createManageImagesController({
   manageImagesWindowController,
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
-    onStateChanged: null,
+    onStateChanged: () => borderTemplateFeature.markDirty(),
   },
 });
 
@@ -804,13 +795,54 @@ const borderController = createBorderUiController({
   },
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
-    onStateChanged: null,
+    onStateChanged: () => borderTemplateFeature.markDirty(),
   },
   helpers: {
     resolveRenderableImageBorderGroup,
     getManagedImageById,
     clampToPositiveNumber,
     parsePaddingNumber,
+  },
+});
+
+const borderTemplateAdapterService = createBorderTemplateAdapterService({
+  elements: {
+    borderToggle,
+    borderWidthInput,
+    borderRadiusInput,
+    borderColorSolidRadio,
+    borderColorInsideOutRadio,
+    borderColorImagesRadio,
+    borderColorInput,
+    borderBackgroundColorTransparentRadio,
+    borderBackgroundColorSolidRadio,
+    borderBackgroundColorInput,
+    centerPaddingInput,
+    sidePaddingControls,
+    imageBorderSizingModeInput,
+    imageBorderRepeatModeInput,
+    imageBorderTransformInputs,
+  },
+  state: {
+    lockState,
+    imageBorderState,
+  },
+  borderState,
+  updateBorderControlsState: borderController.updateBorderControlsState,
+  syncColorPreviewButtons,
+  requestRender: drawEditorToCanvas,
+});
+
+const borderTemplateFeature = createBorderTemplateFeature({
+  loadBorderTemplateView,
+  saveBorderTemplateView,
+  getTemplatePayload: () => borderTemplateAdapterService.captureTemplateData(),
+  applyTemplatePayload: (templateData) => borderTemplateAdapterService.applyTemplateData(templateData),
+  onTemplateLoaded: () => {
+    drawEditorToCanvas();
+  },
+  onTemplateSaved: () => {
+    drawEditorToCanvas();
   },
 });
 
@@ -899,7 +931,7 @@ const colorPickerController = createColorPickerController({
   },
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
-    onStateChanged: null,
+    onStateChanged: () => borderTemplateFeature.markDirty(),
   },
 });
 
@@ -961,7 +993,7 @@ const editorController = createEditorController({
   },
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
-    onStateChanged: null,
+    onStateChanged: () => borderTemplateFeature.markDirty(),
   },
 });
 

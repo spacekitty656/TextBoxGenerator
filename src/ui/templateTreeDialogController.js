@@ -102,6 +102,45 @@ export function createTemplateTreeDialogController({
     return getEntityByKey(state.selectedKey);
   }
 
+  function getAncestorFolderIdsForTemplate(templateId) {
+    const template = store.getTemplate(templateId);
+    if (!template) {
+      return [];
+    }
+
+    const ancestorIds = [];
+    let parentId = template.parentId;
+
+    while (parentId) {
+      const folder = store.getFolder(parentId);
+      if (!folder) {
+        break;
+      }
+
+      ancestorIds.push(folder.id);
+      parentId = folder.parentId;
+    }
+
+    return ancestorIds;
+  }
+
+  function collapseToTemplateAncestors(templateId) {
+    const ancestorSet = new Set(getAncestorFolderIdsForTemplate(templateId));
+
+    getVisibleRows().forEach((entry) => {
+      if (entry.type !== 'folder' || entry.synthetic) {
+        return;
+      }
+
+      if (entry.id === store.ROOT_FOLDER_ID || ancestorSet.has(entry.id)) {
+        state.collapsedFolderIds.delete(entry.id);
+        return;
+      }
+
+      state.collapsedFolderIds.add(entry.id);
+    });
+  }
+
   function getVisibleSelectionKeys() {
     return getVisibleRows().filter((row) => !row.synthetic).map((row) => row.key);
   }
@@ -266,6 +305,10 @@ export function createTemplateTreeDialogController({
     }
 
     if (mode === 'save') {
+      if (selected.immutable) {
+        return;
+      }
+
       onSaveTemplate?.(selected);
     }
 
@@ -435,14 +478,22 @@ export function createTemplateTreeDialogController({
     syncToolbarState();
   }
 
-  function open() {
+  function open({ selectedTemplateId = null } = {}) {
     state.isOpen = true;
+
+    if (selectedTemplateId && store.getTemplate(selectedTemplateId)) {
+      collapseToTemplateAncestors(selectedTemplateId);
+      setSelection(getEntityKey(store.getTemplate(selectedTemplateId)));
+    }
+
     elements.overlay.classList.remove('hidden');
     elements.overlay.setAttribute('aria-hidden', 'false');
+
     if (!state.selectedKey) {
       const firstVisible = getVisibleSelectionKeys()[0] || null;
       setSelection(firstVisible);
     }
+
     render();
     elements.tree.focus();
   }
