@@ -555,7 +555,6 @@ const borderState = createBorderState({
   getManagedImageById,
   syncLockedPaddingValues,
   drawEditorToCanvas,
-  onStateChanged: () => borderTemplateFeature.handleStatePossiblyChanged(),
 });
 
 const manageImagesWindowController = createManageImagesWindowController({
@@ -579,17 +578,13 @@ const manageImagesWindowController = createManageImagesWindowController({
   onSelectionApplied: ({ slotType, slotName }, imageId) => {
     assignManagedImageToSlot(slotType, slotName, imageId);
     borderState.updatePieceButtonLabel(slotType, slotName);
-    borderTemplateFeature.handleStatePossiblyChanged();
     drawEditorToCanvas();
   },
   onStoreChanged: () => {
     borderState.updateAllPieceButtonLabels();
     persistImageLibrary();
   },
-  onImagesDeleted: () => {
-    borderState.clearDeletedImageSlots();
-    borderTemplateFeature.handleStatePossiblyChanged();
-  },
+  onImagesDeleted: borderState.clearDeletedImageSlots,
 });
 
 
@@ -625,23 +620,11 @@ const borderTemplateAdapterService = createBorderTemplateAdapterService({
   },
 });
 
-function syncBorderTemplateSaveButtonText(isDirty) {
-  const mainLabel = isDirty ? '*Save as' : 'Save as';
-  const dialogLabel = isDirty ? '*Save' : 'Save';
-
-  borderTemplateSaveAsButton.textContent = mainLabel;
-  saveBorderTemplateView.window.primaryButton.textContent = dialogLabel;
-}
-
 const borderTemplateFeature = createBorderTemplateFeature({
   loadBorderTemplateView,
   saveBorderTemplateView,
   getTemplatePayload: () => borderTemplateAdapterService.captureTemplatePayload(),
   applyTemplatePayload: (payload) => borderTemplateAdapterService.applyTemplatePayload(payload),
-  isCurrentStateEqualToSnapshot: (snapshot) => borderTemplateAdapterService.isEqualToSnapshot(snapshot),
-  onDirtyStateChanged: ({ isDirty }) => {
-    syncBorderTemplateSaveButtonText(isDirty);
-  },
   onTemplateLoaded: () => {
     drawEditorToCanvas();
   },
@@ -856,7 +839,7 @@ const borderController = createBorderUiController({
   },
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
-    onStateChanged: () => borderTemplateFeature.handleStatePossiblyChanged(),
+    onStateChanged: null,
   },
   helpers: {
     resolveRenderableImageBorderGroup,
@@ -1010,7 +993,6 @@ const editorController = createEditorController({
     handleManageImagesDelete: (event) => manageImagesController.handleDeleteKey(event),
     persistSettings,
     persistImageLibrary,
-    hasUnsavedTemplateChanges: () => Boolean(borderTemplateFeature.getLoadedTemplateId() && borderTemplateFeature.isDirty()),
   },
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
@@ -1030,7 +1012,6 @@ if (appVersionBadge) {
 
 syncColorPickerUI();
 syncColorPreviewButtons();
-syncBorderTemplateSaveButtonText(false);
 applySavedSettings();
 borderState.updateAllPieceButtonLabels();
 

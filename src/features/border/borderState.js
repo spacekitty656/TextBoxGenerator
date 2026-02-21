@@ -9,13 +9,8 @@ export function createBorderState({
   getManagedImageById,
   syncLockedPaddingValues,
   drawEditorToCanvas,
-  onStateChanged,
 }) {
   const insideOutColorInputs = [];
-
-  function notifyStateChanged() {
-    onStateChanged?.();
-  }
 
   function getPieceButton(slotType, slotName) {
     return slotType === 'corners'
@@ -76,14 +71,12 @@ export function createBorderState({
 
   function clearDeletedImageSlots() {
     updateAllPieceButtonLabels();
-    notifyStateChanged();
     drawEditorToCanvas();
   }
 
   function registerInsideOutColorInput(input) {
     input.addEventListener('input', () => {
       syncLockedPaddingValues();
-      notifyStateChanged();
       drawEditorToCanvas();
     });
   }
@@ -154,7 +147,6 @@ export function createBorderState({
       insideOutColorInputs.splice(rowIndex, 1);
       row.remove();
       updateInsideOutColorRowsState();
-      notifyStateChanged();
       drawEditorToCanvas();
     });
 
@@ -171,7 +163,6 @@ export function createBorderState({
 
       insideOutColorList.insertBefore(row, row.previousElementSibling);
       updateInsideOutColorRowsState();
-      notifyStateChanged();
       drawEditorToCanvas();
     });
 
@@ -188,7 +179,6 @@ export function createBorderState({
 
       insideOutColorList.insertBefore(row.nextElementSibling, row);
       updateInsideOutColorRowsState();
-      notifyStateChanged();
       drawEditorToCanvas();
     });
 
@@ -202,7 +192,6 @@ export function createBorderState({
   function addInsideOutColor() {
     const outerMostColor = insideOutColorInputs[insideOutColorInputs.length - 1]?.value || '#1f2937';
     createInsideOutColorRow(outerMostColor);
-    notifyStateChanged();
     drawEditorToCanvas();
   }
 

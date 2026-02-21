@@ -12,10 +12,6 @@ function cloneSlotGroup(slotGroup = {}) {
   );
 }
 
-function createSnapshotKey(snapshot) {
-  return JSON.stringify(snapshot || null);
-}
-
 export function createBorderTemplateAdapterService({ elements, state, borderState, actions }) {
   function captureTemplatePayload() {
     return {
@@ -141,13 +137,8 @@ export function createBorderTemplateAdapterService({ elements, state, borderStat
     actions.requestRender();
   }
 
-  function isEqualToSnapshot(snapshot) {
-    return createSnapshotKey(captureTemplatePayload()) === createSnapshotKey(snapshot);
-  }
-
   return {
     captureTemplatePayload,
     applyTemplatePayload,
-    isEqualToSnapshot,
   };
 }

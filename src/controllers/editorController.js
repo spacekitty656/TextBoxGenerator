@@ -26,7 +26,6 @@ export function createEditorController({ elements, quill, actions, callbacks }) 
       handleManageImagesDelete,
       persistSettings,
       persistImageLibrary,
-      hasUnsavedTemplateChanges,
     } = actions;
     const { onRenderRequested, onStateChanged } = callbacks;
 
@@ -80,14 +79,9 @@ export function createEditorController({ elements, quill, actions, callbacks }) 
       }
     });
 
-    events.on(windowObject, 'beforeunload', (event) => {
+    events.on(windowObject, 'beforeunload', () => {
       persistSettings();
       persistImageLibrary();
-
-      if (hasUnsavedTemplateChanges?.()) {
-        event.preventDefault();
-        event.returnValue = '';
-      }
     });
 
     isMounted = true;
