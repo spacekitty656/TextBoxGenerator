@@ -23,7 +23,6 @@ export function createBorderTemplateAdapterService({
 }) {
   function captureTemplateData() {
     const {
-      borderToggle,
       borderWidthInput,
       borderRadiusInput,
       borderColorSolidRadio,
@@ -40,7 +39,6 @@ export function createBorderTemplateAdapterService({
     } = elements;
 
     return {
-      enabled: Boolean(borderToggle.checked),
       borderWidthValue: borderWidthInput.value,
       borderRadiusValue: borderRadiusInput.value,
       colorMode: borderColorInsideOutRadio.checked
@@ -85,7 +83,6 @@ export function createBorderTemplateAdapterService({
       : {};
 
     const {
-      borderToggle,
       borderWidthInput,
       borderRadiusInput,
       borderColorSolidRadio,
@@ -102,9 +99,6 @@ export function createBorderTemplateAdapterService({
       imageBorderTransformInputs,
     } = elements;
 
-    if (Object.prototype.hasOwnProperty.call(normalizedTemplateData, 'enabled')) {
-      borderToggle.checked = Boolean(normalizedTemplateData.enabled);
-    }
     borderWidthInput.value = String(normalizedTemplateData.borderWidthValue ?? borderWidthInput.value);
     borderRadiusInput.value = String(normalizedTemplateData.borderRadiusValue ?? borderRadiusInput.value);
     borderColorInput.value = normalizedTemplateData.color || borderColorInput.value;

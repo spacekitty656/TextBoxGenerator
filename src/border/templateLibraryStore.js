@@ -4,7 +4,6 @@ const BORDER_TEMPLATE_ROOT_NAME = 'All Border Templates';
 const DEFAULT_BORDER_TEMPLATE_ID = 'template-border-default';
 
 const DEFAULT_BORDER_TEMPLATE_DATA = {
-  enabled: false,
   borderWidthValue: '2',
   borderRadiusValue: '16',
   colorMode: 'solid',
