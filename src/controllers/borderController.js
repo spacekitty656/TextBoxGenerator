@@ -16,6 +16,8 @@ export function createBorderController({ elements, actions, callbacks }) {
       centerPaddingInput,
       borderWidthInput,
       borderRadiusInput,
+      templateLoadButton,
+      templateSaveAsButton,
       imageBorderCornerButtons,
       imageBorderSideButtons,
       imageBorderTransformInputs,
@@ -43,6 +45,8 @@ export function createBorderController({ elements, actions, callbacks }) {
       onSidePaddingInput,
       onCorePaddingInput,
       openManageImagesWindow,
+      openLoadBorderTemplateWindow,
+      openSaveBorderTemplateWindow,
       onImageBorderTransformChanged,
       onImageBorderSlotCleared,
       addInsideOutColor,
@@ -64,12 +68,14 @@ export function createBorderController({ elements, actions, callbacks }) {
 
       events.on(input, 'input', () => {
         onImageSidePaddingInput();
+        onStateChanged?.();
         onRenderRequested?.();
       });
     });
 
     events.on(imageCenterPaddingInput, 'input', () => {
       onImageCenterPaddingInput();
+      onStateChanged?.();
       onRenderRequested?.();
     });
 
@@ -82,6 +88,7 @@ export function createBorderController({ elements, actions, callbacks }) {
 
       events.on(input, 'input', () => {
         onSidePaddingInput();
+        onStateChanged?.();
         onRenderRequested?.();
       });
     });
@@ -89,8 +96,17 @@ export function createBorderController({ elements, actions, callbacks }) {
     [centerPaddingInput, borderWidthInput, borderRadiusInput].forEach((input) => {
       events.on(input, 'input', () => {
         onCorePaddingInput();
+        onStateChanged?.();
         onRenderRequested?.();
       });
+    });
+
+    events.on(templateLoadButton, 'click', () => {
+      openLoadBorderTemplateWindow();
+    });
+
+    events.on(templateSaveAsButton, 'click', () => {
+      openSaveBorderTemplateWindow();
     });
 
     Object.entries(imageBorderCornerButtons).forEach(([corner, button]) => {
@@ -109,16 +125,19 @@ export function createBorderController({ elements, actions, callbacks }) {
       Object.entries(group).forEach(([slotName, controls]) => {
         events.on(controls.rotation, 'change', () => {
           onImageBorderTransformChanged(slotType, slotName, 'rotation', Number.parseInt(controls.rotation.value, 10) || 0);
+          onStateChanged?.();
           onRenderRequested?.();
         });
 
         events.on(controls.flipX, 'change', () => {
           onImageBorderTransformChanged(slotType, slotName, 'flipX', controls.flipX.checked);
+          onStateChanged?.();
           onRenderRequested?.();
         });
 
         events.on(controls.flipY, 'change', () => {
           onImageBorderTransformChanged(slotType, slotName, 'flipY', controls.flipY.checked);
+          onStateChanged?.();
           onRenderRequested?.();
         });
 
@@ -139,6 +158,7 @@ export function createBorderController({ elements, actions, callbacks }) {
     [borderColorSolidRadio, borderColorInsideOutRadio, borderColorImagesRadio].forEach((radioInput) => {
       events.on(radioInput, 'change', () => {
         updateBorderColorModeUI();
+        onStateChanged?.();
         onRenderRequested?.();
       });
     });
@@ -152,29 +172,34 @@ export function createBorderController({ elements, actions, callbacks }) {
 
     events.on(borderColorInput, 'input', () => {
       syncColorPreviewButtons();
+      onStateChanged?.();
       onRenderRequested?.();
     });
 
     [imageBorderSizingModeInput, imageBorderRepeatModeInput].forEach((input) => {
       events.on(input, 'change', () => {
+        onStateChanged?.();
         onRenderRequested?.();
       });
     });
 
     events.on(backgroundColorInput, 'input', () => {
       syncColorPreviewButtons();
+      onStateChanged?.();
       onRenderRequested?.();
     });
 
     [borderBackgroundColorTransparentRadio, borderBackgroundColorSolidRadio].forEach((radioInput) => {
       events.on(radioInput, 'change', () => {
         updateBorderColorModeUI();
+        onStateChanged?.();
         onRenderRequested?.();
       });
     });
 
     events.on(borderBackgroundColorInput, 'input', () => {
       syncColorPreviewButtons();
+      onStateChanged?.();
       onRenderRequested?.();
     });
 
@@ -182,6 +207,7 @@ export function createBorderController({ elements, actions, callbacks }) {
       syncColorPickerUI();
       syncColorPreviewButtons();
       updateBorderControlsState();
+      onStateChanged?.();
       onRenderRequested?.();
     });
 

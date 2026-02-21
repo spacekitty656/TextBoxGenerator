@@ -37,6 +37,8 @@ import { createBorderControlsView } from './ui/views/borderControlsView.js';
 import { createColorPickerView } from './ui/views/colorPickerView.js';
 import { createEditorView } from './ui/views/editorView.js';
 import { createManageImagesView } from './ui/views/manageImagesView.js';
+import { createLoadBorderTemplateView } from './ui/views/loadBorderTemplateView.js';
+import { createSaveBorderTemplateView } from './ui/views/saveBorderTemplateView.js';
 import { createSettingsView } from './ui/views/settingsView.js';
 import { createColorPickerController } from './controllers/colorPickerController.js';
 import { createEditorController } from './controllers/editorController.js';
@@ -44,6 +46,8 @@ import { createManageImagesController } from './controllers/manageImagesControll
 import { createSettingsController } from './controllers/settingsController.js';
 import { createBorderState } from './features/border/borderState.js';
 import { createBorderUiController } from './features/border/borderUiController.js';
+import { createBorderTemplateFeature } from './features/border/borderTemplateFeature.js';
+import { createBorderTemplateAdapterService } from './features/border/borderTemplateAdapterService.js';
 
 const Quill = window.Quill;
 
@@ -51,6 +55,8 @@ const editorView = createEditorView(document);
 const settingsView = createSettingsView(document);
 const borderControlsView = createBorderControlsView(document);
 const manageImagesView = createManageImagesView(document);
+const loadBorderTemplateView = createLoadBorderTemplateView(document);
+const saveBorderTemplateView = createSaveBorderTemplateView(document);
 const colorPickerView = createColorPickerView(document);
 
 const canvas = editorView.canvas.preview;
@@ -72,6 +78,9 @@ const borderToggle = borderControlsView.toggles.borderToggle;
 const borderOptions = borderControlsView.toggles.borderOptions;
 const borderWidthInput = borderControlsView.borderStyle.widthInput;
 const borderRadiusInput = borderControlsView.borderStyle.radiusInput;
+const borderTemplateLoadButton = borderControlsView.borderStyle.templateLoadButton;
+const borderTemplateSaveAsButton = borderControlsView.borderStyle.templateSaveAsButton;
+const borderTemplatePathLabel = borderControlsView.borderStyle.templatePath;
 const borderColorSolidRadio = borderControlsView.colorModes.borderColorSolidRadio;
 const borderColorInsideOutRadio = borderControlsView.colorModes.borderColorInsideOutRadio;
 const borderColorImagesRadio = borderControlsView.colorModes.borderColorImagesRadio;
@@ -105,6 +114,7 @@ const manageImagesRenameButton = manageImagesView.actions.renameButton;
 const manageImagesDeleteButton = manageImagesView.actions.deleteButton;
 const manageImagesOkButton = manageImagesView.window.okButton;
 const manageImagesCancelButton = manageImagesView.window.cancelButton;
+
 
 const imageBorderState = {
   corners: {
@@ -546,6 +556,7 @@ const borderState = createBorderState({
   getManagedImageById,
   syncLockedPaddingValues,
   drawEditorToCanvas,
+  onStateChanged: () => borderTemplateFeature.markDirty(),
 });
 
 const manageImagesWindowController = createManageImagesWindowController({
@@ -569,6 +580,7 @@ const manageImagesWindowController = createManageImagesWindowController({
   onSelectionApplied: ({ slotType, slotName }, imageId) => {
     assignManagedImageToSlot(slotType, slotName, imageId);
     borderState.updatePieceButtonLabel(slotType, slotName);
+    borderTemplateFeature.markDirty();
     drawEditorToCanvas();
   },
   onStoreChanged: () => {
@@ -589,6 +601,23 @@ function openManageImagesWindow(slotType = null, slotName = null) {
 function closeManageImagesWindow() {
   manageImagesController.close();
 }
+
+function openLoadBorderTemplateWindow() {
+  borderTemplateFeature.openLoadWindow();
+}
+
+function closeLoadBorderTemplateWindow() {
+  borderTemplateFeature.closeLoadWindow();
+}
+
+function openSaveBorderTemplateWindow() {
+  borderTemplateFeature.openSaveWindow();
+}
+
+function closeSaveBorderTemplateWindow() {
+  borderTemplateFeature.closeSaveWindow();
+}
+
 
 function triggerSaveImage() {
   saveButton.click();
@@ -685,7 +714,7 @@ const manageImagesController = createManageImagesController({
   manageImagesWindowController,
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
-    onStateChanged: null,
+    onStateChanged: () => borderTemplateFeature.markDirty(),
   },
 });
 
@@ -697,6 +726,8 @@ const borderController = createBorderUiController({
     centerPaddingInput,
     borderWidthInput,
     borderRadiusInput,
+    templateLoadButton: borderTemplateLoadButton,
+    templateSaveAsButton: borderTemplateSaveAsButton,
     imageBorderCornerButtons,
     imageBorderSideButtons,
     imageBorderTransformInputs,
@@ -743,6 +774,8 @@ const borderController = createBorderUiController({
     openManageImagesWindow: (slotType, slotName) => {
       openManageImagesWindow(slotType, slotName);
     },
+    openLoadBorderTemplateWindow,
+    openSaveBorderTemplateWindow,
     onImageBorderTransformChanged: (slotType, slotName, key, value) => {
       const slotState = getImageBorderSlotState(slotType, slotName);
       if (!slotState) {
@@ -763,7 +796,7 @@ const borderController = createBorderUiController({
   },
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
-    onStateChanged: null,
+    onStateChanged: () => borderTemplateFeature.markDirty(),
   },
   helpers: {
     resolveRenderableImageBorderGroup,
@@ -772,6 +805,83 @@ const borderController = createBorderUiController({
     parsePaddingNumber,
   },
 });
+
+const borderTemplateAdapterService = createBorderTemplateAdapterService({
+  elements: {
+    borderToggle,
+    borderWidthInput,
+    borderRadiusInput,
+    borderColorSolidRadio,
+    borderColorInsideOutRadio,
+    borderColorImagesRadio,
+    borderColorInput,
+    borderBackgroundColorTransparentRadio,
+    borderBackgroundColorSolidRadio,
+    borderBackgroundColorInput,
+    centerPaddingInput,
+    sidePaddingControls,
+    imageBorderSizingModeInput,
+    imageBorderRepeatModeInput,
+    imageBorderTransformInputs,
+  },
+  state: {
+    lockState,
+    imageBorderState,
+  },
+  borderState,
+  updateBorderControlsState: borderController.updateBorderControlsState,
+  syncColorPreviewButtons,
+  requestRender: drawEditorToCanvas,
+});
+
+const borderTemplateFeature = createBorderTemplateFeature({
+  loadBorderTemplateView,
+  saveBorderTemplateView,
+  getTemplatePayload: () => borderTemplateAdapterService.captureTemplateData(),
+  applyTemplatePayload: (templateData) => borderTemplateAdapterService.applyTemplateData(templateData),
+  onTemplateLoaded: () => {
+    syncBorderTemplatePathLabel();
+    drawEditorToCanvas();
+  },
+  onTemplateSaved: () => {
+    syncBorderTemplatePathLabel();
+    drawEditorToCanvas();
+  },
+});
+
+function applyLeftEllipsis(element, value) {
+  const fullText = value || '…';
+  element.textContent = fullText;
+
+  if (element.scrollWidth <= element.clientWidth) {
+    return;
+  }
+
+  let low = 0;
+  let high = fullText.length;
+
+  while (low < high) {
+    const midpoint = Math.floor((low + high) / 2);
+    const candidate = `…${fullText.slice(midpoint)}`;
+    element.textContent = candidate;
+
+    if (element.scrollWidth > element.clientWidth) {
+      low = midpoint + 1;
+    } else {
+      high = midpoint;
+    }
+  }
+
+  element.textContent = `…${fullText.slice(low)}`;
+}
+
+function syncBorderTemplatePathLabel() {
+  const currentPath = borderTemplateFeature.getLoadedTemplatePath();
+  borderTemplatePathLabel.title = currentPath || 'No template selected';
+  applyLeftEllipsis(borderTemplatePathLabel, currentPath || '…');
+}
+
+window.addEventListener('resize', syncBorderTemplatePathLabel);
 
 const canvasPainter = createCanvasPainter({
   context,
@@ -858,7 +968,7 @@ const colorPickerController = createColorPickerController({
   },
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
-    onStateChanged: null,
+    onStateChanged: () => borderTemplateFeature.markDirty(),
   },
 });
 
@@ -909,14 +1019,18 @@ const editorController = createEditorController({
     closeColorWindow,
     closeSettingsWindow,
     closeManageImagesWindow,
+    closeLoadBorderTemplateWindow,
+    closeSaveBorderTemplateWindow,
     handleManageImagesEnter: (event) => manageImagesController.handleEnterKey(event),
+    handleLoadBorderTemplateEnter: (event) => borderTemplateFeature.handleLoadEnterKey(event),
+    handleSaveBorderTemplateEnter: (event) => borderTemplateFeature.handleSaveEnterKey(event),
     handleManageImagesDelete: (event) => manageImagesController.handleDeleteKey(event),
     persistSettings,
     persistImageLibrary,
   },
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
-    onStateChanged: null,
+    onStateChanged: () => borderTemplateFeature.markDirty(),
   },
 });
 
@@ -934,9 +1048,15 @@ syncColorPickerUI();
 syncColorPreviewButtons();
 applySavedSettings();
 borderState.updateAllPieceButtonLabels();
+syncBorderTemplatePathLabel();
 
-imageLibraryService.init(imageLibraryStore).then(() => imageLibraryService.hydrateImages(imageLibraryStore)).then(() => {
+Promise.all([
+  imageLibraryService.init(imageLibraryStore)
+    .then(() => imageLibraryService.hydrateImages(imageLibraryStore)),
+  borderTemplateFeature.init(),
+]).then(() => {
   borderState.updateAllPieceButtonLabels();
+  syncBorderTemplatePathLabel();
   drawEditorToCanvas();
 });
 

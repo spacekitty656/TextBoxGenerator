@@ -9,6 +9,7 @@ export function createBorderState({
   getManagedImageById,
   syncLockedPaddingValues,
   drawEditorToCanvas,
+  onStateChanged,
 }) {
   const insideOutColorInputs = [];
 
@@ -71,12 +72,14 @@ export function createBorderState({
 
   function clearDeletedImageSlots() {
     updateAllPieceButtonLabels();
+    onStateChanged?.();
     drawEditorToCanvas();
   }
 
   function registerInsideOutColorInput(input) {
     input.addEventListener('input', () => {
       syncLockedPaddingValues();
+      onStateChanged?.();
       drawEditorToCanvas();
     });
   }
@@ -147,6 +150,7 @@ export function createBorderState({
       insideOutColorInputs.splice(rowIndex, 1);
       row.remove();
       updateInsideOutColorRowsState();
+      onStateChanged?.();
       drawEditorToCanvas();
     });
 
@@ -163,6 +167,7 @@ export function createBorderState({
 
       insideOutColorList.insertBefore(row, row.previousElementSibling);
       updateInsideOutColorRowsState();
+      onStateChanged?.();
       drawEditorToCanvas();
     });
 
@@ -179,6 +184,7 @@ export function createBorderState({
 
       insideOutColorList.insertBefore(row.nextElementSibling, row);
       updateInsideOutColorRowsState();
+      onStateChanged?.();
       drawEditorToCanvas();
     });
 
@@ -192,11 +198,26 @@ export function createBorderState({
   function addInsideOutColor() {
     const outerMostColor = insideOutColorInputs[insideOutColorInputs.length - 1]?.value || '#1f2937';
     createInsideOutColorRow(outerMostColor);
+    onStateChanged?.();
     drawEditorToCanvas();
   }
 
   function getInsideOutColorValues() {
     return insideOutColorInputs.map((input) => input.value);
+  }
+
+  function setInsideOutColorValues(values = []) {
+    insideOutColorList.innerHTML = '';
+    insideOutColorInputs.length = 0;
+
+    const normalizedValues = Array.isArray(values)
+      ? values.filter((value) => typeof value === 'string' && value.trim())
+      : [];
+
+    const valuesToApply = normalizedValues.length ? normalizedValues : ['#1f2937'];
+    valuesToApply.forEach((value) => {
+      createInsideOutColorRow(value);
+    });
   }
 
   return {
@@ -209,5 +230,6 @@ export function createBorderState({
     createInsideOutColorRow,
     addInsideOutColor,
     getInsideOutColorValues,
+    setInsideOutColorValues,
   };
 }
