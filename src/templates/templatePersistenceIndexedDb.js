@@ -1,4 +1,4 @@
-const DB_NAME = 'textbox-generator-template-library';
+const DB_NAME = 'textbox-generator-border-template-library';
 const DB_VERSION = 1;
 const LIBRARY_STORE = 'library';
 const LIBRARY_RECORD_ID = 'snapshot';

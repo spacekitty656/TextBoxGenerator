@@ -80,6 +80,10 @@ export function createBorderTemplateAdapterService({
   }
 
   function applyTemplateData(templateData = {}) {
+    const normalizedTemplateData = templateData && typeof templateData === 'object'
+      ? templateData
+      : {};
+
     const {
       borderToggle,
       borderWidthInput,
@@ -98,54 +102,70 @@ export function createBorderTemplateAdapterService({
       imageBorderTransformInputs,
     } = elements;
 
-    borderToggle.checked = Boolean(templateData.enabled);
-    borderWidthInput.value = String(templateData.borderWidthValue ?? borderWidthInput.value);
-    borderRadiusInput.value = String(templateData.borderRadiusValue ?? borderRadiusInput.value);
-    borderColorInput.value = templateData.color || '#000000';
-    borderBackgroundColorInput.value = templateData.backgroundColor || '#ffffff';
-    centerPaddingInput.value = String(templateData.centerPaddingValue ?? centerPaddingInput.value);
+    if (Object.prototype.hasOwnProperty.call(normalizedTemplateData, 'enabled')) {
+      borderToggle.checked = Boolean(normalizedTemplateData.enabled);
+    }
+    borderWidthInput.value = String(normalizedTemplateData.borderWidthValue ?? borderWidthInput.value);
+    borderRadiusInput.value = String(normalizedTemplateData.borderRadiusValue ?? borderRadiusInput.value);
+    borderColorInput.value = normalizedTemplateData.color || borderColorInput.value;
+    borderBackgroundColorInput.value = normalizedTemplateData.backgroundColor || borderBackgroundColorInput.value;
+    centerPaddingInput.value = String(normalizedTemplateData.centerPaddingValue ?? centerPaddingInput.value);
 
-    const colorMode = templateData.colorMode;
-    borderColorSolidRadio.checked = colorMode === 'solid';
-    borderColorInsideOutRadio.checked = colorMode === 'inside-out';
-    borderColorImagesRadio.checked = colorMode === 'images';
+    const colorMode = normalizedTemplateData.colorMode;
+    if (colorMode === 'solid' || colorMode === 'inside-out' || colorMode === 'images') {
+      borderColorSolidRadio.checked = colorMode === 'solid';
+      borderColorInsideOutRadio.checked = colorMode === 'inside-out';
+      borderColorImagesRadio.checked = colorMode === 'images';
+    }
 
-    const backgroundMode = templateData.backgroundMode;
-    borderBackgroundColorSolidRadio.checked = backgroundMode === 'solid';
-    borderBackgroundColorTransparentRadio.checked = backgroundMode !== 'solid';
+    const backgroundMode = normalizedTemplateData.backgroundMode;
+    if (backgroundMode === 'solid' || backgroundMode === 'transparent') {
+      borderBackgroundColorSolidRadio.checked = backgroundMode === 'solid';
+      borderBackgroundColorTransparentRadio.checked = backgroundMode !== 'solid';
+    }
 
     ['top', 'right', 'bottom', 'left'].forEach((side) => {
-      sidePaddingControls[side].input.value = String(templateData?.sidePaddingValues?.[side] ?? sidePaddingControls[side].input.value);
-      state.lockState[side] = Boolean(templateData?.lockState?.[side]);
+      sidePaddingControls[side].input.value = String(normalizedTemplateData?.sidePaddingValues?.[side] ?? sidePaddingControls[side].input.value);
+      if (Object.prototype.hasOwnProperty.call(normalizedTemplateData?.lockState || {}, side)) {
+        state.lockState[side] = Boolean(normalizedTemplateData?.lockState?.[side]);
+      }
     });
 
-    borderState.setInsideOutColorValues(templateData.insideOutColorValues || []);
+    if (Array.isArray(normalizedTemplateData.insideOutColorValues)) {
+      borderState.setInsideOutColorValues(normalizedTemplateData.insideOutColorValues);
+    }
 
-    ['corners', 'sides'].forEach((slotType) => {
-      Object.entries(state.imageBorderState[slotType]).forEach(([slotName, slotState]) => {
-        const nextSlotState = templateData?.imageBorder?.[slotType]?.[slotName] || {};
-        slotState.imageId = nextSlotState.imageId || null;
-        slotState.rotation = Number.isFinite(nextSlotState.rotation) ? nextSlotState.rotation : 0;
-        slotState.flipX = Boolean(nextSlotState.flipX);
-        slotState.flipY = Boolean(nextSlotState.flipY);
+    if (normalizedTemplateData.imageBorder && typeof normalizedTemplateData.imageBorder === 'object') {
+      ['corners', 'sides'].forEach((slotType) => {
+        Object.entries(state.imageBorderState[slotType]).forEach(([slotName, slotState]) => {
+          const nextSlotState = normalizedTemplateData.imageBorder?.[slotType]?.[slotName];
+          if (!nextSlotState || typeof nextSlotState !== 'object') {
+            return;
+          }
 
-        const controls = imageBorderTransformInputs?.[slotType]?.[slotName];
-        if (controls) {
-          controls.rotation.value = String(slotState.rotation);
-          controls.flipX.checked = slotState.flipX;
-          controls.flipY.checked = slotState.flipY;
-        }
+          slotState.imageId = nextSlotState.imageId || null;
+          slotState.rotation = Number.isFinite(nextSlotState.rotation) ? nextSlotState.rotation : 0;
+          slotState.flipX = Boolean(nextSlotState.flipX);
+          slotState.flipY = Boolean(nextSlotState.flipY);
 
-        borderState.updatePieceButtonLabel(slotType, slotName);
+          const controls = imageBorderTransformInputs?.[slotType]?.[slotName];
+          if (controls) {
+            controls.rotation.value = String(slotState.rotation);
+            controls.flipX.checked = slotState.flipX;
+            controls.flipY.checked = slotState.flipY;
+          }
+
+          borderState.updatePieceButtonLabel(slotType, slotName);
+        });
       });
-    });
+    }
 
     if (imageBorderSizingModeInput) {
-      imageBorderSizingModeInput.value = templateData?.imageBorder?.sizingStrategy || 'auto';
+      imageBorderSizingModeInput.value = normalizedTemplateData?.imageBorder?.sizingStrategy || imageBorderSizingModeInput.value;
     }
 
     if (imageBorderRepeatModeInput) {
-      imageBorderRepeatModeInput.value = templateData?.imageBorder?.sideMode || 'stretch';
+      imageBorderRepeatModeInput.value = normalizedTemplateData?.imageBorder?.sideMode || imageBorderRepeatModeInput.value;
     }
 
     updateBorderControlsState();
