@@ -19,6 +19,7 @@ export function createTemplateTreeDialogController({
   store,
   elements,
   mode,
+  onStoreChanged,
   onLoadTemplate,
   onSaveTemplate,
 }) {
@@ -125,14 +126,17 @@ export function createTemplateTreeDialogController({
   function syncToolbarState() {
     const selected = getSingleSelection();
     const isRoot = selected?.type === 'folder' && selected.id === store.ROOT_FOLDER_ID;
+    const isImmutable = Boolean(selected?.immutable);
 
     if (elements.createTemplateButton) {
       elements.createTemplateButton.disabled = Boolean(state.editor);
     }
     elements.createFolderButton.disabled = Boolean(state.editor);
-    elements.renameButton.disabled = !selected || isRoot || Boolean(state.editor);
-    elements.deleteButton.disabled = !selected || isRoot || Boolean(state.editor);
-    elements.primaryButton.disabled = selected?.type !== 'template' || Boolean(state.editor);
+    elements.renameButton.disabled = !selected || isRoot || isImmutable || Boolean(state.editor);
+    elements.deleteButton.disabled = !selected || isRoot || isImmutable || Boolean(state.editor);
+    elements.primaryButton.disabled = selected?.type !== 'template'
+      || Boolean(state.editor)
+      || (mode === 'save' && isImmutable);
   }
 
   function getPreferredParentId() {
@@ -192,6 +196,7 @@ export function createTemplateTreeDialogController({
       const created = store.createFolder({ name: nextName, parentId: state.editor.parentId });
       state.editor = null;
       setSelection(getEntityKey(created));
+      onStoreChanged?.();
       render();
       return;
     }
@@ -200,6 +205,7 @@ export function createTemplateTreeDialogController({
       const created = store.createTemplate({ name: nextName, parentId: state.editor.parentId });
       state.editor = null;
       setSelection(getEntityKey(created));
+      onStoreChanged?.();
       render();
       return;
     }
@@ -214,12 +220,13 @@ export function createTemplateTreeDialogController({
     }
 
     state.editor = null;
+    onStoreChanged?.();
     render();
   }
 
   async function requestDelete() {
     const selected = getSingleSelection();
-    if (!selected || selected.id === store.ROOT_FOLDER_ID) {
+    if (!selected || selected.id === store.ROOT_FOLDER_ID || selected.immutable) {
       return;
     }
 
@@ -244,6 +251,7 @@ export function createTemplateTreeDialogController({
     }
 
     setSelection(null);
+    onStoreChanged?.();
     render();
   }
 
@@ -271,7 +279,7 @@ export function createTemplateTreeDialogController({
 
   function renderContextMenu(x, y) {
     const selected = getSingleSelection();
-    if (!selected || selected.id === store.ROOT_FOLDER_ID) {
+    if (!selected || selected.id === store.ROOT_FOLDER_ID || selected.immutable) {
       return;
     }
 

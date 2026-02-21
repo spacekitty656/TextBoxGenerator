@@ -589,6 +589,7 @@ const manageImagesWindowController = createManageImagesWindowController({
 const borderTemplateFeature = createBorderTemplateFeature({
   loadBorderTemplateView,
   saveBorderTemplateView,
+  getTemplatePayload: () => getBorderConfig(),
   onTemplateLoaded: () => {
     drawEditorToCanvas();
   },
@@ -979,7 +980,11 @@ syncColorPreviewButtons();
 applySavedSettings();
 borderState.updateAllPieceButtonLabels();
 
-imageLibraryService.init(imageLibraryStore).then(() => imageLibraryService.hydrateImages(imageLibraryStore)).then(() => {
+Promise.all([
+  imageLibraryService.init(imageLibraryStore)
+    .then(() => imageLibraryService.hydrateImages(imageLibraryStore)),
+  borderTemplateFeature.init(),
+]).then(() => {
   borderState.updateAllPieceButtonLabels();
   drawEditorToCanvas();
 });
