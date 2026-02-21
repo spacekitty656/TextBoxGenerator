@@ -474,6 +474,55 @@
       </div>
     </div>
 
+    <div id="load-border-template-overlay" class="color-window-overlay hidden" aria-hidden="true">
+      <div class="color-window manage-images-window" role="dialog" aria-modal="true" aria-labelledby="load-border-template-title">
+        <div class="color-window-header">
+          <h2 id="load-border-template-title">Load Border Template</h2>
+          <button type="button" id="close-load-border-template-window" class="close-window-button" aria-label="Close load border template window">✕</button>
+        </div>
+        <div class="color-window-body manage-images-body">
+          <div class="manage-images-toolbar" role="toolbar" aria-label="Load border template toolbar">
+            <button type="button" id="load-border-template-create-folder">📁 Create Folder</button>
+            <button type="button" id="load-border-template-rename">📝 Rename</button>
+            <button type="button" id="load-border-template-delete" aria-label="Delete selected">🗑️</button>
+          </div>
+          <div class="manage-images-content">
+            <div id="load-border-template-tree" class="manage-images-tree" aria-label="Border template folders and templates"></div>
+          </div>
+          <div id="load-border-template-context-menu" class="manage-images-context-menu hidden" role="menu" aria-label="Load border template context menu"></div>
+          <div class="dialog-action-row">
+            <button type="button" class="window-primary-button" id="load-border-template-load">Load</button>
+            <button type="button" class="window-secondary-button" id="load-border-template-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="save-border-template-overlay" class="color-window-overlay hidden" aria-hidden="true">
+      <div class="color-window manage-images-window" role="dialog" aria-modal="true" aria-labelledby="save-border-template-title">
+        <div class="color-window-header">
+          <h2 id="save-border-template-title">Save Border Template</h2>
+          <button type="button" id="close-save-border-template-window" class="close-window-button" aria-label="Close save border template window">✕</button>
+        </div>
+        <div class="color-window-body manage-images-body">
+          <div class="manage-images-toolbar" role="toolbar" aria-label="Save border template toolbar">
+            <button type="button" id="save-border-template-create-template">📄 Create New Template</button>
+            <button type="button" id="save-border-template-create-folder">📁 Create Folder</button>
+            <button type="button" id="save-border-template-rename">📝 Rename</button>
+            <button type="button" id="save-border-template-delete" aria-label="Delete selected">🗑️</button>
+          </div>
+          <div class="manage-images-content">
+            <div id="save-border-template-tree" class="manage-images-tree" aria-label="Border template folders and templates"></div>
+          </div>
+          <div id="save-border-template-context-menu" class="manage-images-context-menu hidden" role="menu" aria-label="Save border template context menu"></div>
+          <div class="dialog-action-row">
+            <button type="button" class="window-primary-button" id="save-border-template-save">Save</button>
+            <button type="button" class="window-secondary-button" id="save-border-template-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
     <script type="module" src="src/app.js"></script>
   </body>

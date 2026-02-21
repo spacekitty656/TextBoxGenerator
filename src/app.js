@@ -30,6 +30,8 @@ import { createImageLibraryService } from './images/imageLibraryService.js';
 import { createQuillEditor } from './editor/quillAdapter.js';
 import { createDeltaAdapter } from './editor/deltaAdapter.js';
 import { createManageImagesWindowController } from './ui/manageImagesWindow.js';
+import { createLoadBorderTemplateWindowController } from './ui/loadBorderTemplateWindow.js';
+import { createSaveBorderTemplateWindowController } from './ui/saveBorderTemplateWindow.js';
 import { createCanvasPainter } from './render/canvasPainter.js';
 import { createBackgroundRectHeightForFont, createLayoutAdapter } from './render/layoutAdapter.js';
 import { createRenderOrchestrator } from './render/renderOrchestrator.js';
@@ -37,6 +39,8 @@ import { createBorderControlsView } from './ui/views/borderControlsView.js';
 import { createColorPickerView } from './ui/views/colorPickerView.js';
 import { createEditorView } from './ui/views/editorView.js';
 import { createManageImagesView } from './ui/views/manageImagesView.js';
+import { createLoadBorderTemplateView } from './ui/views/loadBorderTemplateView.js';
+import { createSaveBorderTemplateView } from './ui/views/saveBorderTemplateView.js';
 import { createSettingsView } from './ui/views/settingsView.js';
 import { createColorPickerController } from './controllers/colorPickerController.js';
 import { createEditorController } from './controllers/editorController.js';
@@ -44,6 +48,7 @@ import { createManageImagesController } from './controllers/manageImagesControll
 import { createSettingsController } from './controllers/settingsController.js';
 import { createBorderState } from './features/border/borderState.js';
 import { createBorderUiController } from './features/border/borderUiController.js';
+import { createTemplateLibraryStore } from './border/templateLibraryStore.js';
 
 const Quill = window.Quill;
 
@@ -51,6 +56,8 @@ const editorView = createEditorView(document);
 const settingsView = createSettingsView(document);
 const borderControlsView = createBorderControlsView(document);
 const manageImagesView = createManageImagesView(document);
+const loadBorderTemplateView = createLoadBorderTemplateView(document);
+const saveBorderTemplateView = createSaveBorderTemplateView(document);
 const colorPickerView = createColorPickerView(document);
 
 const canvas = editorView.canvas.preview;
@@ -72,6 +79,8 @@ const borderToggle = borderControlsView.toggles.borderToggle;
 const borderOptions = borderControlsView.toggles.borderOptions;
 const borderWidthInput = borderControlsView.borderStyle.widthInput;
 const borderRadiusInput = borderControlsView.borderStyle.radiusInput;
+const borderTemplateLoadButton = borderControlsView.borderStyle.templateLoadButton;
+const borderTemplateSaveAsButton = borderControlsView.borderStyle.templateSaveAsButton;
 const borderColorSolidRadio = borderControlsView.colorModes.borderColorSolidRadio;
 const borderColorInsideOutRadio = borderControlsView.colorModes.borderColorInsideOutRadio;
 const borderColorImagesRadio = borderControlsView.colorModes.borderColorImagesRadio;
@@ -105,6 +114,28 @@ const manageImagesRenameButton = manageImagesView.actions.renameButton;
 const manageImagesDeleteButton = manageImagesView.actions.deleteButton;
 const manageImagesOkButton = manageImagesView.window.okButton;
 const manageImagesCancelButton = manageImagesView.window.cancelButton;
+
+
+const loadBorderTemplateOverlay = loadBorderTemplateView.window.overlay;
+const closeLoadBorderTemplateWindowButton = loadBorderTemplateView.window.closeButton;
+const loadBorderTemplateTree = loadBorderTemplateView.tree.tree;
+const loadBorderTemplateContextMenu = loadBorderTemplateView.tree.contextMenu;
+const loadBorderTemplateCreateFolderButton = loadBorderTemplateView.actions.createFolderButton;
+const loadBorderTemplateRenameButton = loadBorderTemplateView.actions.renameButton;
+const loadBorderTemplateDeleteButton = loadBorderTemplateView.actions.deleteButton;
+const loadBorderTemplateLoadButton = loadBorderTemplateView.window.primaryButton;
+const loadBorderTemplateCancelButton = loadBorderTemplateView.window.secondaryButton;
+
+const saveBorderTemplateOverlay = saveBorderTemplateView.window.overlay;
+const closeSaveBorderTemplateWindowButton = saveBorderTemplateView.window.closeButton;
+const saveBorderTemplateTree = saveBorderTemplateView.tree.tree;
+const saveBorderTemplateContextMenu = saveBorderTemplateView.tree.contextMenu;
+const saveBorderTemplateCreateTemplateButton = saveBorderTemplateView.actions.createTemplateButton;
+const saveBorderTemplateCreateFolderButton = saveBorderTemplateView.actions.createFolderButton;
+const saveBorderTemplateRenameButton = saveBorderTemplateView.actions.renameButton;
+const saveBorderTemplateDeleteButton = saveBorderTemplateView.actions.deleteButton;
+const saveBorderTemplateSaveButton = saveBorderTemplateView.window.primaryButton;
+const saveBorderTemplateCancelButton = saveBorderTemplateView.window.secondaryButton;
 
 const imageBorderState = {
   corners: {
@@ -516,6 +547,7 @@ function getImageBorderSlotState(slotType, slotName) {
 }
 
 const imageLibraryStore = createImageLibraryStore();
+const borderTemplateLibraryStore = createTemplateLibraryStore();
 const imageLibraryService = createImageLibraryService({
   setStorageStatusMessage,
 });
@@ -588,6 +620,60 @@ function openManageImagesWindow(slotType = null, slotName = null) {
 
 function closeManageImagesWindow() {
   manageImagesController.close();
+}
+
+
+const loadBorderTemplateWindowController = createLoadBorderTemplateWindowController({
+  store: borderTemplateLibraryStore,
+  elements: {
+    overlay: loadBorderTemplateOverlay,
+    closeButton: closeLoadBorderTemplateWindowButton,
+    tree: loadBorderTemplateTree,
+    contextMenu: loadBorderTemplateContextMenu,
+    createFolderButton: loadBorderTemplateCreateFolderButton,
+    renameButton: loadBorderTemplateRenameButton,
+    deleteButton: loadBorderTemplateDeleteButton,
+    loadButton: loadBorderTemplateLoadButton,
+    cancelButton: loadBorderTemplateCancelButton,
+  },
+  onTemplateLoaded: () => {
+    drawEditorToCanvas();
+  },
+});
+
+const saveBorderTemplateWindowController = createSaveBorderTemplateWindowController({
+  store: borderTemplateLibraryStore,
+  elements: {
+    overlay: saveBorderTemplateOverlay,
+    closeButton: closeSaveBorderTemplateWindowButton,
+    tree: saveBorderTemplateTree,
+    contextMenu: saveBorderTemplateContextMenu,
+    createTemplateButton: saveBorderTemplateCreateTemplateButton,
+    createFolderButton: saveBorderTemplateCreateFolderButton,
+    renameButton: saveBorderTemplateRenameButton,
+    deleteButton: saveBorderTemplateDeleteButton,
+    saveButton: saveBorderTemplateSaveButton,
+    cancelButton: saveBorderTemplateCancelButton,
+  },
+  onTemplateSaved: () => {
+    drawEditorToCanvas();
+  },
+});
+
+function openLoadBorderTemplateWindow() {
+  loadBorderTemplateWindowController.open();
+}
+
+function closeLoadBorderTemplateWindow() {
+  loadBorderTemplateWindowController.close();
+}
+
+function openSaveBorderTemplateWindow() {
+  saveBorderTemplateWindowController.open();
+}
+
+function closeSaveBorderTemplateWindow() {
+  saveBorderTemplateWindowController.close();
 }
 
 function triggerSaveImage() {
@@ -697,6 +783,8 @@ const borderController = createBorderUiController({
     centerPaddingInput,
     borderWidthInput,
     borderRadiusInput,
+    templateLoadButton: borderTemplateLoadButton,
+    templateSaveAsButton: borderTemplateSaveAsButton,
     imageBorderCornerButtons,
     imageBorderSideButtons,
     imageBorderTransformInputs,
@@ -743,6 +831,8 @@ const borderController = createBorderUiController({
     openManageImagesWindow: (slotType, slotName) => {
       openManageImagesWindow(slotType, slotName);
     },
+    openLoadBorderTemplateWindow,
+    openSaveBorderTemplateWindow,
     onImageBorderTransformChanged: (slotType, slotName, key, value) => {
       const slotState = getImageBorderSlotState(slotType, slotName);
       if (!slotState) {
@@ -909,7 +999,11 @@ const editorController = createEditorController({
     closeColorWindow,
     closeSettingsWindow,
     closeManageImagesWindow,
+    closeLoadBorderTemplateWindow,
+    closeSaveBorderTemplateWindow,
     handleManageImagesEnter: (event) => manageImagesController.handleEnterKey(event),
+    handleLoadBorderTemplateEnter: (event) => loadBorderTemplateWindowController.handleEnterKey(event),
+    handleSaveBorderTemplateEnter: (event) => saveBorderTemplateWindowController.handleEnterKey(event),
     handleManageImagesDelete: (event) => manageImagesController.handleDeleteKey(event),
     persistSettings,
     persistImageLibrary,

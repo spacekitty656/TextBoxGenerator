@@ -16,6 +16,8 @@ export function createBorderController({ elements, actions, callbacks }) {
       centerPaddingInput,
       borderWidthInput,
       borderRadiusInput,
+      templateLoadButton,
+      templateSaveAsButton,
       imageBorderCornerButtons,
       imageBorderSideButtons,
       imageBorderTransformInputs,
@@ -43,6 +45,8 @@ export function createBorderController({ elements, actions, callbacks }) {
       onSidePaddingInput,
       onCorePaddingInput,
       openManageImagesWindow,
+      openLoadBorderTemplateWindow,
+      openSaveBorderTemplateWindow,
       onImageBorderTransformChanged,
       onImageBorderSlotCleared,
       addInsideOutColor,
@@ -91,6 +95,14 @@ export function createBorderController({ elements, actions, callbacks }) {
         onCorePaddingInput();
         onRenderRequested?.();
       });
+    });
+
+    events.on(templateLoadButton, 'click', () => {
+      openLoadBorderTemplateWindow();
+    });
+
+    events.on(templateSaveAsButton, 'click', () => {
+      openSaveBorderTemplateWindow();
     });
 
     Object.entries(imageBorderCornerButtons).forEach(([corner, button]) => {
