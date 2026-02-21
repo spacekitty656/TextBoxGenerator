@@ -475,8 +475,7 @@ body.dark-mode .lock-button {
   font-size: 0.86rem;
   overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
-  direction: rtl;
+  text-overflow: clip;
   text-align: left;
 }
 

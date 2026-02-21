@@ -849,12 +849,39 @@ const borderTemplateFeature = createBorderTemplateFeature({
   },
 });
 
-function syncBorderTemplatePathLabel() {
-  const currentPath = borderTemplateFeature.getLoadedTemplatePath();
-  borderTemplatePathLabel.textContent = currentPath || '…';
-  borderTemplatePathLabel.title = currentPath || 'No template selected';
+function applyLeftEllipsis(element, value) {
+  const fullText = value || '…';
+  element.textContent = fullText;
+
+  if (element.scrollWidth <= element.clientWidth) {
+    return;
+  }
+
+  let low = 0;
+  let high = fullText.length;
+
+  while (low < high) {
+    const midpoint = Math.floor((low + high) / 2);
+    const candidate = `…${fullText.slice(midpoint)}`;
+    element.textContent = candidate;
+
+    if (element.scrollWidth > element.clientWidth) {
+      low = midpoint + 1;
+    } else {
+      high = midpoint;
+    }
+  }
+
+  element.textContent = `…${fullText.slice(low)}`;
 }
 
+function syncBorderTemplatePathLabel() {
+  const currentPath = borderTemplateFeature.getLoadedTemplatePath();
+  borderTemplatePathLabel.title = currentPath || 'No template selected';
+  applyLeftEllipsis(borderTemplatePathLabel, currentPath || '…');
+}
+
+window.addEventListener('resize', syncBorderTemplatePathLabel);
 
 const canvasPainter = createCanvasPainter({
   context,
