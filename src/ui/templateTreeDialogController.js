@@ -106,6 +106,18 @@ export function createTemplateTreeDialogController({
     return getVisibleRows().filter((row) => !row.synthetic).map((row) => row.key);
   }
 
+  function getFolderAncestors(folderId) {
+    const ancestors = [];
+    let cursor = store.getFolder(folderId);
+
+    while (cursor?.parentId) {
+      ancestors.push(cursor.parentId);
+      cursor = store.getFolder(cursor.parentId);
+    }
+
+    return ancestors;
+  }
+
   function moveSelectionByOffset(offset) {
     const keys = getVisibleSelectionKeys();
     if (!keys.length) {
@@ -435,10 +447,29 @@ export function createTemplateTreeDialogController({
     syncToolbarState();
   }
 
-  function open() {
+  function open({ selectedTemplateId = null, collapseToSelectionAncestors = false } = {}) {
     state.isOpen = true;
     elements.overlay.classList.remove('hidden');
     elements.overlay.setAttribute('aria-hidden', 'false');
+
+    if (collapseToSelectionAncestors) {
+      const allFolders = store.serialize().folders || [];
+      state.collapsedFolderIds = new Set(allFolders
+        .map((folder) => folder.id)
+        .filter((id) => id !== store.ROOT_FOLDER_ID));
+    }
+
+    if (selectedTemplateId) {
+      const template = store.getTemplate(selectedTemplateId);
+      if (template) {
+        getFolderAncestors(template.parentId).forEach((folderId) => {
+          state.collapsedFolderIds.delete(folderId);
+        });
+        state.collapsedFolderIds.delete(template.parentId);
+        setSelection(getEntityKey(template));
+      }
+    }
+
     if (!state.selectedKey) {
       const firstVisible = getVisibleSelectionKeys()[0] || null;
       setSelection(firstVisible);

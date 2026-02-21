@@ -1,7 +1,7 @@
 import { createTemplateTreeDialogController } from './templateTreeDialogController.js';
 
 export function createLoadBorderTemplateWindowController({ store, elements, onTemplateLoaded, onStoreChanged }) {
-  return createTemplateTreeDialogController({
+  const controller = createTemplateTreeDialogController({
     store,
     mode: 'load',
     elements: {
@@ -12,4 +12,9 @@ export function createLoadBorderTemplateWindowController({ store, elements, onTe
     onStoreChanged,
     onLoadTemplate: onTemplateLoaded,
   });
+
+  return {
+    ...controller,
+    open: (options = {}) => controller.open(options),
+  };
 }

@@ -19,13 +19,29 @@ export function createBorderTemplateFeature({
   loadBorderTemplateView,
   saveBorderTemplateView,
   getTemplatePayload = () => null,
+  applyTemplatePayload,
+  isCurrentStateEqualToSnapshot = () => true,
+  onDirtyStateChanged,
   onTemplateLoaded,
   onTemplateSaved,
 }) {
   const store = createTemplateLibraryStore();
   const state = {
     activeTemplateId: DEFAULT_BORDER_TEMPLATE_ID,
+    loadedTemplateId: null,
+    loadedSnapshot: null,
+    isDirty: false,
   };
+
+  function updateDirtyState(nextDirty) {
+    const normalized = Boolean(nextDirty);
+    if (state.isDirty === normalized) {
+      return;
+    }
+
+    state.isDirty = normalized;
+    onDirtyStateChanged?.({ isDirty: state.isDirty, loadedTemplateId: state.loadedTemplateId });
+  }
 
   async function persistLibrary() {
     const result = await persistTemplateLibraryToIndexedDb(store);
@@ -51,7 +67,12 @@ export function createBorderTemplateFeature({
     }
 
     state.activeTemplateId = template.id;
+    state.loadedTemplateId = template.id;
+    state.loadedSnapshot = template.data;
+    updateDirtyState(false);
     persistSelection(template.id);
+
+    applyTemplatePayload?.(template.data);
 
     if (shouldNotify) {
       onTemplateLoaded?.(template);
@@ -146,8 +167,20 @@ export function createBorderTemplateFeature({
     openLoadWindow: () => loadWindowController.open(),
     closeLoadWindow: () => loadWindowController.close(),
     handleLoadEnterKey: (event) => loadWindowController.handleEnterKey(event),
-    openSaveWindow: () => saveWindowController.open(),
+    openSaveWindow: () => saveWindowController.open({
+      selectedTemplateId: state.activeTemplateId !== DEFAULT_BORDER_TEMPLATE_ID ? state.activeTemplateId : null,
+      collapseToSelectionAncestors: state.activeTemplateId !== DEFAULT_BORDER_TEMPLATE_ID,
+    }),
     closeSaveWindow: () => saveWindowController.close(),
     handleSaveEnterKey: (event) => saveWindowController.handleEnterKey(event),
+    handleStatePossiblyChanged: () => {
+      if (!state.loadedTemplateId) {
+        return;
+      }
+
+      updateDirtyState(!isCurrentStateEqualToSnapshot(state.loadedSnapshot));
+    },
+    getLoadedTemplateId: () => state.loadedTemplateId,
+    isDirty: () => state.isDirty,
   };
 }

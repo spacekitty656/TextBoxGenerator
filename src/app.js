@@ -47,6 +47,7 @@ import { createSettingsController } from './controllers/settingsController.js';
 import { createBorderState } from './features/border/borderState.js';
 import { createBorderUiController } from './features/border/borderUiController.js';
 import { createBorderTemplateFeature } from './features/border/borderTemplateFeature.js';
+import { createBorderTemplateAdapterService } from './features/border/borderTemplateAdapterService.js';
 
 const Quill = window.Quill;
 
@@ -586,10 +587,56 @@ const manageImagesWindowController = createManageImagesWindowController({
   onImagesDeleted: borderState.clearDeletedImageSlots,
 });
 
+
+const borderTemplateAdapterService = createBorderTemplateAdapterService({
+  elements: {
+    borderToggle,
+    borderWidthInput,
+    borderRadiusInput,
+    borderColorSolidRadio,
+    borderColorInsideOutRadio,
+    borderColorImagesRadio,
+    borderColorInput,
+    borderBackgroundColorTransparentRadio,
+    borderBackgroundColorSolidRadio,
+    borderBackgroundColorInput,
+    centerPaddingInput,
+    sidePaddingControls,
+    imageBorderSizingModeInput,
+    imageBorderRepeatModeInput,
+    imageBorderTransformInputs,
+    insideOutColorList,
+  },
+  state: {
+    lockState,
+    imageBorderState,
+  },
+  borderState,
+  actions: {
+    syncLockedPaddingValues,
+    updateBorderControlsState: () => borderController.updateBorderControlsState(),
+    syncColorPreviewButtons,
+    requestRender: drawEditorToCanvas,
+  },
+});
+
+function syncBorderTemplateSaveButtonText(isDirty) {
+  const mainLabel = isDirty ? '*Save as' : 'Save as';
+  const dialogLabel = isDirty ? '*Save' : 'Save';
+
+  borderTemplateSaveAsButton.textContent = mainLabel;
+  saveBorderTemplateView.window.primaryButton.textContent = dialogLabel;
+}
+
 const borderTemplateFeature = createBorderTemplateFeature({
   loadBorderTemplateView,
   saveBorderTemplateView,
-  getTemplatePayload: () => getBorderConfig(),
+  getTemplatePayload: () => borderTemplateAdapterService.captureTemplatePayload(),
+  applyTemplatePayload: (payload) => borderTemplateAdapterService.applyTemplatePayload(payload),
+  isCurrentStateEqualToSnapshot: (snapshot) => borderTemplateAdapterService.isEqualToSnapshot(snapshot),
+  onDirtyStateChanged: ({ isDirty }) => {
+    syncBorderTemplateSaveButtonText(isDirty);
+  },
   onTemplateLoaded: () => {
     drawEditorToCanvas();
   },
@@ -710,6 +757,7 @@ function updateCanvasBackgroundControlsState() {
 
 function drawEditorToCanvas() {
   renderOrchestrator.render();
+  borderTemplateFeature.handleStatePossiblyChanged();
 }
 
 borderState.createInsideOutColorRow('#1f2937');
@@ -804,7 +852,7 @@ const borderController = createBorderUiController({
   },
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
-    onStateChanged: null,
+    onStateChanged: () => borderTemplateFeature.handleStatePossiblyChanged(),
   },
   helpers: {
     resolveRenderableImageBorderGroup,
@@ -958,6 +1006,7 @@ const editorController = createEditorController({
     handleManageImagesDelete: (event) => manageImagesController.handleDeleteKey(event),
     persistSettings,
     persistImageLibrary,
+    hasUnsavedTemplateChanges: () => Boolean(borderTemplateFeature.getLoadedTemplateId() && borderTemplateFeature.isDirty()),
   },
   callbacks: {
     onRenderRequested: drawEditorToCanvas,
@@ -977,6 +1026,7 @@ if (appVersionBadge) {
 
 syncColorPickerUI();
 syncColorPreviewButtons();
+syncBorderTemplateSaveButtonText(false);
 applySavedSettings();
 borderState.updateAllPieceButtonLabels();
 

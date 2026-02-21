@@ -1,7 +1,7 @@
 import { createTemplateTreeDialogController } from './templateTreeDialogController.js';
 
 export function createSaveBorderTemplateWindowController({ store, elements, onTemplateSaved, onStoreChanged }) {
-  return createTemplateTreeDialogController({
+  const controller = createTemplateTreeDialogController({
     store,
     mode: 'save',
     elements: {
@@ -12,4 +12,9 @@ export function createSaveBorderTemplateWindowController({ store, elements, onTe
     onStoreChanged,
     onSaveTemplate: onTemplateSaved,
   });
+
+  return {
+    ...controller,
+    open: (options = {}) => controller.open(options),
+  };
 }
