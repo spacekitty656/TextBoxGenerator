@@ -1,6 +1,6 @@
 import { createTemplateTreeDialogController } from './templateTreeDialogController.js';
 
-export function createSaveBorderTemplateWindowController({ store, elements, onTemplateSaved }) {
+export function createSaveBorderTemplateWindowController({ store, elements, onTemplateSaved, onStoreChanged }) {
   return createTemplateTreeDialogController({
     store,
     mode: 'save',
@@ -9,6 +9,7 @@ export function createSaveBorderTemplateWindowController({ store, elements, onTe
       primaryButton: elements.saveButton,
       secondaryButton: elements.cancelButton,
     },
+    onStoreChanged,
     onSaveTemplate: onTemplateSaved,
   });
 }

@@ -1,6 +1,6 @@
 import { createTemplateTreeDialogController } from './templateTreeDialogController.js';
 
-export function createLoadBorderTemplateWindowController({ store, elements, onTemplateLoaded }) {
+export function createLoadBorderTemplateWindowController({ store, elements, onTemplateLoaded, onStoreChanged }) {
   return createTemplateTreeDialogController({
     store,
     mode: 'load',
@@ -9,6 +9,7 @@ export function createLoadBorderTemplateWindowController({ store, elements, onTe
       primaryButton: elements.loadButton,
       secondaryButton: elements.cancelButton,
     },
+    onStoreChanged,
     onLoadTemplate: onTemplateLoaded,
   });
 }
