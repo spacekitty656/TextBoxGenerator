@@ -23,6 +23,82 @@ export function createHierarchicalTemplateStore({
   const folders = new Map();
   const templates = new Map();
 
+  function listEntityReferences(parentId = ROOT_FOLDER_ID) {
+    const entries = [];
+
+    folders.forEach((folder) => {
+      if (folder.parentId === parentId) {
+        entries.push(folder);
+      }
+    });
+
+    templates.forEach((template) => {
+      if (template.parentId === parentId) {
+        entries.push(template);
+      }
+    });
+
+    return entries.sort((a, b) => a.orderIndex - b.orderIndex);
+  }
+
+  function resequenceParent(parentId = ROOT_FOLDER_ID) {
+    listEntityReferences(parentId).forEach((entry, index) => {
+      if (entry.type === 'folder') {
+        folders.set(entry.id, { ...entry, orderIndex: index });
+      }
+
+      if (entry.type === 'template') {
+        templates.set(entry.id, { ...entry, orderIndex: index });
+      }
+    });
+  }
+
+  function insertAtParent(parentId, entryType, entryId, targetIndex = null) {
+    const siblingEntries = listEntityReferences(parentId);
+    const boundedIndex = Number.isFinite(targetIndex)
+      ? Math.max(0, Math.min(siblingEntries.length, targetIndex))
+      : siblingEntries.length;
+
+    siblingEntries.forEach((entry) => {
+      if (entry.orderIndex >= boundedIndex) {
+        const nextOrderIndex = entry.orderIndex + 1;
+        if (entry.type === 'folder') {
+          folders.set(entry.id, { ...entry, orderIndex: nextOrderIndex });
+        }
+
+        if (entry.type === 'template') {
+          templates.set(entry.id, { ...entry, orderIndex: nextOrderIndex });
+        }
+      }
+    });
+
+    if (entryType === 'folder') {
+      const folder = folders.get(entryId);
+      folders.set(entryId, { ...folder, parentId, orderIndex: boundedIndex });
+    }
+
+    if (entryType === 'template') {
+      const template = templates.get(entryId);
+      templates.set(entryId, { ...template, parentId, orderIndex: boundedIndex });
+    }
+
+    resequenceParent(parentId);
+  }
+
+  function isDescendantFolder(folderId, ancestorFolderId) {
+    let cursor = folders.get(folderId);
+
+    while (cursor?.parentId) {
+      if (cursor.parentId === ancestorFolderId) {
+        return true;
+      }
+
+      cursor = folders.get(cursor.parentId);
+    }
+
+    return false;
+  }
+
   function setRootFolder() {
     folders.set(ROOT_FOLDER_ID, {
       id: ROOT_FOLDER_ID,
@@ -83,7 +159,7 @@ export function createHierarchicalTemplateStore({
       return null;
     }
 
-    const siblings = listChildren(parentId).folders;
+    const siblings = listEntityReferences(parentId);
     const folder = {
       id: id || makeFolderId(),
       type: 'folder',
@@ -109,7 +185,7 @@ export function createHierarchicalTemplateStore({
       return null;
     }
 
-    const siblings = listChildren(parentId).templates;
+    const siblings = listEntityReferences(parentId);
     const template = {
       id: id || makeTemplateId(),
       type: 'template',
@@ -155,21 +231,48 @@ export function createHierarchicalTemplateStore({
     return cloneEntity(next);
   }
 
-  function moveTemplate(id, parentId) {
+  function moveTemplate(id, parentId, orderIndex = null) {
     const template = templates.get(id);
     if (!template || template.immutable || !folders.has(parentId)) {
       return null;
     }
 
-    const siblings = listChildren(parentId).templates;
-    const next = {
-      ...template,
-      parentId,
-      orderIndex: siblings.length,
-    };
+    const previousParentId = template.parentId;
+    const previousOrderIndex = template.orderIndex;
 
-    templates.set(id, next);
-    return cloneEntity(next);
+    if (previousParentId === parentId && Number.isFinite(orderIndex) && orderIndex > previousOrderIndex) {
+      orderIndex -= 1;
+    }
+
+    templates.set(id, { ...template, parentId, orderIndex: 0 });
+    resequenceParent(previousParentId);
+    insertAtParent(parentId, 'template', id, orderIndex);
+
+    return cloneEntity(templates.get(id));
+  }
+
+  function moveFolder(id, parentId, orderIndex = null) {
+    const folder = folders.get(id);
+    if (!folder || id === ROOT_FOLDER_ID || folder.immutable || !folders.has(parentId)) {
+      return null;
+    }
+
+    if (id === parentId || isDescendantFolder(parentId, id)) {
+      return null;
+    }
+
+    const previousParentId = folder.parentId;
+    const previousOrderIndex = folder.orderIndex;
+
+    if (previousParentId === parentId && Number.isFinite(orderIndex) && orderIndex > previousOrderIndex) {
+      orderIndex -= 1;
+    }
+
+    folders.set(id, { ...folder, parentId, orderIndex: 0 });
+    resequenceParent(previousParentId);
+    insertAtParent(parentId, 'folder', id, orderIndex);
+
+    return cloneEntity(folders.get(id));
   }
 
   function deleteTemplate(id) {
@@ -294,6 +397,7 @@ export function createHierarchicalTemplateStore({
     updateFolder,
     updateTemplate,
     moveTemplate,
+    moveFolder,
     deleteFolder,
     deleteTemplate,
     serialize,

@@ -716,6 +716,23 @@ body.dark-mode .piece-select-button {
   background: #1e3a8a;
 }
 
+.manage-tree-row.manage-tree-row-dragging {
+  opacity: 0.5;
+}
+
+.manage-tree-row.manage-tree-drop-before {
+  box-shadow: inset 0 2px 0 #93c5fd;
+}
+
+.manage-tree-row.manage-tree-drop-after {
+  box-shadow: inset 0 -2px 0 #93c5fd;
+}
+
+.manage-tree-row.manage-tree-drop-inside {
+  border-color: #93c5fd;
+  background: #1d4ed8;
+}
+
 .manage-tree-toggle {
   width: 1.3rem;
   height: 1.3rem;

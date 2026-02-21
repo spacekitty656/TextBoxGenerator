@@ -28,6 +28,8 @@ export function createTemplateTreeDialogController({
     selectedKey: null,
     collapsedFolderIds: new Set(),
     editor: null,
+    draggedKey: null,
+    dragHover: null,
   };
 
   function listEntities(parentId) {
@@ -100,6 +102,89 @@ export function createTemplateTreeDialogController({
 
   function getSingleSelection() {
     return getEntityByKey(state.selectedKey);
+  }
+
+  function getEntitySiblings(parentId) {
+    const children = store.listChildren(parentId);
+    return [...children.folders, ...children.templates].sort((a, b) => a.orderIndex - b.orderIndex);
+  }
+
+  function resolveDropPlacement(targetEntry, clientY) {
+    const row = elements.tree.querySelector(`[data-entity-key="${targetEntry.key}"]`);
+    if (!row) {
+      return { targetKey: targetEntry.key, mode: targetEntry.type === 'folder' ? 'inside' : 'after' };
+    }
+
+    const { top, height } = row.getBoundingClientRect();
+    const offset = clientY - top;
+
+    if (targetEntry.type === 'folder') {
+      if (offset < height * 0.25) {
+        return { targetKey: targetEntry.key, mode: 'before' };
+      }
+
+      if (offset > height * 0.75) {
+        return { targetKey: targetEntry.key, mode: 'after' };
+      }
+
+      return { targetKey: targetEntry.key, mode: 'inside' };
+    }
+
+    return { targetKey: targetEntry.key, mode: offset < height * 0.5 ? 'before' : 'after' };
+  }
+
+  function isValidDropTarget(source, target, mode) {
+    if (!source || !target || source.id === target.id) {
+      return false;
+    }
+
+    if (source.immutable || target.synthetic) {
+      return false;
+    }
+
+    if (mode === 'inside') {
+      return target.type === 'folder';
+    }
+
+    if (mode === 'before' || mode === 'after') {
+      if (target.type === 'folder' && target.id === store.ROOT_FOLDER_ID) {
+        return false;
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
+  function moveEntityFromDrop(source, target, mode) {
+    if (!source || !target) {
+      return false;
+    }
+
+    if (mode === 'inside' && target.type === 'folder') {
+      if (source.type === 'folder') {
+        return Boolean(store.moveFolder(source.id, target.id));
+      }
+
+      return Boolean(store.moveTemplate(source.id, target.id));
+    }
+
+    const targetParentId = target.parentId || store.ROOT_FOLDER_ID;
+    const siblings = getEntitySiblings(targetParentId);
+    const targetIndex = siblings.findIndex((entry) => entry.id === target.id && entry.type === target.type);
+
+    if (targetIndex < 0) {
+      return false;
+    }
+
+    const insertIndex = mode === 'after' ? targetIndex + 1 : targetIndex;
+
+    if (source.type === 'folder') {
+      return Boolean(store.moveFolder(source.id, targetParentId, insertIndex));
+    }
+
+    return Boolean(store.moveTemplate(source.id, targetParentId, insertIndex));
   }
 
   function getAncestorFolderIdsForTemplate(templateId) {
@@ -380,6 +465,81 @@ export function createTemplateTreeDialogController({
 
       row.innerHTML = `${toggleMarkup}<span class="manage-tree-icon">${icon}</span>${nameMarkup}`;
 
+      const isDraggable = !entry.synthetic && entry.id !== store.ROOT_FOLDER_ID && !entry.immutable && !state.editor;
+      row.draggable = isDraggable;
+
+      if (state.dragHover?.targetKey === entry.key && state.dragHover?.mode) {
+        row.classList.add(`manage-tree-drop-${state.dragHover.mode}`);
+      }
+
+      row.addEventListener('dragstart', (event) => {
+        if (!isDraggable) {
+          event.preventDefault();
+          return;
+        }
+
+        state.draggedKey = entry.key;
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', entry.key);
+        row.classList.add('manage-tree-row-dragging');
+      });
+
+      row.addEventListener('dragend', () => {
+        state.draggedKey = null;
+        state.dragHover = null;
+        renderTree();
+      });
+
+      row.addEventListener('dragover', (event) => {
+        if (!state.draggedKey || state.editor) {
+          return;
+        }
+
+        const source = getEntityByKey(state.draggedKey);
+        const placement = resolveDropPlacement(entry, event.clientY);
+
+        if (!isValidDropTarget(source, entry, placement.mode)) {
+          return;
+        }
+
+        event.preventDefault();
+        state.dragHover = placement;
+        renderTree();
+      });
+
+      row.addEventListener('dragleave', (event) => {
+        if (!row.contains(event.relatedTarget) && state.dragHover?.targetKey === entry.key) {
+          state.dragHover = null;
+          renderTree();
+        }
+      });
+
+      row.addEventListener('drop', (event) => {
+        if (!state.draggedKey || state.editor) {
+          return;
+        }
+
+        const source = getEntityByKey(state.draggedKey);
+        const placement = resolveDropPlacement(entry, event.clientY);
+        if (!isValidDropTarget(source, entry, placement.mode)) {
+          return;
+        }
+
+        event.preventDefault();
+        const moved = moveEntityFromDrop(source, entry, placement.mode);
+        state.draggedKey = null;
+        state.dragHover = null;
+
+        if (!moved) {
+          renderTree();
+          return;
+        }
+
+        setSelection(getEntityKey(source));
+        onStoreChanged?.();
+        render();
+      });
+
       row.addEventListener('click', (event) => {
         if (event.target.closest('.manage-tree-toggle') || event.target.closest('.manage-tree-rename-input') || entry.synthetic) {
           return;
@@ -501,6 +661,8 @@ export function createTemplateTreeDialogController({
   function close() {
     state.isOpen = false;
     state.editor = null;
+    state.draggedKey = null;
+    state.dragHover = null;
     setSelection(null);
     hideContextMenu();
     elements.overlay.classList.add('hidden');
@@ -558,6 +720,14 @@ export function createTemplateTreeDialogController({
   elements.primaryButton.addEventListener('click', runPrimaryAction);
   elements.secondaryButton.addEventListener('click', close);
   elements.closeButton.addEventListener('click', close);
+  elements.tree.addEventListener('dragover', (event) => {
+    if (!state.draggedKey || state.editor) {
+      return;
+    }
+
+    event.preventDefault();
+  });
+
   elements.tree.addEventListener('click', (event) => {
     if (!event.target.closest('.manage-tree-row') && !state.editor) {
       setSelection(null);
