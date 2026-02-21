@@ -555,6 +555,7 @@ const borderState = createBorderState({
   getManagedImageById,
   syncLockedPaddingValues,
   drawEditorToCanvas,
+  onStateChanged: () => borderTemplateFeature.handleStatePossiblyChanged(),
 });
 
 const manageImagesWindowController = createManageImagesWindowController({
@@ -578,13 +579,17 @@ const manageImagesWindowController = createManageImagesWindowController({
   onSelectionApplied: ({ slotType, slotName }, imageId) => {
     assignManagedImageToSlot(slotType, slotName, imageId);
     borderState.updatePieceButtonLabel(slotType, slotName);
+    borderTemplateFeature.handleStatePossiblyChanged();
     drawEditorToCanvas();
   },
   onStoreChanged: () => {
     borderState.updateAllPieceButtonLabels();
     persistImageLibrary();
   },
-  onImagesDeleted: borderState.clearDeletedImageSlots,
+  onImagesDeleted: () => {
+    borderState.clearDeletedImageSlots();
+    borderTemplateFeature.handleStatePossiblyChanged();
+  },
 });
 
 
@@ -757,7 +762,6 @@ function updateCanvasBackgroundControlsState() {
 
 function drawEditorToCanvas() {
   renderOrchestrator.render();
-  borderTemplateFeature.handleStatePossiblyChanged();
 }
 
 borderState.createInsideOutColorRow('#1f2937');
