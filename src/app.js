@@ -30,8 +30,6 @@ import { createImageLibraryService } from './images/imageLibraryService.js';
 import { createQuillEditor } from './editor/quillAdapter.js';
 import { createDeltaAdapter } from './editor/deltaAdapter.js';
 import { createManageImagesWindowController } from './ui/manageImagesWindow.js';
-import { createLoadBorderTemplateWindowController } from './ui/loadBorderTemplateWindow.js';
-import { createSaveBorderTemplateWindowController } from './ui/saveBorderTemplateWindow.js';
 import { createCanvasPainter } from './render/canvasPainter.js';
 import { createBackgroundRectHeightForFont, createLayoutAdapter } from './render/layoutAdapter.js';
 import { createRenderOrchestrator } from './render/renderOrchestrator.js';
@@ -48,7 +46,7 @@ import { createManageImagesController } from './controllers/manageImagesControll
 import { createSettingsController } from './controllers/settingsController.js';
 import { createBorderState } from './features/border/borderState.js';
 import { createBorderUiController } from './features/border/borderUiController.js';
-import { createTemplateLibraryStore } from './border/templateLibraryStore.js';
+import { createBorderTemplateFeature } from './features/border/borderTemplateFeature.js';
 
 const Quill = window.Quill;
 
@@ -115,27 +113,6 @@ const manageImagesDeleteButton = manageImagesView.actions.deleteButton;
 const manageImagesOkButton = manageImagesView.window.okButton;
 const manageImagesCancelButton = manageImagesView.window.cancelButton;
 
-
-const loadBorderTemplateOverlay = loadBorderTemplateView.window.overlay;
-const closeLoadBorderTemplateWindowButton = loadBorderTemplateView.window.closeButton;
-const loadBorderTemplateTree = loadBorderTemplateView.tree.tree;
-const loadBorderTemplateContextMenu = loadBorderTemplateView.tree.contextMenu;
-const loadBorderTemplateCreateFolderButton = loadBorderTemplateView.actions.createFolderButton;
-const loadBorderTemplateRenameButton = loadBorderTemplateView.actions.renameButton;
-const loadBorderTemplateDeleteButton = loadBorderTemplateView.actions.deleteButton;
-const loadBorderTemplateLoadButton = loadBorderTemplateView.window.primaryButton;
-const loadBorderTemplateCancelButton = loadBorderTemplateView.window.secondaryButton;
-
-const saveBorderTemplateOverlay = saveBorderTemplateView.window.overlay;
-const closeSaveBorderTemplateWindowButton = saveBorderTemplateView.window.closeButton;
-const saveBorderTemplateTree = saveBorderTemplateView.tree.tree;
-const saveBorderTemplateContextMenu = saveBorderTemplateView.tree.contextMenu;
-const saveBorderTemplateCreateTemplateButton = saveBorderTemplateView.actions.createTemplateButton;
-const saveBorderTemplateCreateFolderButton = saveBorderTemplateView.actions.createFolderButton;
-const saveBorderTemplateRenameButton = saveBorderTemplateView.actions.renameButton;
-const saveBorderTemplateDeleteButton = saveBorderTemplateView.actions.deleteButton;
-const saveBorderTemplateSaveButton = saveBorderTemplateView.window.primaryButton;
-const saveBorderTemplateCancelButton = saveBorderTemplateView.window.secondaryButton;
 
 const imageBorderState = {
   corners: {
@@ -547,7 +524,6 @@ function getImageBorderSlotState(slotType, slotName) {
 }
 
 const imageLibraryStore = createImageLibraryStore();
-const borderTemplateLibraryStore = createTemplateLibraryStore();
 const imageLibraryService = createImageLibraryService({
   setStorageStatusMessage,
 });
@@ -610,6 +586,17 @@ const manageImagesWindowController = createManageImagesWindowController({
   onImagesDeleted: borderState.clearDeletedImageSlots,
 });
 
+const borderTemplateFeature = createBorderTemplateFeature({
+  loadBorderTemplateView,
+  saveBorderTemplateView,
+  onTemplateLoaded: () => {
+    drawEditorToCanvas();
+  },
+  onTemplateSaved: () => {
+    drawEditorToCanvas();
+  },
+});
+
 function openManageImagesWindow(slotType = null, slotName = null) {
   const initialImageId = slotType && slotName
     ? (getImageBorderSlotState(slotType, slotName)?.imageId || null)
@@ -622,59 +609,22 @@ function closeManageImagesWindow() {
   manageImagesController.close();
 }
 
-
-const loadBorderTemplateWindowController = createLoadBorderTemplateWindowController({
-  store: borderTemplateLibraryStore,
-  elements: {
-    overlay: loadBorderTemplateOverlay,
-    closeButton: closeLoadBorderTemplateWindowButton,
-    tree: loadBorderTemplateTree,
-    contextMenu: loadBorderTemplateContextMenu,
-    createFolderButton: loadBorderTemplateCreateFolderButton,
-    renameButton: loadBorderTemplateRenameButton,
-    deleteButton: loadBorderTemplateDeleteButton,
-    loadButton: loadBorderTemplateLoadButton,
-    cancelButton: loadBorderTemplateCancelButton,
-  },
-  onTemplateLoaded: () => {
-    drawEditorToCanvas();
-  },
-});
-
-const saveBorderTemplateWindowController = createSaveBorderTemplateWindowController({
-  store: borderTemplateLibraryStore,
-  elements: {
-    overlay: saveBorderTemplateOverlay,
-    closeButton: closeSaveBorderTemplateWindowButton,
-    tree: saveBorderTemplateTree,
-    contextMenu: saveBorderTemplateContextMenu,
-    createTemplateButton: saveBorderTemplateCreateTemplateButton,
-    createFolderButton: saveBorderTemplateCreateFolderButton,
-    renameButton: saveBorderTemplateRenameButton,
-    deleteButton: saveBorderTemplateDeleteButton,
-    saveButton: saveBorderTemplateSaveButton,
-    cancelButton: saveBorderTemplateCancelButton,
-  },
-  onTemplateSaved: () => {
-    drawEditorToCanvas();
-  },
-});
-
 function openLoadBorderTemplateWindow() {
-  loadBorderTemplateWindowController.open();
+  borderTemplateFeature.openLoadWindow();
 }
 
 function closeLoadBorderTemplateWindow() {
-  loadBorderTemplateWindowController.close();
+  borderTemplateFeature.closeLoadWindow();
 }
 
 function openSaveBorderTemplateWindow() {
-  saveBorderTemplateWindowController.open();
+  borderTemplateFeature.openSaveWindow();
 }
 
 function closeSaveBorderTemplateWindow() {
-  saveBorderTemplateWindowController.close();
+  borderTemplateFeature.closeSaveWindow();
 }
+
 
 function triggerSaveImage() {
   saveButton.click();
@@ -1002,8 +952,8 @@ const editorController = createEditorController({
     closeLoadBorderTemplateWindow,
     closeSaveBorderTemplateWindow,
     handleManageImagesEnter: (event) => manageImagesController.handleEnterKey(event),
-    handleLoadBorderTemplateEnter: (event) => loadBorderTemplateWindowController.handleEnterKey(event),
-    handleSaveBorderTemplateEnter: (event) => saveBorderTemplateWindowController.handleEnterKey(event),
+    handleLoadBorderTemplateEnter: (event) => borderTemplateFeature.handleLoadEnterKey(event),
+    handleSaveBorderTemplateEnter: (event) => borderTemplateFeature.handleSaveEnterKey(event),
     handleManageImagesDelete: (event) => manageImagesController.handleDeleteKey(event),
     persistSettings,
     persistImageLibrary,
