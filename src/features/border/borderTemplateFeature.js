@@ -58,6 +58,34 @@ export function createBorderTemplateFeature({
     return store.getTemplate(state.loadedTemplateId);
   }
 
+
+  function getTemplatePath(templateId) {
+    const template = templateId ? store.getTemplate(templateId) : null;
+    if (!template) {
+      return '…';
+    }
+
+    const segments = [template.name];
+    let parentId = template.parentId;
+
+    while (parentId) {
+      const folder = store.getFolder(parentId);
+      if (!folder) {
+        break;
+      }
+
+      if (folder.id === store.ROOT_FOLDER_ID) {
+        segments.unshift('…');
+        break;
+      }
+
+      segments.unshift(folder.name);
+      parentId = folder.parentId;
+    }
+
+    return segments.join(' / ');
+  }
+
   function setLoadedTemplate(templateId, { shouldApply = false, shouldNotify = true } = {}) {
     const template = store.getTemplate(templateId);
     if (!isValidBorderTemplate(template)) {
@@ -181,5 +209,6 @@ export function createBorderTemplateFeature({
     getLoadedTemplateId: () => state.loadedTemplateId,
     isDirty: () => state.isDirty,
     getLoadedTemplate,
+    getLoadedTemplatePath: () => getTemplatePath(state.loadedTemplateId),
   };
 }

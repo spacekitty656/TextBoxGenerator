@@ -80,6 +80,7 @@ const borderWidthInput = borderControlsView.borderStyle.widthInput;
 const borderRadiusInput = borderControlsView.borderStyle.radiusInput;
 const borderTemplateLoadButton = borderControlsView.borderStyle.templateLoadButton;
 const borderTemplateSaveAsButton = borderControlsView.borderStyle.templateSaveAsButton;
+const borderTemplatePathLabel = borderControlsView.borderStyle.templatePath;
 const borderColorSolidRadio = borderControlsView.colorModes.borderColorSolidRadio;
 const borderColorInsideOutRadio = borderControlsView.colorModes.borderColorInsideOutRadio;
 const borderColorImagesRadio = borderControlsView.colorModes.borderColorImagesRadio;
@@ -839,12 +840,21 @@ const borderTemplateFeature = createBorderTemplateFeature({
   getTemplatePayload: () => borderTemplateAdapterService.captureTemplateData(),
   applyTemplatePayload: (templateData) => borderTemplateAdapterService.applyTemplateData(templateData),
   onTemplateLoaded: () => {
+    syncBorderTemplatePathLabel();
     drawEditorToCanvas();
   },
   onTemplateSaved: () => {
+    syncBorderTemplatePathLabel();
     drawEditorToCanvas();
   },
 });
+
+function syncBorderTemplatePathLabel() {
+  const currentPath = borderTemplateFeature.getLoadedTemplatePath();
+  borderTemplatePathLabel.textContent = currentPath || '…';
+  borderTemplatePathLabel.title = currentPath || 'No template selected';
+}
+
 
 const canvasPainter = createCanvasPainter({
   context,
@@ -1011,6 +1021,7 @@ syncColorPickerUI();
 syncColorPreviewButtons();
 applySavedSettings();
 borderState.updateAllPieceButtonLabels();
+syncBorderTemplatePathLabel();
 
 Promise.all([
   imageLibraryService.init(imageLibraryStore)
@@ -1018,6 +1029,7 @@ Promise.all([
   borderTemplateFeature.init(),
 ]).then(() => {
   borderState.updateAllPieceButtonLabels();
+  syncBorderTemplatePathLabel();
   drawEditorToCanvas();
 });
 

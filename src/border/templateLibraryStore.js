@@ -48,7 +48,7 @@ export function createTemplateLibraryStore() {
     defaultTemplates: [
       {
         id: DEFAULT_BORDER_TEMPLATE_ID,
-        name: 'Default Border Template',
+        name: 'Default',
         parentId: 'root',
         orderIndex: 0,
         templateClass: 'border',

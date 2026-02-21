@@ -456,6 +456,30 @@ body.dark-mode .lock-button {
   gap: 0.6rem;
 }
 
+.border-input-label {
+  font-weight: 600;
+}
+
+.border-template-heading {
+  min-width: 0;
+  flex: 1;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55rem;
+}
+
+.border-template-path {
+  min-width: 0;
+  flex: 1;
+  color: #6b7280;
+  font-size: 0.86rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+
 .border-template-actions {
   display: inline-flex;
   align-items: center;
