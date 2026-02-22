@@ -222,7 +222,7 @@ export function createManageFontsWindowController({
   }
 
   function renderTree() {
-    elements.tree.innerHTML = '';
+    elements.tree.tree.innerHTML = '';
 
     getVisibleRows().forEach((entry) => {
       const row = document.createElement('div');
@@ -303,7 +303,7 @@ export function createManageFontsWindowController({
         });
       }
 
-      elements.tree.appendChild(row);
+      elements.tree.tree.appendChild(row);
     });
 
     syncToolbarState();
