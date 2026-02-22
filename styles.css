@@ -803,6 +803,13 @@ body.dark-mode .piece-select-button {
   cursor: not-allowed;
 }
 
+.manage-images-toolbar button img {
+  width: 0.85rem;
+  height: 0.85rem;
+  vertical-align: middle;
+}
+
+
 .manage-images-content {
   display: flex;
   flex-direction: column;
