@@ -163,8 +163,9 @@ body.dark-mode .ql-snow .ql-picker-options {
 .font-size-input {
   width: 3.4rem;
   height: 24px;
-  border: 1px solid #d1d5db;
+  border: 1px solid #4b5563;
   border-right: none;
+  border-radius: 4px 0 0 4px;
   padding: 0 0.35rem;
   background: #fff;
   color: #111827;
@@ -173,8 +174,10 @@ body.dark-mode .ql-snow .ql-picker-options {
 .font-size-dropdown-button {
   width: 22px;
   height: 24px;
-  border: 1px solid #d1d5db;
-  background: #111827;
+  border: 1px solid #4b5563;
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  background: #4b5563;
   cursor: pointer;
   position: relative;
 }
@@ -188,6 +191,10 @@ body.dark-mode .ql-snow .ql-picker-options {
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 5px solid #fff;
+}
+
+.font-size-dropdown-button:hover {
+  background: #374151;
 }
 
 .font-size-dropdown {
@@ -223,8 +230,8 @@ body.dark-mode .font-size-input {
 }
 
 body.dark-mode .font-size-dropdown-button {
-  border-color: #4b5563;
-  background: #030712;
+  border-color: #6b7280;
+  background: #374151;
 }
 
 
