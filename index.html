@@ -29,7 +29,26 @@
               <option value="monospace">Monospace</option>
               <option value="pressstart2p">Press Start 2P</option>
             </select>
-            <select class="ql-size" aria-label="Font size"></select>
+            <div class="font-size-combobox" role="group" aria-label="Font size controls">
+              <input
+                id="font-size-input"
+                class="font-size-input"
+                type="text"
+                inputmode="numeric"
+                aria-label="Font size"
+                value="18"
+              />
+              <button
+                id="font-size-dropdown-button"
+                class="font-size-dropdown-button"
+                type="button"
+                aria-label="Open font size dropdown"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-controls="font-size-dropdown"
+              ></button>
+              <ul id="font-size-dropdown" class="font-size-dropdown hidden" role="listbox" aria-label="Font sizes"></ul>
+            </div>
             <button class="ql-bold" type="button" aria-label="Bold"></button>
             <button class="ql-italic" type="button" aria-label="Italic"></button>
             <button class="ql-underline" type="button" aria-label="Underline"></button>
