@@ -466,7 +466,7 @@ QuillFont.whitelist = FONT_WHITELIST;
 Quill.register(QuillFont, true);
 
 const QuillSize = Quill.import('attributors/style/size');
-QuillSize.whitelist = FONT_SIZE_OPTIONS.map(String);
+QuillSize.whitelist = FONT_SIZE_OPTIONS.map((size) => `${size}px`);
 Quill.register(QuillSize, true);
 
 const quill = createQuillEditor(Quill, {
@@ -493,6 +493,7 @@ quill.setContents([
 ]);
 
 let activeFontSize = 18;
+let lastKnownSelection = null;
 let isEditingFontSizeInput = false;
 
 function setFontSizeInputValue(value) {
@@ -506,7 +507,7 @@ function setFontSizeInputValue(value) {
 }
 
 function resolveSelectedFontSize() {
-  const selection = quill.getSelection();
+  const selection = quill.getSelection() || lastKnownSelection;
   const formats = selection ? quill.getFormat(selection) : quill.getFormat();
   const numericSize = Number.parseInt(formats.size, 10);
   if (Number.isFinite(numericSize) && numericSize > 0) {
@@ -549,8 +550,20 @@ function applyFontSize(sizeValue) {
   }
 
   const clampedSize = Math.min(999, requestedSize);
+  const sizeToken = `${clampedSize}px`;
+  const selection = quill.getSelection() || lastKnownSelection;
   activeFontSize = clampedSize;
-  quill.format('size', String(clampedSize), 'user');
+
+  if (selection && Number.isFinite(selection.index) && selection.length > 0) {
+    quill.formatText(selection.index, selection.length, 'size', sizeToken, 'user');
+    quill.setSelection(selection.index, selection.length, 'silent');
+  } else if (selection && Number.isFinite(selection.index)) {
+    quill.setSelection(selection.index, selection.length || 0, 'silent');
+    quill.format('size', sizeToken, 'user');
+  } else {
+    quill.format('size', sizeToken, 'user');
+  }
+
   setFontSizeInputValue(clampedSize);
 }
 
@@ -667,7 +680,10 @@ document.addEventListener('mousedown', (event) => {
   closeFontSizeDropdown();
 });
 
-quill.on('selection-change', () => {
+quill.on('selection-change', (range) => {
+  if (range) {
+    lastKnownSelection = range;
+  }
   syncFontSizeInputFromSelection();
 });
 
