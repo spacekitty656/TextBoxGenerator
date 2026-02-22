@@ -123,20 +123,20 @@ describe('getAlignedStartX', () => {
 });
 
 describe('getAlignmentWidth', () => {
-  it('selects the widest laid out line when under maxContentWidth', () => {
+  it('expands to maxContentWidth for stable center/right alignment', () => {
     const lines = [
       { width: 40 },
       { width: 120 },
       { width: 75 },
     ];
 
-    expect(getAlignmentWidth(lines, 200)).toBe(120);
+    expect(getAlignmentWidth(lines, 200)).toBe(200);
   });
 
-  it('clamps widest line width to maxContentWidth', () => {
+  it('uses maxContentWidth as a stable alignment box when content is narrower', () => {
     const lines = [
       { width: 80 },
-      { width: 180 },
+      { width: 120 },
     ];
 
     expect(getAlignmentWidth(lines, 150)).toBe(150);
@@ -181,8 +181,8 @@ describe('calculateCanvasDimensions', () => {
 
     // Expected canvas width:
     // left canvas padding + border width + left text padding + rendered content width + right text padding + border width + right canvas padding
-    // 50 + 4 + 20 + 100 + 20 + 4 + 50 = 248
-    expect(dimensions.width).toBe(248);
+    // 50 + 4 + 20 + 300 + 20 + 4 + 50 = 448
+    expect(dimensions.width).toBe(448);
   });
 
   it('still expands to rendered text width when border is disabled', () => {
@@ -196,6 +196,6 @@ describe('calculateCanvasDimensions', () => {
       },
     );
 
-    expect(dimensions.width).toBe(260);
+    expect(dimensions.width).toBe(290);
   });
 });
