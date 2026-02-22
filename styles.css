@@ -154,6 +154,79 @@ body.dark-mode .ql-snow .ql-picker-options {
   font-size: 17px;
 }
 
+.font-size-combobox {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.font-size-input {
+  width: 3.4rem;
+  height: 24px;
+  border: 1px solid #d1d5db;
+  border-right: none;
+  padding: 0 0.35rem;
+  background: #fff;
+  color: #111827;
+}
+
+.font-size-dropdown-button {
+  width: 22px;
+  height: 24px;
+  border: 1px solid #d1d5db;
+  background: #111827;
+  cursor: pointer;
+  position: relative;
+}
+
+.font-size-dropdown-button::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -30%);
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #fff;
+}
+
+.font-size-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  width: 100%;
+  min-width: 5.2rem;
+  max-height: 280px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: #2b2b2b;
+  border: 1px solid #171717;
+  overflow-y: auto;
+  z-index: 15;
+}
+
+.font-size-dropdown-option {
+  padding: 0.35rem 0.45rem;
+  color: #fff;
+  cursor: pointer;
+}
+
+.font-size-dropdown-option:hover {
+  background: #1f5aa6;
+}
+
+body.dark-mode .font-size-input {
+  background: #111827;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+body.dark-mode .font-size-dropdown-button {
+  border-color: #4b5563;
+  background: #030712;
+}
+
 
 #editor {
   min-height: 260px;
