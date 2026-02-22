@@ -492,26 +492,33 @@ quill.setContents([
   },
 ]);
 
+let activeFontSize = 18;
+
 function resolveSelectedFontSize() {
-  const formats = quill.getFormat();
+  const selection = quill.getSelection();
+  const formats = selection ? quill.getFormat(selection) : quill.getFormat();
   const numericSize = Number.parseInt(formats.size, 10);
   if (Number.isFinite(numericSize) && numericSize > 0) {
+    activeFontSize = numericSize;
     return numericSize;
   }
 
   if (formats.size === 'small') {
+    activeFontSize = 14;
     return 14;
   }
 
   if (formats.size === 'large') {
+    activeFontSize = 24;
     return 24;
   }
 
   if (formats.size === 'huge') {
+    activeFontSize = 32;
     return 32;
   }
 
-  return 18;
+  return activeFontSize;
 }
 
 function closeFontSizeDropdown() {
@@ -535,6 +542,7 @@ function applyFontSizeFromInput() {
   }
 
   const clampedSize = Math.min(999, requestedSize);
+  activeFontSize = clampedSize;
   quill.format('size', String(clampedSize), 'user');
   fontSizeInput.value = String(clampedSize);
 }
@@ -562,10 +570,13 @@ function populateFontSizeDropdown() {
       event.preventDefault();
     });
     option.addEventListener('click', () => {
+      activeFontSize = fontSize;
       quill.format('size', String(fontSize), 'user');
-      syncFontSizeInputFromSelection();
+      if (fontSizeInput) {
+        fontSizeInput.value = String(fontSize);
+        fontSizeInput.focus();
+      }
       closeFontSizeDropdown();
-      fontSizeInput?.focus();
     });
     fontSizeDropdown.appendChild(option);
   });
@@ -573,6 +584,22 @@ function populateFontSizeDropdown() {
 
 populateFontSizeDropdown();
 syncFontSizeInputFromSelection();
+
+fontSizeInput?.addEventListener('mousedown', (event) => {
+  event.stopPropagation();
+});
+
+fontSizeInput?.addEventListener('click', (event) => {
+  event.stopPropagation();
+});
+
+fontSizeDropdownButton?.addEventListener('mousedown', (event) => {
+  event.stopPropagation();
+});
+
+fontSizeDropdown?.addEventListener('mousedown', (event) => {
+  event.stopPropagation();
+});
 
 fontSizeInput?.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
