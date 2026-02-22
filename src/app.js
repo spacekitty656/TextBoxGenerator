@@ -50,7 +50,10 @@ import { createBorderUiController } from './features/border/borderUiController.j
 import { createBorderTemplateFeature } from './features/border/borderTemplateFeature.js';
 import { createBorderTemplateAdapterService } from './features/border/borderTemplateAdapterService.js';
 import { createFontLibraryStore } from './fonts/fontLibraryStore.js';
-import { persistFontLibrary, restoreFontLibrary } from './fonts/fontLibraryPersistence.js';
+import {
+  persistFontLibraryToIndexedDb,
+  restoreFontLibraryFromIndexedDb,
+} from './fonts/fontPersistenceIndexedDb.js';
 import { createManageFontsWindowController } from './ui/manageFontsWindow.js';
 
 const Quill = window.Quill;
@@ -441,8 +444,24 @@ function persistImageLibrary() {
   imageLibraryService.persist(imageLibraryStore);
 }
 
-function persistFontLibraryState() {
-  persistFontLibrary(window.localStorage, fontLibraryStore);
+async function persistFontLibraryState() {
+  const status = await persistFontLibraryToIndexedDb(fontLibraryStore);
+  if (!status?.ok && status?.error) {
+    console.warn('Unable to persist font library to IndexedDB.', status.error);
+  }
+}
+
+async function initializeFontLibraryFromPersistence() {
+  try {
+    const snapshot = await restoreFontLibraryFromIndexedDb();
+    if (snapshot) {
+      fontLibraryStore.deserialize(snapshot);
+      refreshFontRegistry();
+      drawEditorToCanvas();
+    }
+  } catch (error) {
+    console.warn('Unable to initialize font library persistence.', error);
+  }
 }
 
 
@@ -481,8 +500,6 @@ const imageLockState = {
 };
 
 const fontLibraryStore = createFontLibraryStore();
-restoreFontLibrary(window.localStorage, fontLibraryStore);
-
 const FONT_SIZE_OPTIONS = [4, 6, 8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72, 144];
 const FONT_SIZE_STYLE_WHITELIST = Array.from({ length: 999 }, (_, index) => `${index + 1}px`);
 const loadedFontFaceValues = new Set();
@@ -539,11 +556,25 @@ function syncFontPickerOptions(fonts) {
   if (pickerOptions) {
     pickerOptions.innerHTML = '';
     fonts.forEach((fontEntry) => {
+      const fontValue = fontEntry.data.value;
       const pickerItem = document.createElement('span');
       pickerItem.className = 'ql-picker-item';
-      pickerItem.setAttribute('data-value', fontEntry.data.value);
+      pickerItem.setAttribute('data-value', fontValue);
       pickerItem.setAttribute('data-label', fontEntry.name);
       pickerItem.setAttribute('tabindex', '0');
+      pickerItem.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+      });
+      pickerItem.addEventListener('click', () => {
+        fontSelectInput.value = fontValue;
+        pickerLabel?.setAttribute('data-value', fontValue);
+        picker?.classList.remove('ql-expanded');
+
+        if (quill) {
+          quill.focus();
+          quill.format('font', fontValue, 'user');
+        }
+      });
       pickerOptions.appendChild(pickerItem);
     });
   }
@@ -990,10 +1021,12 @@ const manageFontsWindowController = createManageFontsWindowController({
   importFontFromFile,
   onFontsChanged: () => {
     refreshFontRegistry();
-    persistFontLibraryState();
+    void persistFontLibraryState();
     drawEditorToCanvas();
   },
 });
+
+void initializeFontLibraryFromPersistence();
 
 function openManageImagesWindow(slotType = null, slotName = null) {
   const initialImageId = slotType && slotName
