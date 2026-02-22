@@ -493,6 +493,17 @@ quill.setContents([
 ]);
 
 let activeFontSize = 18;
+let isEditingFontSizeInput = false;
+
+function setFontSizeInputValue(value) {
+  if (!fontSizeInput) {
+    return;
+  }
+
+  const nextValue = String(value);
+  fontSizeInput.value = nextValue;
+  fontSizeInput.setAttribute('value', nextValue);
+}
 
 function resolveSelectedFontSize() {
   const selection = quill.getSelection();
@@ -530,29 +541,25 @@ function closeFontSizeDropdown() {
   fontSizeDropdownButton.setAttribute('aria-expanded', 'false');
 }
 
-function applyFontSizeFromInput() {
-  if (!fontSizeInput) {
-    return;
-  }
-
-  const requestedSize = Number.parseInt(fontSizeInput.value, 10);
+function applyFontSize(sizeValue) {
+  const requestedSize = Number.parseInt(sizeValue, 10);
   if (!Number.isFinite(requestedSize) || requestedSize <= 0) {
-    fontSizeInput.value = String(resolveSelectedFontSize());
+    setFontSizeInputValue(resolveSelectedFontSize());
     return;
   }
 
   const clampedSize = Math.min(999, requestedSize);
   activeFontSize = clampedSize;
   quill.format('size', String(clampedSize), 'user');
-  fontSizeInput.value = String(clampedSize);
+  setFontSizeInputValue(clampedSize);
 }
 
 function syncFontSizeInputFromSelection() {
-  if (!fontSizeInput) {
+  if (!fontSizeInput || isEditingFontSizeInput) {
     return;
   }
 
-  fontSizeInput.value = String(resolveSelectedFontSize());
+  setFontSizeInputValue(resolveSelectedFontSize());
 }
 
 function populateFontSizeDropdown() {
@@ -568,15 +575,13 @@ function populateFontSizeDropdown() {
     option.textContent = String(fontSize);
     option.addEventListener('mousedown', (event) => {
       event.preventDefault();
+      event.stopPropagation();
     });
     option.addEventListener('click', () => {
-      activeFontSize = fontSize;
-      quill.format('size', String(fontSize), 'user');
-      if (fontSizeInput) {
-        fontSizeInput.value = String(fontSize);
-        fontSizeInput.focus();
-      }
+      applyFontSize(fontSize);
+      isEditingFontSizeInput = false;
       closeFontSizeDropdown();
+      fontSizeInput?.focus();
     });
     fontSizeDropdown.appendChild(option);
   });
@@ -584,6 +589,10 @@ function populateFontSizeDropdown() {
 
 populateFontSizeDropdown();
 syncFontSizeInputFromSelection();
+
+fontSizeInput?.addEventListener('focus', () => {
+  isEditingFontSizeInput = true;
+});
 
 fontSizeInput?.addEventListener('mousedown', (event) => {
   event.stopPropagation();
@@ -604,13 +613,24 @@ fontSizeDropdown?.addEventListener('mousedown', (event) => {
 fontSizeInput?.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
     event.preventDefault();
-    applyFontSizeFromInput();
+    isEditingFontSizeInput = false;
+    applyFontSize(fontSizeInput.value);
     closeFontSizeDropdown();
+    fontSizeInput.blur();
+  }
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    isEditingFontSizeInput = false;
+    setFontSizeInputValue(resolveSelectedFontSize());
+    closeFontSizeDropdown();
+    fontSizeInput.blur();
   }
 });
 
 fontSizeInput?.addEventListener('blur', () => {
-  applyFontSizeFromInput();
+  isEditingFontSizeInput = false;
+  applyFontSize(fontSizeInput.value);
 });
 
 fontSizeDropdownButton?.addEventListener('click', () => {
