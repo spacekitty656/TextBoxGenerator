@@ -157,6 +157,7 @@ body.dark-mode .ql-snow .ql-picker-options {
 #editor-toolbar .font-size-combobox {
   position: relative;
   display: inline-flex;
+  float: left;
   vertical-align: middle;
 }
 
