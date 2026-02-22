@@ -460,13 +460,14 @@ const imageLockState = {
 
 const FONT_WHITELIST = ['sansserif', 'serif', 'monospace', 'pressstart2p'];
 const FONT_SIZE_OPTIONS = [4, 6, 8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72, 144];
+const FONT_SIZE_STYLE_WHITELIST = Array.from({ length: 999 }, (_, index) => `${index + 1}px`);
 
 const QuillFont = Quill.import('formats/font');
 QuillFont.whitelist = FONT_WHITELIST;
 Quill.register(QuillFont, true);
 
 const QuillSize = Quill.import('attributors/style/size');
-QuillSize.whitelist = FONT_SIZE_OPTIONS.map((size) => `${size}px`);
+QuillSize.whitelist = FONT_SIZE_STYLE_WHITELIST;
 Quill.register(QuillSize, true);
 
 const quill = createQuillEditor(Quill, {
