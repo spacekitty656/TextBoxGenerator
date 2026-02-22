@@ -31,7 +31,7 @@ import { createQuillEditor } from './editor/quillAdapter.js';
 import { createDeltaAdapter } from './editor/deltaAdapter.js';
 import { createManageImagesWindowController } from './ui/manageImagesWindow.js';
 import { createCanvasPainter } from './render/canvasPainter.js';
-import { createBackgroundRectHeightForFont, createLayoutAdapter } from './render/layoutAdapter.js';
+import { createBackgroundRectHeightForFont, createLayoutAdapter, registerCanvasFontFamily } from './render/layoutAdapter.js';
 import { createRenderOrchestrator } from './render/renderOrchestrator.js';
 import { createBorderControlsView } from './ui/views/borderControlsView.js';
 import { createColorPickerView } from './ui/views/colorPickerView.js';
@@ -40,6 +40,7 @@ import { createManageImagesView } from './ui/views/manageImagesView.js';
 import { createLoadBorderTemplateView } from './ui/views/loadBorderTemplateView.js';
 import { createSaveBorderTemplateView } from './ui/views/saveBorderTemplateView.js';
 import { createSettingsView } from './ui/views/settingsView.js';
+import { createManageFontsView } from './ui/views/manageFontsView.js';
 import { createColorPickerController } from './controllers/colorPickerController.js';
 import { createEditorController } from './controllers/editorController.js';
 import { createManageImagesController } from './controllers/manageImagesController.js';
@@ -48,6 +49,8 @@ import { createBorderState } from './features/border/borderState.js';
 import { createBorderUiController } from './features/border/borderUiController.js';
 import { createBorderTemplateFeature } from './features/border/borderTemplateFeature.js';
 import { createBorderTemplateAdapterService } from './features/border/borderTemplateAdapterService.js';
+import { createFontLibraryStore } from './fonts/fontLibraryStore.js';
+import { createManageFontsWindowController } from './ui/manageFontsWindow.js';
 
 const Quill = window.Quill;
 
@@ -57,6 +60,7 @@ const borderControlsView = createBorderControlsView(document);
 const manageImagesView = createManageImagesView(document);
 const loadBorderTemplateView = createLoadBorderTemplateView(document);
 const saveBorderTemplateView = createSaveBorderTemplateView(document);
+const manageFontsView = createManageFontsView(document);
 const colorPickerView = createColorPickerView(document);
 
 const canvas = editorView.canvas.preview;
@@ -116,6 +120,18 @@ const manageImagesOkButton = manageImagesView.window.okButton;
 const manageImagesCancelButton = manageImagesView.window.cancelButton;
 
 
+const manageFontsOverlay = manageFontsView.window.overlay;
+const closeManageFontsWindowButton = manageFontsView.window.closeButton;
+const manageFontsCancelButton = manageFontsView.window.cancelButton;
+const manageFontsInput = manageFontsView.tree.input;
+const manageFontsTree = manageFontsView.tree.tree;
+const manageFontsButton = manageFontsView.window.openButton;
+const manageFontsImportButton = manageFontsView.actions.importButton;
+const manageFontsCreateFolderButton = manageFontsView.actions.createFolderButton;
+const manageFontsRenameButton = manageFontsView.actions.renameButton;
+const manageFontsDeleteButton = manageFontsView.actions.deleteButton;
+
+
 const imageBorderState = {
   corners: {
     topLeft: createImageBorderSlotState(),
@@ -136,6 +152,7 @@ const sidePaddingControls = editorView.padding.text.sides;
 
 const wrapTextInput = editorView.editor.wrapTextInput;
 const maxImageWidthInput = editorView.editor.maxImageWidthInput;
+const fontSelectInput = document.querySelector('#editor-toolbar .ql-font');
 const fontSizeInput = document.getElementById('font-size-input');
 const fontSizeDropdownButton = document.getElementById('font-size-dropdown-button');
 const fontSizeDropdown = document.getElementById('font-size-dropdown');
@@ -458,13 +475,46 @@ const imageLockState = {
   left: true,
 };
 
-const FONT_WHITELIST = ['sansserif', 'serif', 'monospace', 'pressstart2p'];
+const fontLibraryStore = createFontLibraryStore();
 const FONT_SIZE_OPTIONS = [4, 6, 8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72, 144];
 const FONT_SIZE_STYLE_WHITELIST = Array.from({ length: 999 }, (_, index) => `${index + 1}px`);
 
-const QuillFont = Quill.import('formats/font');
-QuillFont.whitelist = FONT_WHITELIST;
-Quill.register(QuillFont, true);
+function listAvailableFonts() {
+  return fontLibraryStore.listTemplatesByClass('font');
+}
+
+function refreshFontRegistry() {
+  const fonts = listAvailableFonts();
+  const whitelist = [];
+
+  fonts.forEach((fontEntry) => {
+    const value = fontEntry?.data?.value;
+    const family = fontEntry?.data?.family;
+    if (!value || !family) {
+      return;
+    }
+
+    whitelist.push(value);
+    registerCanvasFontFamily(value, family);
+  });
+
+  const QuillFont = Quill.import('formats/font');
+  QuillFont.whitelist = whitelist;
+  Quill.register(QuillFont, true);
+
+  if (fontSelectInput) {
+    fontSelectInput.innerHTML = '';
+    fonts.forEach((fontEntry) => {
+      const option = document.createElement('option');
+      option.value = fontEntry.data.value;
+      option.textContent = fontEntry.name;
+      option.setAttribute('data-label', fontEntry.name);
+      fontSelectInput.appendChild(option);
+    });
+  }
+}
+
+refreshFontRegistry();
 
 const QuillSize = Quill.import('attributors/style/size');
 QuillSize.whitelist = FONT_SIZE_STYLE_WHITELIST;
@@ -739,6 +789,44 @@ const imageLibraryService = createImageLibraryService({
   setStorageStatusMessage,
 });
 
+function toFontValue(name) {
+  return String(name || 'font')
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'font';
+}
+
+async function importFontFromFile(file) {
+  if (!file) {
+    return null;
+  }
+
+  const baseName = String(file.name || 'Imported Font').replace(/\.[^.]+$/, '').trim() || 'Imported Font';
+  let value = toFontValue(baseName);
+  const usedValues = new Set(listAvailableFonts().map((entry) => entry?.data?.value).filter(Boolean));
+  let counter = 2;
+  while (usedValues.has(value)) {
+    value = `${toFontValue(baseName)}-${counter}`;
+    counter += 1;
+  }
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const fontFace = new FontFace(baseName, arrayBuffer);
+    await fontFace.load();
+    document.fonts.add(fontFace);
+  } catch (error) {
+    console.error('Unable to load imported font for preview.', error);
+  }
+
+  return {
+    name: baseName,
+    value,
+    family: `"${baseName}", sans-serif`,
+  };
+}
+
 
 function getManagedImageById(imageId) {
   return imageLibraryStore.getImage(imageId);
@@ -797,6 +885,33 @@ const manageImagesWindowController = createManageImagesWindowController({
     persistImageLibrary();
   },
   onImagesDeleted: borderState.clearDeletedImageSlots,
+});
+
+const manageFontsWindowController = createManageFontsWindowController({
+  store: fontLibraryStore,
+  elements: {
+    window: {
+      overlay: manageFontsOverlay,
+      closeButton: closeManageFontsWindowButton,
+      cancelButton: manageFontsCancelButton,
+      openButton: manageFontsButton,
+    },
+    tree: {
+      input: manageFontsInput,
+      tree: manageFontsTree,
+    },
+    actions: {
+      importButton: manageFontsImportButton,
+      createFolderButton: manageFontsCreateFolderButton,
+      renameButton: manageFontsRenameButton,
+      deleteButton: manageFontsDeleteButton,
+    },
+  },
+  importFontFromFile,
+  onFontsChanged: () => {
+    refreshFontRegistry();
+    drawEditorToCanvas();
+  },
 });
 
 function openManageImagesWindow(slotType = null, slotName = null) {
