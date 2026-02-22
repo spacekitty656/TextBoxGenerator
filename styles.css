@@ -154,6 +154,103 @@ body.dark-mode .ql-snow .ql-picker-options {
   font-size: 17px;
 }
 
+#editor-toolbar .font-size-combobox {
+  position: relative;
+  display: inline-flex;
+  float: left;
+  vertical-align: middle;
+}
+
+#editor-toolbar .font-size-input {
+  width: 3.4rem;
+  height: 24px;
+  border: 1px solid #4b5563;
+  border-right: none;
+  border-radius: 4px 0 0 4px;
+  padding: 0 0.35rem;
+  margin: 0;
+  background: #fff;
+  color: #111827;
+}
+
+#editor-toolbar .font-size-input:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: #374151;
+  border-right: none;
+}
+
+#editor-toolbar .font-size-dropdown-button {
+  width: 22px;
+  height: 24px;
+  border: 1px solid #4b5563;
+  border-left: none;
+  border-radius: 0 4px 4px 0;
+  padding: 0;
+  margin: 0;
+  background: #4b5563;
+  cursor: pointer;
+  position: relative;
+  opacity: 1;
+}
+
+#editor-toolbar .font-size-combobox:focus-within .font-size-dropdown-button {
+  border-color: #374151;
+  background: #374151;
+}
+
+#editor-toolbar .font-size-dropdown-button::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -30%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid #fff;
+}
+
+#editor-toolbar .font-size-dropdown-button:hover {
+  background: #374151;
+}
+
+.font-size-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  width: 100%;
+  min-width: 5.2rem;
+  max-height: 280px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: #2b2b2b;
+  border: 1px solid #171717;
+  overflow-y: auto;
+  z-index: 15;
+}
+
+.font-size-dropdown-option {
+  padding: 0.35rem 0.45rem;
+  color: #fff;
+  cursor: pointer;
+}
+
+.font-size-dropdown-option:hover {
+  background: #1f5aa6;
+}
+
+body.dark-mode #editor-toolbar .font-size-input {
+  background: #111827;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+body.dark-mode #editor-toolbar .font-size-dropdown-button {
+  border-color: #6b7280;
+  background: #374151;
+}
+
 
 #editor {
   min-height: 260px;
@@ -442,6 +539,12 @@ body.dark-mode .lock-button {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+
+.border-input-label-with-tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .border-input-row input {

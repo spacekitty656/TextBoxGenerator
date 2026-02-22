@@ -29,7 +29,26 @@
               <option value="monospace">Monospace</option>
               <option value="pressstart2p">Press Start 2P</option>
             </select>
-            <select class="ql-size" aria-label="Font size"></select>
+            <div class="font-size-combobox" role="group" aria-label="Font size controls">
+              <input
+                id="font-size-input"
+                class="font-size-input"
+                type="text"
+                inputmode="numeric"
+                aria-label="Font size"
+                value="18"
+              />
+              <button
+                id="font-size-dropdown-button"
+                class="font-size-dropdown-button"
+                type="button"
+                aria-label="Open font size dropdown"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-controls="font-size-dropdown"
+              ></button>
+              <ul id="font-size-dropdown" class="font-size-dropdown hidden" role="listbox" aria-label="Font sizes"></ul>
+            </div>
             <button class="ql-bold" type="button" aria-label="Bold"></button>
             <button class="ql-italic" type="button" aria-label="Italic"></button>
             <button class="ql-underline" type="button" aria-label="Underline"></button>
@@ -212,14 +231,32 @@
                     and side images fill the edge between corners using the selected side mode.
                   </p>
                   <div class="border-input-row">
-                    <label for="image-border-sizing-mode">Image sizing</label>
+                    <label for="image-border-sizing-mode" class="border-input-label-with-tooltip">
+                      Image sizing
+                      <span
+                        class="info-tooltip"
+                        role="img"
+                        aria-label="Info: Auto scales each image to fit its border segment. Fixed uses the image's original pixel size so larger images can overflow and smaller images leave extra space."
+                        title="Auto scales each image to fit its border segment. Fixed uses the image's original pixel size so larger images can overflow and smaller images leave extra space."
+                        >ℹ</span
+                      >
+                    </label>
                     <select id="image-border-sizing-mode">
                       <option value="auto" selected>Auto</option>
                       <option value="fixed">Fixed</option>
                     </select>
                   </div>
                   <div class="border-input-row">
-                    <label for="image-border-repeat-mode">Side mode</label>
+                    <label for="image-border-repeat-mode" class="border-input-label-with-tooltip">
+                      Side mode
+                      <span
+                        class="info-tooltip"
+                        role="img"
+                        aria-label="Info: Stretch draws one side image across the full edge. Repeat tiles the side image along the edge."
+                        title="Stretch draws one side image across the full edge. Repeat tiles the side image along the edge."
+                        >ℹ</span
+                      >
+                    </label>
                     <select id="image-border-repeat-mode">
                       <option value="stretch" selected>Stretch</option>
                       <option value="repeat">Repeat</option>

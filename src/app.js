@@ -136,6 +136,9 @@ const sidePaddingControls = editorView.padding.text.sides;
 
 const wrapTextInput = editorView.editor.wrapTextInput;
 const maxImageWidthInput = editorView.editor.maxImageWidthInput;
+const fontSizeInput = document.getElementById('font-size-input');
+const fontSizeDropdownButton = document.getElementById('font-size-dropdown-button');
+const fontSizeDropdown = document.getElementById('font-size-dropdown');
 const colorWindowOverlay = colorPickerView.window.overlay;
 const closeColorWindowButton = colorPickerView.window.closeButton;
 const basicColorsGrid = colorPickerView.grids.basicColors;
@@ -456,10 +459,16 @@ const imageLockState = {
 };
 
 const FONT_WHITELIST = ['sansserif', 'serif', 'monospace', 'pressstart2p'];
+const FONT_SIZE_OPTIONS = [4, 6, 8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72, 144];
+const FONT_SIZE_STYLE_WHITELIST = Array.from({ length: 999 }, (_, index) => `${index + 1}px`);
 
 const QuillFont = Quill.import('formats/font');
 QuillFont.whitelist = FONT_WHITELIST;
 Quill.register(QuillFont, true);
+
+const QuillSize = Quill.import('attributors/style/size');
+QuillSize.whitelist = FONT_SIZE_STYLE_WHITELIST;
+Quill.register(QuillSize, true);
 
 const quill = createQuillEditor(Quill, {
   'open-color-window': openColorWindow,
@@ -483,6 +492,206 @@ quill.setContents([
     },
   },
 ]);
+
+let activeFontSize = 18;
+let lastKnownSelection = null;
+let isEditingFontSizeInput = false;
+
+function setFontSizeInputValue(value) {
+  if (!fontSizeInput) {
+    return;
+  }
+
+  const nextValue = String(value);
+  fontSizeInput.value = nextValue;
+  fontSizeInput.setAttribute('value', nextValue);
+}
+
+function resolveSelectedFontSize() {
+  const selection = quill.getSelection() || lastKnownSelection;
+  const formats = selection ? quill.getFormat(selection) : quill.getFormat();
+  const numericSize = Number.parseInt(formats.size, 10);
+  if (Number.isFinite(numericSize) && numericSize > 0) {
+    activeFontSize = numericSize;
+    return numericSize;
+  }
+
+  if (formats.size === 'small') {
+    activeFontSize = 14;
+    return 14;
+  }
+
+  if (formats.size === 'large') {
+    activeFontSize = 24;
+    return 24;
+  }
+
+  if (formats.size === 'huge') {
+    activeFontSize = 32;
+    return 32;
+  }
+
+  return activeFontSize;
+}
+
+function closeFontSizeDropdown() {
+  if (!fontSizeDropdown || !fontSizeDropdownButton) {
+    return;
+  }
+
+  fontSizeDropdown.classList.add('hidden');
+  fontSizeDropdownButton.setAttribute('aria-expanded', 'false');
+}
+
+function applyFontSize(sizeValue) {
+  const requestedSize = Number.parseInt(sizeValue, 10);
+  if (!Number.isFinite(requestedSize) || requestedSize <= 0) {
+    setFontSizeInputValue(resolveSelectedFontSize());
+    return;
+  }
+
+  const clampedSize = Math.min(999, requestedSize);
+  const sizeToken = `${clampedSize}px`;
+  const selection = quill.getSelection() || lastKnownSelection;
+  activeFontSize = clampedSize;
+
+  if (selection && Number.isFinite(selection.index) && selection.length > 0) {
+    quill.formatText(selection.index, selection.length, 'size', sizeToken, 'user');
+    quill.setSelection(selection.index, selection.length, 'silent');
+  } else if (selection && Number.isFinite(selection.index)) {
+    quill.setSelection(selection.index, selection.length || 0, 'silent');
+    quill.format('size', sizeToken, 'user');
+  } else {
+    quill.format('size', sizeToken, 'user');
+  }
+
+  setFontSizeInputValue(clampedSize);
+}
+
+function syncFontSizeInputFromSelection() {
+  if (!fontSizeInput || isEditingFontSizeInput) {
+    return;
+  }
+
+  setFontSizeInputValue(resolveSelectedFontSize());
+}
+
+function populateFontSizeDropdown() {
+  if (!fontSizeDropdown) {
+    return;
+  }
+
+  fontSizeDropdown.innerHTML = '';
+  FONT_SIZE_OPTIONS.forEach((fontSize) => {
+    const option = document.createElement('li');
+    option.className = 'font-size-dropdown-option';
+    option.setAttribute('role', 'option');
+    option.textContent = String(fontSize);
+    option.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    option.addEventListener('click', () => {
+      applyFontSize(fontSize);
+      isEditingFontSizeInput = false;
+      closeFontSizeDropdown();
+      fontSizeInput?.focus();
+    });
+    fontSizeDropdown.appendChild(option);
+  });
+}
+
+populateFontSizeDropdown();
+syncFontSizeInputFromSelection();
+
+fontSizeInput?.addEventListener('focus', () => {
+  isEditingFontSizeInput = true;
+  fontSizeInput.select();
+});
+
+fontSizeInput?.addEventListener('mousedown', (event) => {
+  event.stopPropagation();
+});
+
+fontSizeInput?.addEventListener('click', (event) => {
+  event.stopPropagation();
+});
+
+fontSizeDropdownButton?.addEventListener('mousedown', (event) => {
+  event.stopPropagation();
+});
+
+fontSizeDropdown?.addEventListener('mousedown', (event) => {
+  event.stopPropagation();
+});
+
+fontSizeInput?.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    isEditingFontSizeInput = false;
+    applyFontSize(fontSizeInput.value);
+    closeFontSizeDropdown();
+    fontSizeInput.blur();
+  }
+
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    isEditingFontSizeInput = false;
+    setFontSizeInputValue(resolveSelectedFontSize());
+    closeFontSizeDropdown();
+    fontSizeInput.blur();
+  }
+});
+
+fontSizeInput?.addEventListener('blur', () => {
+  isEditingFontSizeInput = false;
+  applyFontSize(fontSizeInput.value);
+});
+
+fontSizeDropdownButton?.addEventListener('click', () => {
+  if (!fontSizeDropdown) {
+    return;
+  }
+
+  const isExpanded = !fontSizeDropdown.classList.contains('hidden');
+  if (isExpanded) {
+    closeFontSizeDropdown();
+    return;
+  }
+
+  fontSizeDropdown.classList.remove('hidden');
+  fontSizeDropdownButton.setAttribute('aria-expanded', 'true');
+});
+
+document.addEventListener('mousedown', (event) => {
+  if (!fontSizeDropdown || !fontSizeInput || !fontSizeDropdownButton) {
+    return;
+  }
+
+  const clickTarget = event.target;
+  if (!(clickTarget instanceof Node)) {
+    return;
+  }
+
+  if (fontSizeDropdown.contains(clickTarget)
+      || fontSizeInput.contains(clickTarget)
+      || fontSizeDropdownButton.contains(clickTarget)) {
+    return;
+  }
+
+  closeFontSizeDropdown();
+});
+
+quill.on('selection-change', (range) => {
+  if (range) {
+    lastKnownSelection = range;
+  }
+  syncFontSizeInputFromSelection();
+});
+
+quill.on('text-change', () => {
+  syncFontSizeInputFromSelection();
+});
 
 function isTextWrapEnabled() {
   return !wrapTextInput || wrapTextInput.checked;
