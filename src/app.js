@@ -605,6 +605,7 @@ syncFontSizeInputFromSelection();
 
 fontSizeInput?.addEventListener('focus', () => {
   isEditingFontSizeInput = true;
+  fontSizeInput.select();
 });
 
 fontSizeInput?.addEventListener('mousedown', (event) => {
