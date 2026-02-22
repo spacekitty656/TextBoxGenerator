@@ -181,8 +181,8 @@ describe('calculateCanvasDimensions', () => {
 
     // Expected canvas width:
     // left canvas padding + border width + left text padding + rendered content width + right text padding + border width + right canvas padding
-    // 50 + 4 + 20 + 200 + 20 + 4 + 50 = 348
-    expect(dimensions.width).toBe(348);
+    // 50 + 4 + 20 + 300 + 20 + 4 + 50 = 448
+    expect(dimensions.width).toBe(448);
   });
 
   it('still expands to rendered text width when border is disabled', () => {

@@ -80,6 +80,9 @@ export function createCanvasPainter({ context, canvas, getBackgroundRectHeightFo
     const lineStartPositions = laidOutLines.map((line) => getAlignedStartX(line.align, textStartX, alignmentWidth, line.width));
     const renderedMinX = lineStartPositions.length ? Math.min(...lineStartPositions) : textStartX;
     const renderedMaxX = laidOutLines.reduce((maxX, line, index) => Math.max(maxX, lineStartPositions[index] + line.width), renderedMinX);
+    const hasNonLeftAlignment = laidOutLines.some((line) => line.align === 'center' || line.align === 'right');
+    const contentMinX = hasNonLeftAlignment ? Math.min(renderedMinX, textStartX) : renderedMinX;
+    const contentMaxX = hasNonLeftAlignment ? Math.max(renderedMaxX, textStartX + alignmentWidth) : renderedMaxX;
     const verticalBounds = measureRenderedVerticalBounds(laidOutLines, textStartY);
 
     let borderX = 0;
@@ -88,9 +91,9 @@ export function createCanvasPainter({ context, canvas, getBackgroundRectHeightFo
     let borderRectHeight = 0;
 
     if (borderConfig.enabled) {
-      borderX = renderedMinX - textPadding.left - borderWidth / 2;
+      borderX = contentMinX - textPadding.left - borderWidth / 2;
       borderY = verticalBounds.minY - textPadding.top - borderWidth / 2;
-      borderRectWidth = renderedMaxX - renderedMinX + textPadding.left + textPadding.right + borderWidth;
+      borderRectWidth = contentMaxX - contentMinX + textPadding.left + textPadding.right + borderWidth;
       borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderWidth;
 
       if (borderConfig.backgroundMode === 'solid') {
