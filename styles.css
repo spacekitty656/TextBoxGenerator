@@ -444,6 +444,12 @@ body.dark-mode .lock-button {
   gap: 1rem;
 }
 
+.border-input-label-with-tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .border-input-row input {
   width: 84px;
   padding: 0.35rem;

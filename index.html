@@ -212,14 +212,32 @@
                     and side images fill the edge between corners using the selected side mode.
                   </p>
                   <div class="border-input-row">
-                    <label for="image-border-sizing-mode">Image sizing</label>
+                    <label for="image-border-sizing-mode" class="border-input-label-with-tooltip">
+                      Image sizing
+                      <span
+                        class="info-tooltip"
+                        role="img"
+                        aria-label="Info: Auto scales each image to fit its border segment. Fixed uses the image's original pixel size so larger images can overflow and smaller images leave extra space."
+                        title="Auto scales each image to fit its border segment. Fixed uses the image's original pixel size so larger images can overflow and smaller images leave extra space."
+                        >ℹ</span
+                      >
+                    </label>
                     <select id="image-border-sizing-mode">
                       <option value="auto" selected>Auto</option>
                       <option value="fixed">Fixed</option>
                     </select>
                   </div>
                   <div class="border-input-row">
-                    <label for="image-border-repeat-mode">Side mode</label>
+                    <label for="image-border-repeat-mode" class="border-input-label-with-tooltip">
+                      Side mode
+                      <span
+                        class="info-tooltip"
+                        role="img"
+                        aria-label="Info: Stretch draws one side image across the full edge. Repeat tiles the side image along the edge."
+                        title="Stretch draws one side image across the full edge. Repeat tiles the side image along the edge."
+                        >ℹ</span
+                      >
+                    </label>
                     <select id="image-border-repeat-mode">
                       <option value="stretch" selected>Stretch</option>
                       <option value="repeat">Repeat</option>
