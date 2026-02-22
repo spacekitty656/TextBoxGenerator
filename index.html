@@ -78,6 +78,11 @@
               Max image width
               <input type="number" id="max-image-width" min="50" step="1" value="900" />
             </label>
+
+            <button type="button" id="manage-fonts-button" class="manage-fonts-button" aria-label="Open manage fonts window">
+              <img src="assets/icons/file-font-svgrepo-com.svg" alt="" aria-hidden="true" />
+              Manage Fonts
+            </button>
           </div>
 
 
@@ -511,6 +516,30 @@
           <div class="dialog-action-row">
             <button type="button" class="window-primary-button" id="manage-images-ok">OK</button>
             <button type="button" class="window-secondary-button" id="manage-images-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="manage-fonts-overlay" class="color-window-overlay hidden" aria-hidden="true">
+      <div class="color-window manage-images-window" role="dialog" aria-modal="true" aria-labelledby="manage-fonts-title">
+        <div class="color-window-header">
+          <h2 id="manage-fonts-title">Manage Fonts</h2>
+          <button type="button" id="close-manage-fonts-window" class="close-window-button" aria-label="Close manage fonts window">✕</button>
+        </div>
+        <div class="color-window-body manage-images-body">
+          <input type="file" id="manage-fonts-input" accept=".ttf,.otf,.woff,.woff2,font/*" class="manage-images-hidden-input" />
+          <div class="manage-images-toolbar" role="toolbar" aria-label="Manage fonts toolbar">
+            <button type="button" id="manage-fonts-import"><img src="assets/icons/file-font-svgrepo-com.svg" alt="" aria-hidden="true" /> Import Font</button>
+            <button type="button" id="manage-fonts-create-folder">📁 Create Folder</button>
+            <button type="button" id="manage-fonts-rename">📝 Rename</button>
+            <button type="button" id="manage-fonts-delete" aria-label="Delete selected">🗑️</button>
+          </div>
+          <div class="manage-images-content">
+            <div id="manage-fonts-tree" class="manage-images-tree" aria-label="Fonts and folders tree"></div>
+          </div>
+          <div class="dialog-action-row">
+            <button type="button" class="window-secondary-button" id="manage-fonts-ok">OK</button>
           </div>
         </div>
       </div>

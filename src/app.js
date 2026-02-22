@@ -31,7 +31,7 @@ import { createQuillEditor } from './editor/quillAdapter.js';
 import { createDeltaAdapter } from './editor/deltaAdapter.js';
 import { createManageImagesWindowController } from './ui/manageImagesWindow.js';
 import { createCanvasPainter } from './render/canvasPainter.js';
-import { createBackgroundRectHeightForFont, createLayoutAdapter } from './render/layoutAdapter.js';
+import { createBackgroundRectHeightForFont, createLayoutAdapter, registerCanvasFontFamily } from './render/layoutAdapter.js';
 import { createRenderOrchestrator } from './render/renderOrchestrator.js';
 import { createBorderControlsView } from './ui/views/borderControlsView.js';
 import { createColorPickerView } from './ui/views/colorPickerView.js';
@@ -40,6 +40,7 @@ import { createManageImagesView } from './ui/views/manageImagesView.js';
 import { createLoadBorderTemplateView } from './ui/views/loadBorderTemplateView.js';
 import { createSaveBorderTemplateView } from './ui/views/saveBorderTemplateView.js';
 import { createSettingsView } from './ui/views/settingsView.js';
+import { createManageFontsView } from './ui/views/manageFontsView.js';
 import { createColorPickerController } from './controllers/colorPickerController.js';
 import { createEditorController } from './controllers/editorController.js';
 import { createManageImagesController } from './controllers/manageImagesController.js';
@@ -48,6 +49,12 @@ import { createBorderState } from './features/border/borderState.js';
 import { createBorderUiController } from './features/border/borderUiController.js';
 import { createBorderTemplateFeature } from './features/border/borderTemplateFeature.js';
 import { createBorderTemplateAdapterService } from './features/border/borderTemplateAdapterService.js';
+import { createFontLibraryStore } from './fonts/fontLibraryStore.js';
+import {
+  persistFontLibraryToIndexedDb,
+  restoreFontLibraryFromIndexedDb,
+} from './fonts/fontPersistenceIndexedDb.js';
+import { createManageFontsWindowController } from './ui/manageFontsWindow.js';
 
 const Quill = window.Quill;
 
@@ -57,6 +64,7 @@ const borderControlsView = createBorderControlsView(document);
 const manageImagesView = createManageImagesView(document);
 const loadBorderTemplateView = createLoadBorderTemplateView(document);
 const saveBorderTemplateView = createSaveBorderTemplateView(document);
+const manageFontsView = createManageFontsView(document);
 const colorPickerView = createColorPickerView(document);
 
 const canvas = editorView.canvas.preview;
@@ -116,6 +124,18 @@ const manageImagesOkButton = manageImagesView.window.okButton;
 const manageImagesCancelButton = manageImagesView.window.cancelButton;
 
 
+const manageFontsOverlay = manageFontsView.window.overlay;
+const closeManageFontsWindowButton = manageFontsView.window.closeButton;
+const manageFontsOkButton = manageFontsView.window.okButton;
+const manageFontsInput = manageFontsView.tree.input;
+const manageFontsTree = manageFontsView.tree.tree;
+const manageFontsButton = manageFontsView.window.openButton;
+const manageFontsImportButton = manageFontsView.actions.importButton;
+const manageFontsCreateFolderButton = manageFontsView.actions.createFolderButton;
+const manageFontsRenameButton = manageFontsView.actions.renameButton;
+const manageFontsDeleteButton = manageFontsView.actions.deleteButton;
+
+
 const imageBorderState = {
   corners: {
     topLeft: createImageBorderSlotState(),
@@ -136,6 +156,7 @@ const sidePaddingControls = editorView.padding.text.sides;
 
 const wrapTextInput = editorView.editor.wrapTextInput;
 const maxImageWidthInput = editorView.editor.maxImageWidthInput;
+const fontSelectInput = document.querySelector('#editor-toolbar .ql-font');
 const fontSizeInput = document.getElementById('font-size-input');
 const fontSizeDropdownButton = document.getElementById('font-size-dropdown-button');
 const fontSizeDropdown = document.getElementById('font-size-dropdown');
@@ -423,6 +444,26 @@ function persistImageLibrary() {
   imageLibraryService.persist(imageLibraryStore);
 }
 
+async function persistFontLibraryState() {
+  const status = await persistFontLibraryToIndexedDb(fontLibraryStore);
+  if (!status?.ok && status?.error) {
+    console.warn('Unable to persist font library to IndexedDB.', status.error);
+  }
+}
+
+async function initializeFontLibraryFromPersistence() {
+  try {
+    const snapshot = await restoreFontLibraryFromIndexedDb();
+    if (snapshot) {
+      fontLibraryStore.deserialize(snapshot);
+      refreshFontRegistry();
+      drawEditorToCanvas();
+    }
+  } catch (error) {
+    console.warn('Unable to initialize font library persistence.', error);
+  }
+}
+
 
 function panelHasVerticalScrollbar(panelElement) {
   if (!panelElement) {
@@ -458,19 +499,124 @@ const imageLockState = {
   left: true,
 };
 
-const FONT_WHITELIST = ['sansserif', 'serif', 'monospace', 'pressstart2p'];
+const fontLibraryStore = createFontLibraryStore();
 const FONT_SIZE_OPTIONS = [4, 6, 8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72, 144];
 const FONT_SIZE_STYLE_WHITELIST = Array.from({ length: 999 }, (_, index) => `${index + 1}px`);
+const loadedFontFaceValues = new Set();
+let quill = null;
 
-const QuillFont = Quill.import('formats/font');
-QuillFont.whitelist = FONT_WHITELIST;
-Quill.register(QuillFont, true);
+function listAvailableFonts() {
+  return fontLibraryStore.listFonts();
+}
+
+async function ensureFontFaceLoaded(fontEntry) {
+  const fontValue = fontEntry?.data?.value;
+  const sourceBlob = fontEntry?.data?.sourceBlob;
+  const familyName = fontEntry?.data?.familyName;
+
+  if (!fontValue || !sourceBlob || !familyName || loadedFontFaceValues.has(fontValue)) {
+    return;
+  }
+
+  const objectUrl = URL.createObjectURL(sourceBlob);
+
+  try {
+    const fontFace = new FontFace(familyName, `url("${objectUrl}")`);
+    await fontFace.load();
+    document.fonts.add(fontFace);
+    loadedFontFaceValues.add(fontValue);
+  } catch (error) {
+    console.error('Unable to restore imported font from persisted data.', error);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function syncFontPickerOptions(fonts) {
+  if (!fontSelectInput) {
+    return;
+  }
+
+  const previousValue = fontSelectInput.value;
+  fontSelectInput.innerHTML = '';
+  fonts.forEach((fontEntry) => {
+    const option = document.createElement('option');
+    option.value = fontEntry.data.value;
+    option.textContent = fontEntry.name;
+    option.setAttribute('data-label', fontEntry.name);
+    fontSelectInput.appendChild(option);
+  });
+
+  const fallbackValue = fonts[0]?.data?.value || '';
+  const selectedValue = fonts.some((entry) => entry?.data?.value === previousValue) ? previousValue : fallbackValue;
+  if (selectedValue) {
+    fontSelectInput.value = selectedValue;
+  }
+
+  const picker = document.querySelector('#editor-toolbar .ql-picker.ql-font');
+  const pickerLabel = picker?.querySelector('.ql-picker-label');
+  const pickerOptions = picker?.querySelector('.ql-picker-options');
+
+  if (pickerOptions) {
+    pickerOptions.innerHTML = '';
+    fonts.forEach((fontEntry) => {
+      const fontValue = fontEntry.data.value;
+      const pickerItem = document.createElement('span');
+      pickerItem.className = 'ql-picker-item';
+      pickerItem.setAttribute('data-value', fontValue);
+      pickerItem.setAttribute('data-label', fontEntry.name);
+      pickerItem.setAttribute('tabindex', '0');
+      pickerItem.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+      });
+      pickerItem.addEventListener('click', () => {
+        fontSelectInput.value = fontValue;
+        pickerLabel?.setAttribute('data-value', fontValue);
+        picker?.classList.remove('ql-expanded');
+
+        if (quill) {
+          quill.focus();
+          quill.format('font', fontValue, 'user');
+        }
+      });
+      pickerOptions.appendChild(pickerItem);
+    });
+  }
+
+  if (pickerLabel) {
+    pickerLabel.setAttribute('data-value', fontSelectInput.value || '');
+  }
+}
+
+function refreshFontRegistry() {
+  const fonts = listAvailableFonts();
+  const whitelist = [];
+
+  fonts.forEach((fontEntry) => {
+    const value = fontEntry?.data?.value;
+    const family = fontEntry?.data?.family;
+    if (!value || !family) {
+      return;
+    }
+
+    whitelist.push(value);
+    registerCanvasFontFamily(value, family);
+    ensureFontFaceLoaded(fontEntry);
+  });
+
+  const QuillFont = Quill.import('formats/font');
+  QuillFont.whitelist = whitelist;
+  Quill.register(QuillFont, true);
+  syncFontPickerOptions(fonts);
+}
+
+refreshFontRegistry();
 
 const QuillSize = Quill.import('attributors/style/size');
 QuillSize.whitelist = FONT_SIZE_STYLE_WHITELIST;
 Quill.register(QuillSize, true);
 
-const quill = createQuillEditor(Quill, {
+quill = createQuillEditor(Quill, {
   'open-color-window': openColorWindow,
   'open-background-color-window': openBackgroundColorWindow,
 });
@@ -739,6 +885,53 @@ const imageLibraryService = createImageLibraryService({
   setStorageStatusMessage,
 });
 
+function toFontValue(name) {
+  return String(name || 'font')
+    .toLowerCase()
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'font';
+}
+
+async function importFontFromFile(file) {
+  if (!file) {
+    return null;
+  }
+
+  const baseName = String(file.name || 'Imported Font').replace(/\.[^.]+$/, '').trim() || 'Imported Font';
+  let value = toFontValue(baseName);
+  const usedValues = new Set(listAvailableFonts().map((entry) => entry?.data?.value).filter(Boolean));
+  let counter = 2;
+  while (usedValues.has(value)) {
+    value = `${toFontValue(baseName)}-${counter}`;
+    counter += 1;
+  }
+
+  let sourceBlob = null;
+
+  try {
+    const [arrayBuffer] = await Promise.all([
+      file.arrayBuffer(),
+    ]);
+
+    sourceBlob = file;
+    const fontFace = new FontFace(baseName, arrayBuffer);
+    await fontFace.load();
+    document.fonts.add(fontFace);
+    loadedFontFaceValues.add(value);
+  } catch (error) {
+    console.error('Unable to load imported font for preview.', error);
+  }
+
+  return {
+    name: baseName,
+    value,
+    family: `"${baseName}", sans-serif`,
+    familyName: baseName,
+    sourceBlob,
+  };
+}
+
 
 function getManagedImageById(imageId) {
   return imageLibraryStore.getImage(imageId);
@@ -798,6 +991,36 @@ const manageImagesWindowController = createManageImagesWindowController({
   },
   onImagesDeleted: borderState.clearDeletedImageSlots,
 });
+
+const manageFontsWindowController = createManageFontsWindowController({
+  store: fontLibraryStore,
+  elements: {
+    window: {
+      overlay: manageFontsOverlay,
+      closeButton: closeManageFontsWindowButton,
+      okButton: manageFontsOkButton,
+      openButton: manageFontsButton,
+    },
+    tree: {
+      input: manageFontsInput,
+      tree: manageFontsTree,
+    },
+    actions: {
+      importButton: manageFontsImportButton,
+      createFolderButton: manageFontsCreateFolderButton,
+      renameButton: manageFontsRenameButton,
+      deleteButton: manageFontsDeleteButton,
+    },
+  },
+  importFontFromFile,
+  onFontsChanged: () => {
+    refreshFontRegistry();
+    void persistFontLibraryState();
+    drawEditorToCanvas();
+  },
+});
+
+void initializeFontLibraryFromPersistence();
 
 function openManageImagesWindow(slotType = null, slotName = null) {
   const initialImageId = slotType && slotName
