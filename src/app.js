@@ -506,25 +506,29 @@ const loadedFontFaceValues = new Set();
 let quill = null;
 
 function listAvailableFonts() {
-  return fontLibraryStore.listTemplatesByClass('font');
+  return fontLibraryStore.listFonts();
 }
 
 async function ensureFontFaceLoaded(fontEntry) {
   const fontValue = fontEntry?.data?.value;
-  const sourceDataUrl = fontEntry?.data?.sourceDataUrl;
+  const sourceBlob = fontEntry?.data?.sourceBlob;
   const familyName = fontEntry?.data?.familyName;
 
-  if (!fontValue || !sourceDataUrl || !familyName || loadedFontFaceValues.has(fontValue)) {
+  if (!fontValue || !sourceBlob || !familyName || loadedFontFaceValues.has(fontValue)) {
     return;
   }
 
+  const objectUrl = URL.createObjectURL(sourceBlob);
+
   try {
-    const fontFace = new FontFace(familyName, `url("${sourceDataUrl}")`);
+    const fontFace = new FontFace(familyName, `url("${objectUrl}")`);
     await fontFace.load();
     document.fonts.add(fontFace);
     loadedFontFaceValues.add(fontValue);
   } catch (error) {
     console.error('Unable to restore imported font from persisted data.', error);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
   }
 }
 
@@ -889,15 +893,6 @@ function toFontValue(name) {
     .replace(/^-+|-+$/g, '') || 'font';
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(reader.error || new Error('Unable to read file.'));
-    reader.readAsDataURL(file);
-  });
-}
-
 async function importFontFromFile(file) {
   if (!file) {
     return null;
@@ -912,15 +907,14 @@ async function importFontFromFile(file) {
     counter += 1;
   }
 
-  let sourceDataUrl = null;
+  let sourceBlob = null;
 
   try {
-    const [arrayBuffer, dataUrl] = await Promise.all([
+    const [arrayBuffer] = await Promise.all([
       file.arrayBuffer(),
-      readFileAsDataUrl(file),
     ]);
 
-    sourceDataUrl = dataUrl;
+    sourceBlob = file;
     const fontFace = new FontFace(baseName, arrayBuffer);
     await fontFace.load();
     document.fonts.add(fontFace);
@@ -934,7 +928,7 @@ async function importFontFromFile(file) {
     value,
     family: `"${baseName}", sans-serif`,
     familyName: baseName,
-    sourceDataUrl,
+    sourceBlob,
   };
 }
 

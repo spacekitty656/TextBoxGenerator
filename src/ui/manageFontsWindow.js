@@ -27,8 +27,8 @@ export function createManageFontsWindowController({
   };
 
   function listEntities(parentId) {
-    const children = store.listChildren(parentId, { templateClass: 'font' });
-    return [...children.folders, ...children.templates].sort((a, b) => a.orderIndex - b.orderIndex);
+    const children = store.listChildren(parentId);
+    return [...children.folders, ...children.fonts].sort((a, b) => a.orderIndex - b.orderIndex);
   }
 
   function getEntityByKey(key) {
@@ -37,8 +37,8 @@ export function createManageFontsWindowController({
       return store.getFolder(id);
     }
 
-    if (type === 'template') {
-      return store.getTemplate(id);
+    if (type === 'font') {
+      return store.getFont(id);
     }
 
     return null;
@@ -162,8 +162,8 @@ export function createManageFontsWindowController({
       store.updateFolder(selected.id, { name: nextName });
     }
 
-    if (selected?.type === 'template') {
-      store.updateTemplate(selected.id, { name: nextName });
+    if (selected?.type === 'font') {
+      store.updateFont(selected.id, { name: nextName });
     }
 
     state.editor = null;
@@ -180,7 +180,7 @@ export function createManageFontsWindowController({
     if (selected.type === 'folder') {
       store.deleteFolder(selected.id);
     } else {
-      store.deleteTemplate(selected.id);
+      store.deleteFont(selected.id);
     }
 
     setSelection(null);
@@ -203,15 +203,14 @@ export function createManageFontsWindowController({
         continue;
       }
 
-      const created = store.createTemplate({
+      const created = store.createFont({
         name: imported.name,
         parentId: targetParentId,
-        templateClass: 'font',
         data: {
           value: imported.value,
           family: imported.family,
           familyName: imported.familyName || imported.name,
-          sourceDataUrl: imported.sourceDataUrl || null,
+          sourceBlob: imported.sourceBlob || null,
         },
       });
       lastImportedKey = getEntityKey(created);
@@ -239,8 +238,7 @@ export function createManageFontsWindowController({
 
       const hasChildren = entry.type === 'folder'
         && !entry.synthetic
-        && (store.listChildren(entry.id, { templateClass: 'font' }).folders.length
-          + store.listChildren(entry.id, { templateClass: 'font' }).templates.length) > 0;
+        && (() => { const children = store.listChildren(entry.id); return children.folders.length + children.fonts.length; })() > 0;
 
       const isCollapsed = state.collapsedFolderIds.has(entry.id);
       const toggleMarkup = entry.type === 'folder'

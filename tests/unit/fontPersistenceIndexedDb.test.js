@@ -130,15 +130,14 @@ describe('indexeddb font library persistence', () => {
     const indexedDb = createFakeIndexedDb();
     const store = createFontLibraryStore();
 
-    store.createTemplate({
+    store.createFont({
       name: 'My Font',
       parentId: store.ROOT_FOLDER_ID,
-      templateClass: 'font',
       data: {
         value: 'my-font',
         family: '"My Font", sans-serif',
         familyName: 'My Font',
-        sourceDataUrl: 'data:font/ttf;base64,AAAA',
+        sourceBlob: new Blob(['font-bytes'], { type: 'font/ttf' }),
       },
     });
 
@@ -146,12 +145,13 @@ describe('indexeddb font library persistence', () => {
     expect(persistStatus).toMatchObject({ ok: true });
 
     const restored = await restoreFontLibraryFromIndexedDb({ indexedDb });
-    const imported = restored.templates.find((entry) => entry.name === 'My Font');
+    const imported = restored.fonts.find((entry) => entry.name === 'My Font');
 
     expect(imported).toBeTruthy();
     expect(imported.data).toMatchObject({
       value: 'my-font',
       familyName: 'My Font',
     });
+    expect(imported.data.sourceBlob).toBeInstanceOf(Blob);
   });
 });
