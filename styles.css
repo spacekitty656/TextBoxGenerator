@@ -443,6 +443,17 @@ body.dark-mode .option-accordion {
   margin-top: 0.45rem;
 }
 
+.option-description {
+  margin: 0.15rem 0 0.5rem;
+  font-size: 0.82rem;
+  color: #4b5563;
+  line-height: 1.35;
+}
+
+body.dark-mode .option-description {
+  color: #9ca3af;
+}
+
 .padding-layout {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
