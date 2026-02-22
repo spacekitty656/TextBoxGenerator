@@ -13,7 +13,7 @@ export function createManageFontsView(documentRef) {
       openButton: getRequiredElementById(documentRef, 'manage-fonts-button'),
       overlay: getRequiredElementById(documentRef, 'manage-fonts-overlay'),
       closeButton: getRequiredElementById(documentRef, 'close-manage-fonts-window'),
-      cancelButton: getRequiredElementById(documentRef, 'manage-fonts-cancel'),
+      okButton: getRequiredElementById(documentRef, 'manage-fonts-ok'),
     },
     tree: {
       input: getRequiredElementById(documentRef, 'manage-fonts-input'),

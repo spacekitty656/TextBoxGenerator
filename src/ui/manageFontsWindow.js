@@ -152,6 +152,7 @@ export function createManageFontsWindowController({
 
       state.editor = null;
       setSelection(getEntityKey(created));
+      onFontsChanged?.();
       render();
       return;
     }
@@ -209,6 +210,8 @@ export function createManageFontsWindowController({
         data: {
           value: imported.value,
           family: imported.family,
+          familyName: imported.familyName || imported.name,
+          sourceDataUrl: imported.sourceDataUrl || null,
         },
       });
       lastImportedKey = getEntityKey(created);
@@ -344,7 +347,7 @@ export function createManageFontsWindowController({
 
   elements.window.openButton.addEventListener('click', open);
   elements.window.closeButton.addEventListener('click', close);
-  elements.window.cancelButton.addEventListener('click', close);
+  elements.window.okButton.addEventListener('click', close);
   elements.window.overlay.addEventListener('click', (event) => {
     if (event.target === elements.window.overlay) {
       close();

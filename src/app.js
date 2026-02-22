@@ -50,6 +50,7 @@ import { createBorderUiController } from './features/border/borderUiController.j
 import { createBorderTemplateFeature } from './features/border/borderTemplateFeature.js';
 import { createBorderTemplateAdapterService } from './features/border/borderTemplateAdapterService.js';
 import { createFontLibraryStore } from './fonts/fontLibraryStore.js';
+import { persistFontLibrary, restoreFontLibrary } from './fonts/fontLibraryPersistence.js';
 import { createManageFontsWindowController } from './ui/manageFontsWindow.js';
 
 const Quill = window.Quill;
@@ -122,7 +123,7 @@ const manageImagesCancelButton = manageImagesView.window.cancelButton;
 
 const manageFontsOverlay = manageFontsView.window.overlay;
 const closeManageFontsWindowButton = manageFontsView.window.closeButton;
-const manageFontsCancelButton = manageFontsView.window.cancelButton;
+const manageFontsOkButton = manageFontsView.window.okButton;
 const manageFontsInput = manageFontsView.tree.input;
 const manageFontsTree = manageFontsView.tree.tree;
 const manageFontsButton = manageFontsView.window.openButton;
@@ -440,6 +441,10 @@ function persistImageLibrary() {
   imageLibraryService.persist(imageLibraryStore);
 }
 
+function persistFontLibraryState() {
+  persistFontLibrary(window.localStorage, fontLibraryStore);
+}
+
 
 function panelHasVerticalScrollbar(panelElement) {
   if (!panelElement) {
@@ -476,11 +481,76 @@ const imageLockState = {
 };
 
 const fontLibraryStore = createFontLibraryStore();
+restoreFontLibrary(window.localStorage, fontLibraryStore);
+
 const FONT_SIZE_OPTIONS = [4, 6, 8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 48, 56, 64, 72, 144];
 const FONT_SIZE_STYLE_WHITELIST = Array.from({ length: 999 }, (_, index) => `${index + 1}px`);
+const loadedFontFaceValues = new Set();
+let quill = null;
 
 function listAvailableFonts() {
   return fontLibraryStore.listTemplatesByClass('font');
+}
+
+async function ensureFontFaceLoaded(fontEntry) {
+  const fontValue = fontEntry?.data?.value;
+  const sourceDataUrl = fontEntry?.data?.sourceDataUrl;
+  const familyName = fontEntry?.data?.familyName;
+
+  if (!fontValue || !sourceDataUrl || !familyName || loadedFontFaceValues.has(fontValue)) {
+    return;
+  }
+
+  try {
+    const fontFace = new FontFace(familyName, `url("${sourceDataUrl}")`);
+    await fontFace.load();
+    document.fonts.add(fontFace);
+    loadedFontFaceValues.add(fontValue);
+  } catch (error) {
+    console.error('Unable to restore imported font from persisted data.', error);
+  }
+}
+
+function syncFontPickerOptions(fonts) {
+  if (!fontSelectInput) {
+    return;
+  }
+
+  const previousValue = fontSelectInput.value;
+  fontSelectInput.innerHTML = '';
+  fonts.forEach((fontEntry) => {
+    const option = document.createElement('option');
+    option.value = fontEntry.data.value;
+    option.textContent = fontEntry.name;
+    option.setAttribute('data-label', fontEntry.name);
+    fontSelectInput.appendChild(option);
+  });
+
+  const fallbackValue = fonts[0]?.data?.value || '';
+  const selectedValue = fonts.some((entry) => entry?.data?.value === previousValue) ? previousValue : fallbackValue;
+  if (selectedValue) {
+    fontSelectInput.value = selectedValue;
+  }
+
+  const picker = document.querySelector('#editor-toolbar .ql-picker.ql-font');
+  const pickerLabel = picker?.querySelector('.ql-picker-label');
+  const pickerOptions = picker?.querySelector('.ql-picker-options');
+
+  if (pickerOptions) {
+    pickerOptions.innerHTML = '';
+    fonts.forEach((fontEntry) => {
+      const pickerItem = document.createElement('span');
+      pickerItem.className = 'ql-picker-item';
+      pickerItem.setAttribute('data-value', fontEntry.data.value);
+      pickerItem.setAttribute('data-label', fontEntry.name);
+      pickerItem.setAttribute('tabindex', '0');
+      pickerOptions.appendChild(pickerItem);
+    });
+  }
+
+  if (pickerLabel) {
+    pickerLabel.setAttribute('data-value', fontSelectInput.value || '');
+  }
 }
 
 function refreshFontRegistry() {
@@ -496,22 +566,13 @@ function refreshFontRegistry() {
 
     whitelist.push(value);
     registerCanvasFontFamily(value, family);
+    ensureFontFaceLoaded(fontEntry);
   });
 
   const QuillFont = Quill.import('formats/font');
   QuillFont.whitelist = whitelist;
   Quill.register(QuillFont, true);
-
-  if (fontSelectInput) {
-    fontSelectInput.innerHTML = '';
-    fonts.forEach((fontEntry) => {
-      const option = document.createElement('option');
-      option.value = fontEntry.data.value;
-      option.textContent = fontEntry.name;
-      option.setAttribute('data-label', fontEntry.name);
-      fontSelectInput.appendChild(option);
-    });
-  }
+  syncFontPickerOptions(fonts);
 }
 
 refreshFontRegistry();
@@ -520,7 +581,7 @@ const QuillSize = Quill.import('attributors/style/size');
 QuillSize.whitelist = FONT_SIZE_STYLE_WHITELIST;
 Quill.register(QuillSize, true);
 
-const quill = createQuillEditor(Quill, {
+quill = createQuillEditor(Quill, {
   'open-color-window': openColorWindow,
   'open-background-color-window': openBackgroundColorWindow,
 });
@@ -797,6 +858,15 @@ function toFontValue(name) {
     .replace(/^-+|-+$/g, '') || 'font';
 }
 
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Unable to read file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 async function importFontFromFile(file) {
   if (!file) {
     return null;
@@ -811,11 +881,19 @@ async function importFontFromFile(file) {
     counter += 1;
   }
 
+  let sourceDataUrl = null;
+
   try {
-    const arrayBuffer = await file.arrayBuffer();
+    const [arrayBuffer, dataUrl] = await Promise.all([
+      file.arrayBuffer(),
+      readFileAsDataUrl(file),
+    ]);
+
+    sourceDataUrl = dataUrl;
     const fontFace = new FontFace(baseName, arrayBuffer);
     await fontFace.load();
     document.fonts.add(fontFace);
+    loadedFontFaceValues.add(value);
   } catch (error) {
     console.error('Unable to load imported font for preview.', error);
   }
@@ -824,6 +902,8 @@ async function importFontFromFile(file) {
     name: baseName,
     value,
     family: `"${baseName}", sans-serif`,
+    familyName: baseName,
+    sourceDataUrl,
   };
 }
 
@@ -893,7 +973,7 @@ const manageFontsWindowController = createManageFontsWindowController({
     window: {
       overlay: manageFontsOverlay,
       closeButton: closeManageFontsWindowButton,
-      cancelButton: manageFontsCancelButton,
+      okButton: manageFontsOkButton,
       openButton: manageFontsButton,
     },
     tree: {
@@ -910,6 +990,7 @@ const manageFontsWindowController = createManageFontsWindowController({
   importFontFromFile,
   onFontsChanged: () => {
     refreshFontRegistry();
+    persistFontLibraryState();
     drawEditorToCanvas();
   },
 });

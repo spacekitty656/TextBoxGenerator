@@ -12,7 +12,7 @@ function createElements() {
       overlay,
       openButton: document.createElement('button'),
       closeButton: document.createElement('button'),
-      cancelButton: document.createElement('button'),
+      okButton: document.createElement('button'),
     },
     tree: {
       input: document.createElement('input'),
