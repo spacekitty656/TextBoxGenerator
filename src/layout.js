@@ -87,7 +87,7 @@ export function getAlignedStartX(align, startX, maxWidth, lineWidth) {
 
 export function getAlignmentWidth(laidOutLines, maxContentWidth) {
   const widestLine = laidOutLines.reduce((maxWidth, line) => Math.max(maxWidth, line.width || 0), 0);
-  return Math.min(maxContentWidth, widestLine);
+  return Math.max(maxContentWidth, widestLine);
 }
 
 export function calculateCanvasDimensions(
