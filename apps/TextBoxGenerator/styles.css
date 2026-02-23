@@ -1565,3 +1565,11 @@ body.dark-mode .settings-window-header {
   color: #d1d5db;
   white-space: pre-line;
 }
+
+.manage-font-button {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
