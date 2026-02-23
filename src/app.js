@@ -1108,7 +1108,7 @@ function getCanvasSizePaddingConfig() {
 
 
 function resolveEditorBackgroundColor(borderConfig, canvasBackgroundConfig) {
-  if (borderConfig.backgroundMode === 'solid' && borderConfig.backgroundColor) {
+  if (borderConfig.enabled && borderConfig.backgroundMode === 'solid' && borderConfig.backgroundColor) {
     return borderConfig.backgroundColor;
   }
 
