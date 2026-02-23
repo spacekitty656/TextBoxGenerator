@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "node --watch server/index.js",
     "start": "node server/index.js",
-    "test:unit": "vitest --environment jsdom --passWithNoTests",
-    "test:e2e": "playwright test --pass-with-no-tests",
-    "test": "npm run test:unit && npm run test:e2e"
+    "test": "npm run test:textbox:unit && npm run test:textbox:e2e",
+    "test:textbox:unit": "vitest --config apps/TextBoxGenerator/vitest.config.js --passWithNoTests",
+    "test:textbox:e2e": "playwright test --config apps/TextBoxGenerator/playwright.config.js --pass-with-no-tests",
+    "test:textbox": "npm run test:textbox:unit && npm run test:textbox:e2e"
   },
   "dependencies": {
     "@fastify/static": "^8.2.0",

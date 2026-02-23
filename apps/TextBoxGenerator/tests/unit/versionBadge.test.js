@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
-const appSource = fs.readFileSync(path.join(process.cwd(), 'src/app.js'), 'utf8');
+const appSource = fs.readFileSync(path.join(process.cwd(), 'apps/TextBoxGenerator/src/app.js'), 'utf8');
 
 describe('version badge wiring', () => {
   test('APP_VERSION matches package version', () => {

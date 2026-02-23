@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Text Box Generator</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-layout">
+      <section class="canvas-panel" aria-label="Canvas preview area">
+        <canvas id="preview-canvas" width="900" height="600"></canvas>
+      </section>
+
+      <section class="form-panel" aria-label="Text editor controls">
+        <form id="text-form">
+          <div class="form-header">
+            <h1>Text Box Generator</h1>
+            <button type="button" id="settings-button" class="settings-button" aria-label="Open settings" title="Settings">⚙️</button>
+          </div>
+          <div id="editor-toolbar" aria-label="Text formatting toolbar">
+            <select class="ql-font" aria-label="Font family">
+              <option value="sansserif">Sans Serif</option>
+              <option value="serif">Serif</option>
+              <option value="monospace">Monospace</option>
+              <option value="pressstart2p">Press Start 2P</option>
+            </select>
+            <div class="font-size-combobox" role="group" aria-label="Font size controls">
+              <input
+                id="font-size-input"
+                class="font-size-input"
+                type="text"
+                inputmode="numeric"
+                aria-label="Font size"
+                value="18"
+              />
+              <button
+                id="font-size-dropdown-button"
+                class="font-size-dropdown-button"
+                type="button"
+                aria-label="Open font size dropdown"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-controls="font-size-dropdown"
+              ></button>
+              <ul id="font-size-dropdown" class="font-size-dropdown hidden" role="listbox" aria-label="Font sizes"></ul>
+            </div>
+            <button class="ql-bold" type="button" aria-label="Bold"></button>
+            <button class="ql-italic" type="button" aria-label="Italic"></button>
+            <button class="ql-underline" type="button" aria-label="Underline"></button>
+            <button class="ql-open-background-color-window" type="button" aria-label="Open background color picker" title="Background color">⬜️</button>
+            <button class="ql-open-color-window" type="button" aria-label="Open color picker" title="Text color">A</button>
+            <button class="ql-align" value="" type="button" aria-label="Align left"></button>
+            <button class="ql-align" value="center" type="button" aria-label="Align center"></button>
+            <button class="ql-align" value="right" type="button" aria-label="Align right"></button>
+          </div>
+
+          <div
+            id="editor"
+            role="textbox"
+            aria-multiline="true"
+            aria-label="Rich text editor"
+          ></div>
+
+          <p id="storage-status-message" class="status-message hidden" role="status" aria-live="polite"></p>
+
+          <div class="wrap-text-controls">
+            <label class="inline-checkbox" for="wrap-text">
+              <input type="checkbox" id="wrap-text" checked />
+              Wrap text
+            </label>
+
+            <label class="inline-input compact-input" for="max-image-width">
+              Max image width
+              <input type="number" id="max-image-width" min="50" step="1" value="900" />
+            </label>
+          </div>
+
+
+          <section class="canvas-background-controls" aria-label="Canvas background options">
+            <details class="option-accordion" aria-label="Canvas background color options">
+              <summary class="control-title">Background color</summary>
+
+              <label class="inline-radio" for="background-color-transparent">
+                <input
+                  type="radio"
+                  id="background-color-transparent"
+                  name="background-color-mode"
+                  value="transparent"
+                  checked
+                />
+                Transparent
+              </label>
+
+              <label class="inline-radio background-color-solid-row" for="background-color-solid">
+                <input
+                  type="radio"
+                  id="background-color-solid"
+                  name="background-color-mode"
+                  value="solid"
+                />
+                Solid color
+                  <input type="color" id="background-color-input" value="#ffffff" disabled />
+                  <button type="button" id="background-color-window-button" class="color-preview-button" aria-label="Open image background color picker" title="Image background color"></button>
+              </label>
+            </details>
+
+            <details class="option-accordion" aria-label="Canvas image size options">
+              <summary class="control-title">Image padding</summary>
+              <div class="padding-layout">
+                <input class="pad-input top" type="number" id="image-padding-top" value="50" aria-label="Image padding top" disabled />
+                <button type="button" class="lock-button top" id="image-lock-top" aria-controls="image-padding-top" aria-pressed="true">🔒</button>
+
+                <input class="pad-input left" type="number" id="image-padding-left" value="50" aria-label="Image padding left" disabled />
+                <button type="button" class="lock-button left" id="image-lock-left" aria-controls="image-padding-left" aria-pressed="true">🔒</button>
+
+                <input class="pad-input center" type="number" id="image-padding-center" value="50" aria-label="Image padding center" />
+
+                <button type="button" class="lock-button right" id="image-lock-right" aria-controls="image-padding-right" aria-pressed="true">🔒</button>
+                <input class="pad-input right" type="number" id="image-padding-right" value="50" aria-label="Image padding right" disabled />
+
+                <button type="button" class="lock-button bottom" id="image-lock-bottom" aria-controls="image-padding-bottom" aria-pressed="true">🔒</button>
+                <input class="pad-input bottom" type="number" id="image-padding-bottom" value="50" aria-label="Image padding bottom" disabled />
+              </div>
+            </details>
+          </section>
+
+          <section class="border-controls" aria-label="Text border options">
+            <label class="inline-checkbox" for="enable-border">
+              <input type="checkbox" id="enable-border" />
+              Add border around text
+            </label>
+
+            <div id="border-options" class="border-options disabled" aria-disabled="true">
+              <div class="border-input-row border-template-row">
+                <div class="border-template-heading">
+                  <span class="border-input-label">Border Template</span>
+                  <span id="border-template-path" class="border-template-path" title="No template selected">…</span>
+                </div>
+                <div class="border-template-actions">
+                  <button type="button" id="border-template-load">Load</button>
+                  <button type="button" id="border-template-save-as">Save as</button>
+                </div>
+              </div>
+              <div class="border-input-row">
+                <label for="border-width">Border width</label>
+                <input type="number" id="border-width" min="0" value="2" />
+              </div>
+              <div class="border-input-row">
+                <label for="border-radius">Border radius
+                <span class="info-tooltip" role="img" aria-label="Cuts off and rounds the corners of your border. Usually best set to zero for image borders." title="Cuts off and rounds the corners of your border. Usually best set to zero for image borders.">ℹ</span>
+                </label>
+                <input type="number" id="border-radius" min="0" value="16" />
+              </div>
+
+              <details class="option-accordion">
+                <summary class="control-title">Border padding</summary>
+                <p class="option-description">Spacing from the border to the content within. Center value controls all sides which are locked. Unlocked sides can be controlled individually.</p>
+                <div class="padding-layout">
+                  <input class="pad-input top" type="number" id="padding-top" value="24" aria-label="Padding top" disabled />
+                  <button type="button" class="lock-button top" id="lock-top" aria-controls="padding-top" aria-pressed="true">🔒</button>
+
+                  <input class="pad-input left" type="number" id="padding-left" value="24" aria-label="Padding left" disabled />
+                  <button type="button" class="lock-button left" id="lock-left" aria-controls="padding-left" aria-pressed="true">🔒</button>
+
+                  <input class="pad-input center" type="number" id="padding-center" value="24" aria-label="Padding center" />
+
+                  <button type="button" class="lock-button right" id="lock-right" aria-controls="padding-right" aria-pressed="true">🔒</button>
+                  <input class="pad-input right" type="number" id="padding-right" value="24" aria-label="Padding right" disabled />
+
+                  <button type="button" class="lock-button bottom" id="lock-bottom" aria-controls="padding-bottom" aria-pressed="true">🔒</button>
+                  <input class="pad-input bottom" type="number" id="padding-bottom" value="24" aria-label="Padding bottom" disabled />
+                </div>
+              </details>
+
+              <details class="option-accordion" aria-label="Border color options">
+                <summary class="control-title">Border color</summary>
+
+                <label class="inline-radio border-color-solid-row" for="border-color-solid">
+                  <input
+                    type="radio"
+                    id="border-color-solid"
+                    name="border-color-mode"
+                    value="solid"
+                    checked
+                  />
+                  Solid Color
+                  <input type="color" id="border-color-input" value="#1f2937" />
+                  <button type="button" id="border-color-window-button" class="color-preview-button" aria-label="Open border color picker" title="Border color"></button>
+                </label>
+
+                <label class="inline-radio" for="border-color-inside-out">
+                  <input
+                    type="radio"
+                    id="border-color-inside-out"
+                    name="border-color-mode"
+                    value="inside-out"
+                  />
+                  Inside out
+                  <span
+                    class="info-tooltip"
+                    role="img"
+                    aria-label="Info: Inside out uses the listed colors in sequence from the center of the border to the outside."
+                    title="Inside out uses the listed colors in sequence from the center of the border to the outside."
+                    >ℹ</span
+                  >
+                </label>
+
+                <label class="inline-radio" for="border-color-images">
+                  <input
+                    type="radio"
+                    id="border-color-images"
+                    name="border-color-mode"
+                    value="images"
+                  />
+                  Images
+                </label>
+
+                <div id="inside-out-colors" class="inside-out-colors hidden" aria-label="Inside out border colors">
+                  <div id="inside-out-color-list" aria-live="polite"></div>
+                  <div class="inside-out-add-row">
+                    <span aria-hidden="true"></span>
+                    <button type="button" id="inside-out-add-color" aria-label="Add inside out color">+</button>
+                  </div>
+                </div>
+
+                <div id="image-border-controls" class="image-border-controls hidden" aria-label="Image border controls">
+                  <p id="image-border-help" class="image-border-help">
+                    Assign images to each border slot. You can reuse one image in multiple slots by flipping or rotating it. Make sure you set border width and radius to ensure things look right.
+                  </p>
+                  <div class="border-input-row">
+                    <label for="image-border-sizing-mode" class="border-input-label-with-tooltip">
+                      Image sizing
+                      <span
+                        class="info-tooltip"
+                        role="img"
+                        aria-label="Info: Auto scales each image to fit its border segment. Fixed uses the image's original pixel size so larger images can overflow and smaller images leave extra space."
+                        title="Auto scales each image to fit its border segment. Fixed uses the image's original pixel size so larger images can overflow and smaller images leave extra space."
+                        >ℹ</span
+                      >
+                    </label>
+                    <select id="image-border-sizing-mode">
+                      <option value="auto" selected>Auto</option>
+                      <option value="fixed">Fixed</option>
+                    </select>
+                  </div>
+                  <div class="border-input-row">
+                    <label for="image-border-repeat-mode" class="border-input-label-with-tooltip">
+                      Side mode
+                      <span
+                        class="info-tooltip"
+                        role="img"
+                        aria-label="Info: Stretch draws one side image across the full edge. Repeat tiles the side image along the edge."
+                        title="Stretch draws one side image across the full edge. Repeat tiles the side image along the edge."
+                        >ℹ</span
+                      >
+                    </label>
+                    <select id="image-border-repeat-mode">
+                      <option value="stretch" selected>Stretch</option>
+                      <option value="repeat">Repeat</option>
+                    </select>
+                  </div>
+                  <div class="image-border-input-groups" aria-describedby="image-border-help">
+                    <fieldset class="image-border-slot-group" aria-label="Corner image slots">
+                      <legend>Corners</legend>
+                      <div class="image-border-slot-header" aria-hidden="true">
+                        <span></span>
+                        <span>Name</span>
+                        <span>Rotate</span>
+                        <span>Flip H</span>
+                        <span>Flip V</span>
+                        <span></span>
+                      </div>
+                      <div class="image-border-slot-row" data-slot="image-border-corner-top-left">
+                        <label for="image-border-corner-top-left">Top Left</label>
+                        <button type="button" id="image-border-corner-top-left" class="piece-select-button" aria-label="Select image for top left piece">No image</button>
+                        <select id="image-border-corner-top-left-rotation" aria-label="Rotation for top left piece">
+                          <option value="0">0°</option>
+                          <option value="90">90°</option>
+                          <option value="180">180°</option>
+                          <option value="270">270°</option>
+                        </select>
+                        <label><input type="checkbox" id="image-border-corner-top-left-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-top-left-flip-y" /></label>
+                        <button type="button" id="image-border-corner-top-left-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
+
+                      <div class="image-border-slot-row" data-slot="image-border-corner-top-right">
+                        <label for="image-border-corner-top-right">Top Right</label>
+                        <button type="button" id="image-border-corner-top-right" class="piece-select-button" aria-label="Select image for top right piece">No image</button>
+                        <select id="image-border-corner-top-right-rotation" aria-label="Rotation for top right piece">
+                          <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>
+                        </select>
+                        <label><input type="checkbox" id="image-border-corner-top-right-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-top-right-flip-y" /></label>
+                        <button type="button" id="image-border-corner-top-right-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
+
+                      <div class="image-border-slot-row" data-slot="image-border-corner-bottom-right">
+                        <label for="image-border-corner-bottom-right">Bottom Right</label>
+                        <button type="button" id="image-border-corner-bottom-right" class="piece-select-button" aria-label="Select image for bottom right piece">No image</button>
+                        <select id="image-border-corner-bottom-right-rotation" aria-label="Rotation for bottom right piece">
+                          <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>
+                        </select>
+                        <label><input type="checkbox" id="image-border-corner-bottom-right-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-bottom-right-flip-y" /></label>
+                        <button type="button" id="image-border-corner-bottom-right-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
+
+                      <div class="image-border-slot-row" data-slot="image-border-corner-bottom-left">
+                        <label for="image-border-corner-bottom-left">Bottom Left</label>
+                        <button type="button" id="image-border-corner-bottom-left" class="piece-select-button" aria-label="Select image for bottom left piece">No image</button>
+                        <select id="image-border-corner-bottom-left-rotation" aria-label="Rotation for bottom left piece">
+                          <option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option>
+                        </select>
+                        <label><input type="checkbox" id="image-border-corner-bottom-left-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-corner-bottom-left-flip-y" /></label>
+                        <button type="button" id="image-border-corner-bottom-left-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
+                    </fieldset>
+
+                    <fieldset class="image-border-slot-group" aria-label="Side image slots">
+                      <legend>Sides</legend>
+                      <div class="image-border-slot-header" aria-hidden="true">
+                        <span></span>
+                        <span>Name</span>
+                        <span>Rotate</span>
+                        <span>Flip H</span>
+                        <span>Flip V</span>
+                        <span></span>
+                      </div>
+                      <div class="image-border-slot-row" data-slot="image-border-side-top">
+                        <label for="image-border-side-top">Top</label>
+                        <button type="button" id="image-border-side-top" class="piece-select-button" aria-label="Select image for top piece">No image</button>
+                        <select id="image-border-side-top-rotation" aria-label="Rotation for top piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-top-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-top-flip-y" /></label>
+                        <button type="button" id="image-border-side-top-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
+
+                      <div class="image-border-slot-row" data-slot="image-border-side-right">
+                        <label for="image-border-side-right">Right</label>
+                        <button type="button" id="image-border-side-right" class="piece-select-button" aria-label="Select image for right piece">No image</button>
+                        <select id="image-border-side-right-rotation" aria-label="Rotation for right piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-right-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-right-flip-y" /></label>
+                        <button type="button" id="image-border-side-right-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
+
+                      <div class="image-border-slot-row" data-slot="image-border-side-bottom">
+                        <label for="image-border-side-bottom">Bottom</label>
+                        <button type="button" id="image-border-side-bottom" class="piece-select-button" aria-label="Select image for bottom piece">No image</button>
+                        <select id="image-border-side-bottom-rotation" aria-label="Rotation for bottom piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-bottom-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-bottom-flip-y" /></label>
+                        <button type="button" id="image-border-side-bottom-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
+
+                      <div class="image-border-slot-row" data-slot="image-border-side-left">
+                        <label for="image-border-side-left">Left</label>
+                        <button type="button" id="image-border-side-left" class="piece-select-button" aria-label="Select image for left piece">No image</button>
+                        <select id="image-border-side-left-rotation" aria-label="Rotation for left piece"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+                        <label><input type="checkbox" id="image-border-side-left-flip-x" /></label>
+                        <label><input type="checkbox" id="image-border-side-left-flip-y" /></label>
+                        <button type="button" id="image-border-side-left-clear" title="Clear piece" aria-label="Clear piece">🗑️</button>
+                      </div>
+                    </fieldset>
+                  </div>
+                </div>
+              </details>
+
+              <details class="option-accordion" aria-label="Border background color options">
+                <summary class="control-title">Background color (Inside border)</summary>
+
+                <label class="inline-radio" for="border-background-color-transparent">
+                  <input
+                    type="radio"
+                    id="border-background-color-transparent"
+                    name="border-background-color-mode"
+                    value="transparent"
+                    checked
+                  />
+                  Transparent
+                </label>
+
+                <label class="inline-radio background-color-solid-row" for="border-background-color-solid">
+                  <input
+                    type="radio"
+                    id="border-background-color-solid"
+                    name="border-background-color-mode"
+                    value="solid"
+                  />
+                  Solid color
+                  <input type="color" id="border-background-color-input" value="#ffffff" disabled />
+                  <button type="button" id="border-background-color-window-button" class="color-preview-button" aria-label="Open border background color picker" title="Border background color"></button>
+                </label>
+              </details>
+
+            </div>
+          </section>
+
+          <div class="save-controls">
+            <label class="sr-only" for="image-name">Image name</label>
+            <input id="image-name" type="text" value="FileName.png" aria-label="Image file name" />
+            <button id="save-image" type="button">
+              <span class="save-icon" aria-hidden="true">💾</span>
+              Save image
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <div id="app-version" class="app-version" aria-label="Application version"></div>
+
+    <div id="settings-overlay" class="settings-overlay hidden" aria-hidden="true">
+      <div class="settings-window" role="dialog" aria-modal="true" aria-labelledby="settings-window-title">
+        <div class="settings-window-header">
+          <h2 id="settings-window-title">Settings</h2>
+          <button type="button" id="close-settings-window" class="close-window-button" aria-label="Close settings window">✕</button>
+        </div>
+        <div class="settings-window-body">
+          <label class="inline-checkbox" for="dark-mode-toggle">
+            <input type="checkbox" id="dark-mode-toggle" />
+            Dark mode
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div id="color-window-overlay" class="color-window-overlay hidden" aria-hidden="true">
+      <div class="color-window" role="dialog" aria-modal="true" aria-labelledby="color-window-title">
+        <div class="color-window-header">
+          <h2 id="color-window-title">Select Color</h2>
+          <button type="button" id="close-color-window" class="close-window-button" aria-label="Close color window">✕</button>
+        </div>
+
+        <div class="color-window-body">
+          <div class="color-left-panel">
+            <span class="panel-label">Basic colors</span>
+            <div class="basic-colors-grid" aria-hidden="true"></div>
+
+            <span class="panel-label custom-label">Custom colors</span>
+            <div class="custom-colors-grid" aria-hidden="true"></div>
+            <button type="button" class="window-secondary-button" id="add-custom-color">Add to Custom Colors</button>
+          </div>
+
+          <div class="color-right-panel">
+            <div class="color-map-row">
+              <div class="color-map" id="color-map" role="slider" aria-label="Saturation and value" tabindex="0">
+                <div class="color-map-handle" id="color-map-handle" aria-hidden="true"></div>
+              </div>
+              <div class="color-slider" id="color-slider" role="slider" aria-label="Hue" tabindex="0">
+                <div class="color-slider-handle" id="color-slider-handle" aria-hidden="true"></div>
+              </div>
+            </div>
+            <div class="color-values-row">
+              <div class="selected-color-preview" id="selected-color-preview"></div>
+              <div class="value-controls">
+                <div class="value-grid">
+                  <label>Hue: <input type="number" id="color-value-hue" min="0" max="360" value="35" /></label>
+                  <label>Red: <input type="number" id="color-value-red" min="0" max="255" value="255" /></label>
+                  <label>Sat: <input type="number" id="color-value-sat" min="0" max="255" value="232" /></label>
+                  <label>Green: <input type="number" id="color-value-green" min="0" max="255" value="158" /></label>
+                  <label>Val: <input type="number" id="color-value-val" min="0" max="255" value="255" /></label>
+                  <label>Blue: <input type="number" id="color-value-blue" min="0" max="255" value="23" /></label>
+                  <label>Alpha: <input type="number" id="color-value-alpha" min="0" max="255" value="255" /></label>
+                </div>
+                <div class="html-value-row">
+                  <button type="button" id="pick-screen-color" class="window-secondary-button pick-screen-color-button" aria-label="Pick Screen Color">
+                    <img src="assets/icons/eye-dropper.png" alt="Pick Screen Color" class="pick-screen-color-icon" />
+                  </button>
+                  <label class="html-value">HTML: <input type="text" id="color-value-hex" value="#ff9e17" /></label>
+                </div>
+              </div>
+            </div>
+            <div class="dialog-action-row">
+              <button type="button" class="window-primary-button" id="color-window-ok">OK</button>
+              <button type="button" class="window-secondary-button" id="color-window-cancel">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="manage-images-overlay" class="color-window-overlay hidden" aria-hidden="true">
+      <div class="color-window manage-images-window" role="dialog" aria-modal="true" aria-labelledby="manage-images-title">
+        <div class="color-window-header">
+          <h2 id="manage-images-title">Manage Images</h2>
+          <button type="button" id="close-manage-images-window" class="close-window-button" aria-label="Close manage images window">✕</button>
+        </div>
+        <div class="color-window-body manage-images-body">
+          <input type="file" id="manage-images-input" accept="image/*" multiple class="manage-images-hidden-input" />
+          <input type="file" id="manage-images-refresh-input" accept="image/*" class="manage-images-hidden-input" />
+          <p class="manage-images-description">Import, edit and organize images here for use in your creations. Please note that if you modify an image on your hard drive you will need to use the 'Refresh from Computer' button to see the change apply here.</p>
+          <div class="manage-images-toolbar" role="toolbar" aria-label="Manage images toolbar">
+            <button type="button" id="manage-images-import">🖼️ Import Image</button>
+            <button type="button" id="manage-images-create-folder">📁 Create Folder</button>
+            <button type="button" id="manage-images-refresh">🗘 Refresh from Computer</button>
+            <button type="button" id="manage-images-rename">📝 Rename</button>
+            <button type="button" id="manage-images-delete" aria-label="Delete selected">🗑️</button>
+          </div>
+          <div class="manage-images-content">
+            <div id="manage-images-tree" class="manage-images-tree" aria-label="Images and folders tree"></div>
+          </div>
+          <div id="manage-images-context-menu" class="manage-images-context-menu hidden" role="menu" aria-label="Manage images context menu"></div>
+          <div class="dialog-action-row">
+            <button type="button" class="window-primary-button" id="manage-images-ok">OK</button>
+            <button type="button" class="window-secondary-button" id="manage-images-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="load-border-template-overlay" class="color-window-overlay hidden" aria-hidden="true">
+      <div class="color-window manage-images-window" role="dialog" aria-modal="true" aria-labelledby="load-border-template-title">
+        <div class="color-window-header">
+          <h2 id="load-border-template-title">Load Border Template</h2>
+          <button type="button" id="close-load-border-template-window" class="close-window-button" aria-label="Close load border template window">✕</button>
+        </div>
+        <div class="color-window-body manage-images-body">
+          <div class="manage-images-toolbar" role="toolbar" aria-label="Load border template toolbar">
+            <button type="button" id="load-border-template-create-folder">📁 Create Folder</button>
+            <button type="button" id="load-border-template-rename">📝 Rename</button>
+            <button type="button" id="load-border-template-delete" aria-label="Delete selected">🗑️</button>
+          </div>
+          <div class="manage-images-content">
+            <div id="load-border-template-tree" class="manage-images-tree" aria-label="Border template folders and templates"></div>
+          </div>
+          <div id="load-border-template-context-menu" class="manage-images-context-menu hidden" role="menu" aria-label="Load border template context menu"></div>
+          <div class="dialog-action-row">
+            <button type="button" class="window-primary-button" id="load-border-template-load">Load</button>
+            <button type="button" class="window-secondary-button" id="load-border-template-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="save-border-template-overlay" class="color-window-overlay hidden" aria-hidden="true">
+      <div class="color-window manage-images-window" role="dialog" aria-modal="true" aria-labelledby="save-border-template-title">
+        <div class="color-window-header">
+          <h2 id="save-border-template-title">Save Border Template</h2>
+          <button type="button" id="close-save-border-template-window" class="close-window-button" aria-label="Close save border template window">✕</button>
+        </div>
+        <div class="color-window-body manage-images-body">
+          <div class="manage-images-toolbar" role="toolbar" aria-label="Save border template toolbar">
+            <button type="button" id="save-border-template-create-template">📄 Create New Template</button>
+            <button type="button" id="save-border-template-create-folder">📁 Create Folder</button>
+            <button type="button" id="save-border-template-rename">📝 Rename</button>
+            <button type="button" id="save-border-template-delete" aria-label="Delete selected">🗑️</button>
+          </div>
+          <div class="manage-images-content">
+            <div id="save-border-template-tree" class="manage-images-tree" aria-label="Border template folders and templates"></div>
+          </div>
+          <div id="save-border-template-context-menu" class="manage-images-context-menu hidden" role="menu" aria-label="Save border template context menu"></div>
+          <div class="dialog-action-row">
+            <button type="button" class="window-primary-button" id="save-border-template-save">Save</button>
+            <button type="button" class="window-secondary-button" id="save-border-template-cancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>

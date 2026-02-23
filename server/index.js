@@ -15,7 +15,7 @@ fastify.register(fastifyStatic, {
 
 fastify.get('/health', async () => ({ status: 'ok' }));
 fastify.get('/favicon.ico', async (_request, reply) => reply.code(204).send());
-
+fastify.get('/TextBoxGenerator', async (_request, reply) => reply.redirect('/TextBoxGenerator/'));
 
 const start = async () => {
   try {
