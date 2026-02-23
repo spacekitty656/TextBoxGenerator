@@ -321,6 +321,14 @@ body.dark-mode .border-options {
   flex-wrap: wrap;
 }
 
+.width-font-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+
 .manage-fonts-button {
   display: inline-flex;
   align-items: center;
@@ -332,6 +340,7 @@ body.dark-mode .border-options {
   padding: 0.36rem 0.55rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .manage-fonts-button img {
@@ -346,9 +355,25 @@ body.dark-mode .border-options {
   font-weight: 600;
 }
 
+.compact-input {
+  white-space: nowrap;
+}
+
 .compact-input input {
-  width: 7rem;
+  width: clamp(4.5rem, 14vw, 7rem);
   padding: 0.35rem 0.5rem;
+}
+
+
+@media (max-width: 560px) {
+  .width-font-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .compact-input input {
+    width: 4.8rem;
+  }
 }
 
 .inline-radio {
