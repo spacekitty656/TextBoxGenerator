@@ -3,12 +3,21 @@ import {
   calculateCanvasDimensions as calculateCanvasDimensionsFromRenderer,
 } from './canvasRenderer.js';
 
-const FONT_MAP = {
+export const FONT_MAP = {
   sansserif: 'Arial, Helvetica, sans-serif',
   serif: 'Georgia, "Times New Roman", serif',
   monospace: '"Courier New", Courier, monospace',
   pressstart2p: '"Press Start 2P", "Courier New", monospace',
 };
+
+
+export function registerCanvasFontFamily(fontValue, fontFamily) {
+  if (!fontValue || !fontFamily) {
+    return;
+  }
+
+  FONT_MAP[fontValue] = fontFamily;
+}
 
 const SIZE_MAP = {
   small: 14,
