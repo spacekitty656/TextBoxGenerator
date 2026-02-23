@@ -315,10 +315,20 @@ body.dark-mode .border-options {
 
 
 .wrap-text-controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.9rem;
-  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.wrap-text-controls .inline-checkbox,
+.wrap-text-controls .manage-fonts-button {
+  white-space: nowrap;
+}
+
+.wrap-text-controls .inline-input {
+  min-width: 0;
+  justify-content: flex-start;
 }
 
 .manage-fonts-button {
@@ -347,7 +357,8 @@ body.dark-mode .border-options {
 }
 
 .compact-input input {
-  width: 7rem;
+  width: min(7rem, 100%);
+  min-width: 0;
   padding: 0.35rem 0.5rem;
 }
 
