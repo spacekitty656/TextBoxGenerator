@@ -6,11 +6,19 @@ const fastifyStatic = require('@fastify/static');
 const projectRoot = path.resolve(__dirname, '..');
 const publicDir = path.join(projectRoot, 'public');
 const staticRoot = existsSync(publicDir) ? publicDir : projectRoot;
+const textBoxAppRoot = path.join(staticRoot, 'apps', 'TextBoxGenerator');
 
 fastify.register(fastifyStatic, {
   root: staticRoot,
   prefix: '/',
   wildcard: true,
+});
+
+fastify.register(fastifyStatic, {
+  root: textBoxAppRoot,
+  prefix: '/TextBoxGenerator/',
+  wildcard: true,
+  decorateReply: false,
 });
 
 fastify.get('/health', async () => ({ status: 'ok' }));
