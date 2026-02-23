@@ -317,16 +317,23 @@ body.dark-mode .border-options {
 .wrap-text-controls {
   display: flex;
   align-items: center;
-  gap: 0.9rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .width-font-controls {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0.6rem;
+  flex: 1 1 auto;
   min-width: 0;
   flex-wrap: nowrap;
+}
+
+.wrap-text-controls > .inline-checkbox {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .manage-fonts-button {
@@ -357,22 +364,19 @@ body.dark-mode .border-options {
 
 .compact-input {
   white-space: nowrap;
+  min-width: 0;
 }
 
 .compact-input input {
-  width: clamp(4.5rem, 14vw, 7rem);
+  width: clamp(4rem, 10vw, 6.5rem);
+  min-width: 4rem;
   padding: 0.35rem 0.5rem;
 }
 
 
 @media (max-width: 560px) {
-  .width-font-controls {
-    width: 100%;
-    justify-content: space-between;
-  }
-
   .compact-input input {
-    width: 4.8rem;
+    width: 4rem;
   }
 }
 
