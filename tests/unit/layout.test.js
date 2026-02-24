@@ -212,8 +212,8 @@ describe('calculateCanvasDimensions', () => {
       },
     );
 
-    expect(dimensions.width).toBe(178);
-    expect(dimensions.height).toBe(72);
+    expect(dimensions.width).toBe(186);
+    expect(dimensions.height).toBe(68);
   });
 
   it('still expands to rendered text width when border is disabled', () => {

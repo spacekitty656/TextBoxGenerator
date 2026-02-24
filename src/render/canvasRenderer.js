@@ -36,6 +36,35 @@ function roundLengthToMode(length, tileLength, mode) {
   return length;
 }
 
+function hasImageDimensions(slot) {
+  return Boolean(slot?.image && ((slot.image.width || slot.image.naturalWidth || 0) > 0) && ((slot.image.height || slot.image.naturalHeight || 0) > 0));
+}
+
+function getImageDimensions(slot) {
+  if (!hasImageDimensions(slot)) {
+    return { width: 0, height: 0 };
+  }
+
+  return {
+    width: slot.image.width || slot.image.naturalWidth || 0,
+    height: slot.image.height || slot.image.naturalHeight || 0,
+  };
+}
+
+function resolveCornerDrawSize(borderConfig, slot) {
+  const defaultCornerSize = Math.max(1, borderConfig.width);
+  const sourceSize = getImageDimensions(slot);
+
+  if (!hasImageDimensions(slot) || borderConfig.imageBorder?.sizingStrategy === 'fixed') {
+    return { width: defaultCornerSize, height: defaultCornerSize };
+  }
+
+  const targetHeight = Math.max(1, borderConfig.width);
+  const safeSourceHeight = Math.max(1, sourceSize.height || targetHeight);
+  const scaledWidth = Math.max(1, Math.round((sourceSize.width || targetHeight) * (targetHeight / safeSourceHeight)));
+  return { width: scaledWidth, height: targetHeight };
+}
+
 function resolveRoundedPadding(borderConfig, contentWidth, contentHeight) {
   const basePadding = borderConfig.padding;
   const imageBorder = borderConfig.imageBorder || {};
@@ -54,15 +83,23 @@ function resolveRoundedPadding(borderConfig, contentWidth, contentHeight) {
   const leftHeight = imageBorder?.sides?.left?.image?.height || imageBorder?.sides?.left?.image?.naturalHeight || 0;
   const rightHeight = imageBorder?.sides?.right?.image?.height || imageBorder?.sides?.right?.image?.naturalHeight || 0;
 
+  const topLeftSize = resolveCornerDrawSize(borderConfig, imageBorder?.corners?.topLeft);
+  const topRightSize = resolveCornerDrawSize(borderConfig, imageBorder?.corners?.topRight);
+  const bottomLeftSize = resolveCornerDrawSize(borderConfig, imageBorder?.corners?.bottomLeft);
+
   if (horizontalMode !== 'none' && topWidth > 0 && topWidth === bottomWidth) {
     const borderRectWidth = contentWidth + basePadding.left + basePadding.right + borderConfig.width;
-    const roundedWidth = roundLengthToMode(borderRectWidth, topWidth, horizontalMode);
+    const sideLength = Math.max(0, borderRectWidth - topLeftSize.width - topRightSize.width);
+    const roundedSideLength = roundLengthToMode(sideLength, topWidth, horizontalMode);
+    const roundedWidth = roundedSideLength + topLeftSize.width + topRightSize.width;
     roundedPadding.right = Math.max(0, basePadding.right + (roundedWidth - borderRectWidth));
   }
 
   if (verticalMode !== 'none' && leftHeight > 0 && leftHeight === rightHeight) {
     const borderRectHeight = contentHeight + basePadding.top + basePadding.bottom + borderConfig.width;
-    const roundedHeight = roundLengthToMode(borderRectHeight, leftHeight, verticalMode);
+    const sideLength = Math.max(0, borderRectHeight - topLeftSize.height - bottomLeftSize.height);
+    const roundedSideLength = roundLengthToMode(sideLength, leftHeight, verticalMode);
+    const roundedHeight = roundedSideLength + topLeftSize.height + bottomLeftSize.height;
     roundedPadding.bottom = Math.max(0, basePadding.bottom + (roundedHeight - borderRectHeight));
   }
 
