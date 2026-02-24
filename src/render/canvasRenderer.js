@@ -19,6 +19,56 @@ export function calculateCanvasDimensions(laidOutLines, borderConfig, canvasSize
   );
 }
 
+
+function roundLengthToMode(length, tileLength, mode) {
+  if (mode === 'up') {
+    return Math.ceil(length / tileLength) * tileLength;
+  }
+
+  if (mode === 'down') {
+    return Math.floor(length / tileLength) * tileLength;
+  }
+
+  if (mode === 'nearest') {
+    return Math.round(length / tileLength) * tileLength;
+  }
+
+  return length;
+}
+
+function resolveRoundedPadding(borderConfig, contentWidth, contentHeight) {
+  const basePadding = borderConfig.padding;
+  const imageBorder = borderConfig.imageBorder || {};
+  const sideMode = imageBorder.sideMode;
+  const colorMode = borderConfig.colorMode;
+  const horizontalMode = borderConfig.paddingRounding?.horizontal || 'none';
+  const verticalMode = borderConfig.paddingRounding?.vertical || 'none';
+
+  if (colorMode !== 'images' || sideMode !== 'repeat') {
+    return basePadding;
+  }
+
+  const roundedPadding = { ...basePadding };
+  const topWidth = imageBorder?.sides?.top?.image?.width || imageBorder?.sides?.top?.image?.naturalWidth || 0;
+  const bottomWidth = imageBorder?.sides?.bottom?.image?.width || imageBorder?.sides?.bottom?.image?.naturalWidth || 0;
+  const leftHeight = imageBorder?.sides?.left?.image?.height || imageBorder?.sides?.left?.image?.naturalHeight || 0;
+  const rightHeight = imageBorder?.sides?.right?.image?.height || imageBorder?.sides?.right?.image?.naturalHeight || 0;
+
+  if (horizontalMode !== 'none' && topWidth > 0 && topWidth === bottomWidth) {
+    const borderRectWidth = contentWidth + basePadding.left + basePadding.right + borderConfig.width;
+    const roundedWidth = roundLengthToMode(borderRectWidth, topWidth, horizontalMode);
+    roundedPadding.right = Math.max(0, basePadding.right + (roundedWidth - borderRectWidth));
+  }
+
+  if (verticalMode !== 'none' && leftHeight > 0 && leftHeight === rightHeight) {
+    const borderRectHeight = contentHeight + basePadding.top + basePadding.bottom + borderConfig.width;
+    const roundedHeight = roundLengthToMode(borderRectHeight, leftHeight, verticalMode);
+    roundedPadding.bottom = Math.max(0, basePadding.bottom + (roundedHeight - borderRectHeight));
+  }
+
+  return roundedPadding;
+}
+
 export function renderDocumentToCanvas({
   context,
   canvas,
@@ -41,10 +91,10 @@ export function renderDocumentToCanvas({
   context.textBaseline = 'top';
 
   const borderWidth = borderConfig.enabled ? borderConfig.width : 0;
-  const textPadding = borderConfig.enabled ? borderConfig.padding : { top: 0, right: 0, bottom: 0, left: 0 };
+  const baseTextPadding = borderConfig.enabled ? borderConfig.padding : { top: 0, right: 0, bottom: 0, left: 0 };
 
-  const textStartX = canvasSizePaddingConfig.left + borderWidth + textPadding.left;
-  const textStartY = canvasSizePaddingConfig.top + borderWidth + textPadding.top;
+  const textStartX = canvasSizePaddingConfig.left + borderWidth + baseTextPadding.left;
+  const textStartY = canvasSizePaddingConfig.top + borderWidth + baseTextPadding.top;
 
   const alignmentWidth = getAlignmentWidth(laidOutLines, maxContentWidth);
   const lineStartPositions = laidOutLines.map((line) => getAlignedStartX(line.align, textStartX, alignmentWidth, line.width));
@@ -61,10 +111,13 @@ export function renderDocumentToCanvas({
   let borderRectHeight = 0;
 
   if (borderConfig.enabled) {
+    const contentWidth = contentMaxX - contentMinX;
+    const contentHeight = verticalBounds.maxY - verticalBounds.minY;
+    const textPadding = resolveRoundedPadding(borderConfig, contentWidth, contentHeight);
     borderX = contentMinX - textPadding.left - borderWidth / 2;
     borderY = verticalBounds.minY - textPadding.top - borderWidth / 2;
-    borderRectWidth = contentMaxX - contentMinX + textPadding.left + textPadding.right + borderWidth;
-    borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderWidth;
+    borderRectWidth = contentWidth + textPadding.left + textPadding.right + borderWidth;
+    borderRectHeight = contentHeight + textPadding.top + textPadding.bottom + borderWidth;
 
     if (borderConfig.backgroundMode === 'solid') {
       const fillInset = borderWidth / 2;

@@ -12,6 +12,7 @@ export function getBorderConfig(inputs) {
     lockState,
     sidePaddingValues,
     imageBorder,
+    paddingRounding,
     clampToPositiveNumber,
     parsePaddingNumber,
   } = inputs;
@@ -33,6 +34,7 @@ export function getBorderConfig(inputs) {
     color,
     insideOutColors: insideOutColorValues,
     imageBorder,
+    paddingRounding,
     backgroundMode,
     backgroundColor,
     padding,

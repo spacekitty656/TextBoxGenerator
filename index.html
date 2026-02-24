@@ -180,6 +180,28 @@
                   <button type="button" class="lock-button bottom" id="lock-bottom" aria-controls="padding-bottom" aria-pressed="true">🔒</button>
                   <input class="pad-input bottom" type="number" id="padding-bottom" value="24" aria-label="Padding bottom" disabled />
                 </div>
+                <div class="border-padding-rounding">
+                  <h4>Border padding rounding</h4>
+                  <p class="option-description">When using image borders in repeat mode, these options can round rendered border padding so repeated side images fill evenly. This only affects the final rendered image and does not change the padding textbox values.</p>
+                  <div class="border-input-row border-padding-rounding-row">
+                    <label for="border-padding-round-horizontal">Round horizontal padding</label>
+                    <select id="border-padding-round-horizontal" disabled>
+                      <option value="none" selected>None</option>
+                      <option value="nearest">Nearest</option>
+                      <option value="up">Up</option>
+                      <option value="down">Down</option>
+                    </select>
+                  </div>
+                  <div class="border-input-row border-padding-rounding-row">
+                    <label for="border-padding-round-vertical">Round vertical padding</label>
+                    <select id="border-padding-round-vertical" disabled>
+                      <option value="none" selected>None</option>
+                      <option value="nearest">Nearest</option>
+                      <option value="up">Up</option>
+                      <option value="down">Down</option>
+                    </select>
+                  </div>
+                </div>
               </details>
 
               <details class="option-accordion" aria-label="Border color options">

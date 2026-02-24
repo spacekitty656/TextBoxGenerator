@@ -78,7 +78,7 @@ const settingsButton = settingsView.window.openButton;
 const settingsOverlay = settingsView.window.overlay;
 const closeSettingsWindowButton = settingsView.window.closeButton;
 const darkModeToggle = settingsView.preferences.darkModeToggle;
-const APP_VERSION = '1.1.9';
+const APP_VERSION = '1.1.10';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 const SETTINGS_STORAGE_KEY = DEFAULT_SETTINGS_STORAGE_KEY;
 
@@ -105,6 +105,8 @@ const insideOutAddColorButton = borderControlsView.insideOut.addColorButton;
 const imageBorderControls = borderControlsView.imageBorder.controls;
 const imageBorderSizingModeInput = borderControlsView.imageBorder.sizingModeInput;
 const imageBorderRepeatModeInput = borderControlsView.imageBorder.repeatModeInput;
+const borderPaddingRoundHorizontalInput = borderControlsView.imageBorder.paddingRoundHorizontalInput;
+const borderPaddingRoundVerticalInput = borderControlsView.imageBorder.paddingRoundVerticalInput;
 const imageBorderCornerButtons = borderControlsView.imageBorder.cornerButtons;
 const imageBorderSideButtons = borderControlsView.imageBorder.sideButtons;
 const imageBorderTransformInputs = borderControlsView.imageBorder.transformInputs;
@@ -982,11 +984,13 @@ const manageImagesWindowController = createManageImagesWindowController({
   onSelectionApplied: ({ slotType, slotName }, imageId) => {
     assignManagedImageToSlot(slotType, slotName, imageId);
     borderState.updatePieceButtonLabel(slotType, slotName);
+    borderController.updatePaddingRoundingInputsState();
     borderTemplateFeature.markDirty();
     drawEditorToCanvas();
   },
   onStoreChanged: () => {
     borderState.updateAllPieceButtonLabels();
+    borderController.updatePaddingRoundingInputsState();
     persistImageLibrary();
   },
   onImagesDeleted: borderState.clearDeletedImageSlots,
@@ -1172,6 +1176,8 @@ const borderController = createBorderUiController({
     borderColorInput,
     imageBorderSizingModeInput,
     imageBorderRepeatModeInput,
+    borderPaddingRoundHorizontalInput,
+    borderPaddingRoundVerticalInput,
     backgroundColorInput,
     borderBackgroundColorTransparentRadio,
     borderBackgroundColorSolidRadio,
@@ -1220,6 +1226,7 @@ const borderController = createBorderUiController({
       const slotState = getImageBorderSlotState(slotType, slotName);
       clearImageBorderSlot(slotState);
       borderState.updatePieceButtonLabel(slotType, slotName);
+      borderController.updatePaddingRoundingInputsState();
     },
     updateCanvasBackgroundControlsState,
     syncColorPreviewButtons,
@@ -1254,6 +1261,8 @@ const borderTemplateAdapterService = createBorderTemplateAdapterService({
     sidePaddingControls,
     imageBorderSizingModeInput,
     imageBorderRepeatModeInput,
+    borderPaddingRoundHorizontalInput,
+    borderPaddingRoundVerticalInput,
     imageBorderTransformInputs,
   },
   state: {

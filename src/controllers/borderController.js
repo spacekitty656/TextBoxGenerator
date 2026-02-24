@@ -30,6 +30,8 @@ export function createBorderController({ elements, actions, callbacks }) {
       borderColorInput,
       imageBorderSizingModeInput,
       imageBorderRepeatModeInput,
+      borderPaddingRoundHorizontalInput,
+      borderPaddingRoundVerticalInput,
       backgroundColorInput,
       borderBackgroundColorTransparentRadio,
       borderBackgroundColorSolidRadio,
@@ -176,7 +178,12 @@ export function createBorderController({ elements, actions, callbacks }) {
       onRenderRequested?.();
     });
 
-    [imageBorderSizingModeInput, imageBorderRepeatModeInput].forEach((input) => {
+    [
+      imageBorderSizingModeInput,
+      imageBorderRepeatModeInput,
+      borderPaddingRoundHorizontalInput,
+      borderPaddingRoundVerticalInput,
+    ].forEach((input) => {
       events.on(input, 'change', () => {
         onStateChanged?.();
         onRenderRequested?.();

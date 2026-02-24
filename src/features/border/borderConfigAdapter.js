@@ -13,6 +13,8 @@ export function createBorderConfigAdapter({ elements, state, helpers }) {
       sidePaddingControls,
       imageBorderSizingModeInput,
       imageBorderRepeatModeInput,
+      borderPaddingRoundHorizontalInput,
+      borderPaddingRoundVerticalInput,
     } = elements;
 
     const {
@@ -51,6 +53,10 @@ export function createBorderConfigAdapter({ elements, state, helpers }) {
         sides: resolveRenderableImageBorderGroup(imageBorderState.sides, getManagedImageById),
         sizingStrategy: imageBorderSizingModeInput?.value || 'auto',
         sideMode: imageBorderRepeatModeInput?.value || 'stretch',
+      },
+      paddingRounding: {
+        horizontal: borderPaddingRoundHorizontalInput?.value || 'none',
+        vertical: borderPaddingRoundVerticalInput?.value || 'none',
       },
       clampToPositiveNumber,
       parsePaddingNumber,

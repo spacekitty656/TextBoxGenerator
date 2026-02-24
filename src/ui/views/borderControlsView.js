@@ -43,6 +43,8 @@ export function createBorderControlsView(documentRef) {
       controls: getRequiredElementById(documentRef, 'image-border-controls'),
       sizingModeInput: getRequiredElementById(documentRef, 'image-border-sizing-mode'),
       repeatModeInput: getRequiredElementById(documentRef, 'image-border-repeat-mode'),
+      paddingRoundHorizontalInput: getRequiredElementById(documentRef, 'border-padding-round-horizontal'),
+      paddingRoundVerticalInput: getRequiredElementById(documentRef, 'border-padding-round-vertical'),
       cornerButtons: {
         topLeft: getRequiredElementById(documentRef, 'image-border-corner-top-left'),
         topRight: getRequiredElementById(documentRef, 'image-border-corner-top-right'),

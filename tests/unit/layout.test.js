@@ -185,6 +185,37 @@ describe('calculateCanvasDimensions', () => {
     expect(dimensions.width).toBe(448);
   });
 
+
+  it('rounds right and bottom rendered border padding for repeat image borders', () => {
+    const dimensions = calculateCanvasDimensions(
+      [{ align: 'left', tokens: [], width: 103, lineHeight: 20 }],
+      {
+        enabled: true,
+        width: 4,
+        colorMode: 'images',
+        padding: { top: 10, right: 20, bottom: 10, left: 20 },
+        paddingRounding: { horizontal: 'nearest', vertical: 'down' },
+        imageBorder: {
+          sideMode: 'repeat',
+          sides: {
+            top: { image: { width: 16, height: 6 } },
+            bottom: { image: { width: 16, height: 6 } },
+            left: { image: { width: 6, height: 12 } },
+            right: { image: { width: 6, height: 12 } },
+          },
+        },
+      },
+      { top: 10, right: 20, bottom: 10, left: 10 },
+      103,
+      {
+        measureRenderedVerticalBounds: () => ({ minY: 24, maxY: 51 }),
+      },
+    );
+
+    expect(dimensions.width).toBe(178);
+    expect(dimensions.height).toBe(72);
+  });
+
   it('still expands to rendered text width when border is disabled', () => {
     const dimensions = calculateCanvasDimensions(
       [{ align: 'center', tokens: [], width: 260, lineHeight: 20 }],

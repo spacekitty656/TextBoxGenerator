@@ -574,6 +574,25 @@ body.dark-mode .lock-button {
   grid-area: lockBottom;
 }
 
+
+.border-padding-rounding {
+  margin-top: 0.6rem;
+}
+
+.border-padding-rounding h4 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.border-padding-rounding .option-description {
+  margin-top: 0.25rem;
+}
+
+.border-padding-rounding-row {
+  margin-top: 0.35rem;
+}
+
 .border-input-row {
   display: flex;
   align-items: center;
