@@ -24,6 +24,10 @@ const DEFAULT_BORDER_TEMPLATE_DATA = {
     bottom: '24',
     left: '24',
   },
+  paddingRounding: {
+    horizontal: 'none',
+    vertical: 'none',
+  },
   imageBorder: {
     corners: {
       topLeft: { imageId: null, rotation: 0, flipX: false, flipY: false },
