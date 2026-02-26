@@ -36,6 +36,8 @@ export function createBorderTemplateAdapterService({
       sidePaddingControls,
       imageBorderSizingModeInput,
       imageBorderRepeatModeInput,
+      borderPaddingRoundHorizontalInput,
+      borderPaddingRoundVerticalInput,
     } = elements;
 
     return {
@@ -60,6 +62,10 @@ export function createBorderTemplateAdapterService({
         right: sidePaddingControls.right.input.value,
         bottom: sidePaddingControls.bottom.input.value,
         left: sidePaddingControls.left.input.value,
+      },
+      paddingRounding: {
+        horizontal: borderPaddingRoundHorizontalInput?.value || 'none',
+        vertical: borderPaddingRoundVerticalInput?.value || 'none',
       },
       imageBorder: {
         corners: cloneImageBorderGroup(state.imageBorderState.corners),
@@ -96,6 +102,8 @@ export function createBorderTemplateAdapterService({
       sidePaddingControls,
       imageBorderSizingModeInput,
       imageBorderRepeatModeInput,
+      borderPaddingRoundHorizontalInput,
+      borderPaddingRoundVerticalInput,
       imageBorderTransformInputs,
     } = elements;
 
@@ -160,6 +168,14 @@ export function createBorderTemplateAdapterService({
 
     if (imageBorderRepeatModeInput) {
       imageBorderRepeatModeInput.value = normalizedTemplateData?.imageBorder?.sideMode || imageBorderRepeatModeInput.value;
+    }
+
+    if (borderPaddingRoundHorizontalInput) {
+      borderPaddingRoundHorizontalInput.value = normalizedTemplateData?.paddingRounding?.horizontal || 'none';
+    }
+
+    if (borderPaddingRoundVerticalInput) {
+      borderPaddingRoundVerticalInput.value = normalizedTemplateData?.paddingRounding?.vertical || 'none';
     }
 
     updateBorderControlsState();

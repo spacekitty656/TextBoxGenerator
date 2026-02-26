@@ -18,6 +18,61 @@ export function createBorderUiController({ elements, borderState, state, actions
     return 'solid';
   }
 
+  function getManagedImageSize(imageId) {
+    const imageRecord = helpers.getManagedImageById(imageId);
+    if (!imageRecord?.image) {
+      return { width: 0, height: 0 };
+    }
+
+    return {
+      width: imageRecord.image.width || imageRecord.image.naturalWidth || 0,
+      height: imageRecord.image.height || imageRecord.image.naturalHeight || 0,
+    };
+  }
+
+  function canEnablePaddingRounding() {
+    const isBorderEnabled = Boolean(elements.borderToggle?.checked);
+    const inImageMode = resolveBorderColorMode() === 'images';
+    const inRepeatMode = elements.imageBorderRepeatModeInput?.value === 'repeat';
+
+    if (!isBorderEnabled || !inImageMode || !inRepeatMode) {
+      return { horizontal: false, vertical: false };
+    }
+
+    const topSize = getManagedImageSize(state.imageBorderState?.sides?.top?.imageId);
+    const bottomSize = getManagedImageSize(state.imageBorderState?.sides?.bottom?.imageId);
+    const leftSize = getManagedImageSize(state.imageBorderState?.sides?.left?.imageId);
+    const rightSize = getManagedImageSize(state.imageBorderState?.sides?.right?.imageId);
+
+    return {
+      horizontal: topSize.width > 0 && topSize.width === bottomSize.width,
+      vertical: leftSize.height > 0 && leftSize.height === rightSize.height,
+    };
+  }
+
+  function updatePaddingRoundingInputsState() {
+    const {
+      borderPaddingRoundHorizontalInput,
+      borderPaddingRoundVerticalInput,
+    } = elements;
+
+    const enabledState = canEnablePaddingRounding();
+
+    if (borderPaddingRoundHorizontalInput) {
+      borderPaddingRoundHorizontalInput.disabled = !enabledState.horizontal;
+      if (borderPaddingRoundHorizontalInput.disabled) {
+        borderPaddingRoundHorizontalInput.value = 'none';
+      }
+    }
+
+    if (borderPaddingRoundVerticalInput) {
+      borderPaddingRoundVerticalInput.disabled = !enabledState.vertical;
+      if (borderPaddingRoundVerticalInput.disabled) {
+        borderPaddingRoundVerticalInput.value = 'none';
+      }
+    }
+  }
+
   function updateImageBorderSlotInputsState(isImageModeActive) {
     const {
       imageBorderCornerButtons,
@@ -78,6 +133,7 @@ export function createBorderUiController({ elements, borderState, state, actions
       imageBorderRepeatModeInput.disabled = !showImageControls;
     }
 
+    updatePaddingRoundingInputsState();
     updateImageBorderSlotInputsState(showImageControls);
     borderState.updateInsideOutColorRowsState();
   }
@@ -161,5 +217,6 @@ export function createBorderUiController({ elements, borderState, state, actions
     updateImageBorderSlotInputsState,
     updateBorderColorModeUI,
     updateBorderControlsState,
+    updatePaddingRoundingInputsState,
   };
 }

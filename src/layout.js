@@ -90,6 +90,93 @@ export function getAlignmentWidth(laidOutLines, maxContentWidth) {
   return Math.max(maxContentWidth, widestLine);
 }
 
+
+function roundLengthToMode(length, tileLength, mode) {
+  if (mode === 'up') {
+    return Math.ceil(length / tileLength) * tileLength;
+  }
+
+  if (mode === 'down') {
+    return Math.floor(length / tileLength) * tileLength;
+  }
+
+  if (mode === 'nearest') {
+    return Math.round(length / tileLength) * tileLength;
+  }
+
+  return length;
+}
+
+function hasImageDimensions(slot) {
+  return Boolean(slot?.image && ((slot.image.width || slot.image.naturalWidth || 0) > 0) && ((slot.image.height || slot.image.naturalHeight || 0) > 0));
+}
+
+function getImageDimensions(slot) {
+  if (!hasImageDimensions(slot)) {
+    return { width: 0, height: 0 };
+  }
+
+  return {
+    width: slot.image.width || slot.image.naturalWidth || 0,
+    height: slot.image.height || slot.image.naturalHeight || 0,
+  };
+}
+
+function resolveCornerDrawSize(borderConfig, slot) {
+  const defaultCornerSize = Math.max(1, borderConfig.width);
+  const sourceSize = getImageDimensions(slot);
+
+  if (!hasImageDimensions(slot) || borderConfig.imageBorder?.sizingStrategy === 'fixed') {
+    return { width: defaultCornerSize, height: defaultCornerSize };
+  }
+
+  const targetHeight = Math.max(1, borderConfig.width);
+  const safeSourceHeight = Math.max(1, sourceSize.height || targetHeight);
+  const scaledWidth = Math.max(1, Math.round((sourceSize.width || targetHeight) * (targetHeight / safeSourceHeight)));
+  return { width: scaledWidth, height: targetHeight };
+}
+
+function resolveRoundedPadding(borderConfig, contentWidth, contentHeight) {
+  const basePadding = borderConfig.padding;
+  const imageBorder = borderConfig.imageBorder || {};
+  const sideMode = imageBorder.sideMode;
+  const colorMode = borderConfig.colorMode;
+  const horizontalMode = borderConfig.paddingRounding?.horizontal || 'none';
+  const verticalMode = borderConfig.paddingRounding?.vertical || 'none';
+
+  if (colorMode !== 'images' || sideMode !== 'repeat') {
+    return basePadding;
+  }
+
+  const roundedPadding = { ...basePadding };
+  const topWidth = imageBorder?.sides?.top?.image?.width || imageBorder?.sides?.top?.image?.naturalWidth || 0;
+  const bottomWidth = imageBorder?.sides?.bottom?.image?.width || imageBorder?.sides?.bottom?.image?.naturalWidth || 0;
+  const leftHeight = imageBorder?.sides?.left?.image?.height || imageBorder?.sides?.left?.image?.naturalHeight || 0;
+  const rightHeight = imageBorder?.sides?.right?.image?.height || imageBorder?.sides?.right?.image?.naturalHeight || 0;
+
+  const topLeftSize = resolveCornerDrawSize(borderConfig, imageBorder?.corners?.topLeft);
+  const topRightSize = resolveCornerDrawSize(borderConfig, imageBorder?.corners?.topRight);
+  const bottomLeftSize = resolveCornerDrawSize(borderConfig, imageBorder?.corners?.bottomLeft);
+
+  if (horizontalMode !== 'none' && topWidth > 0 && topWidth === bottomWidth) {
+    const borderRectWidth = contentWidth + basePadding.left + basePadding.right + borderConfig.width;
+    const sideLength = Math.max(0, borderRectWidth - topLeftSize.width - topRightSize.width);
+    const roundedSideLength = roundLengthToMode(sideLength, topWidth, horizontalMode);
+    const roundedWidth = roundedSideLength + topLeftSize.width + topRightSize.width;
+    roundedPadding.right = Math.max(0, basePadding.right + (roundedWidth - borderRectWidth));
+  }
+
+  if (verticalMode !== 'none' && leftHeight > 0 && leftHeight === rightHeight) {
+    const borderRectHeight = contentHeight + basePadding.top + basePadding.bottom + borderConfig.width;
+    const sideLength = Math.max(0, borderRectHeight - topLeftSize.height - bottomLeftSize.height);
+    const roundedSideLength = roundLengthToMode(sideLength, leftHeight, verticalMode);
+    const roundedHeight = roundedSideLength + topLeftSize.height + bottomLeftSize.height;
+    roundedPadding.bottom = Math.max(0, basePadding.bottom + (roundedHeight - borderRectHeight));
+  }
+
+  return roundedPadding;
+}
+
 export function calculateCanvasDimensions(
   laidOutLines,
   borderConfig,
@@ -102,11 +189,11 @@ export function calculateCanvasDimensions(
   } = dependencies;
   const borderWidth = borderConfig.enabled ? borderConfig.width : 0;
   const borderStrokeOverflow = borderConfig.enabled ? borderWidth / 2 : 0;
-  const textPadding = borderConfig.enabled
+  const baseTextPadding = borderConfig.enabled
     ? borderConfig.padding
     : { top: 0, right: 0, bottom: 0, left: 0 };
-  const textStartX = canvasSizePaddingConfig.left + borderWidth + textPadding.left;
-  const textStartY = canvasSizePaddingConfig.top + borderWidth + textPadding.top;
+  const textStartX = canvasSizePaddingConfig.left + borderWidth + baseTextPadding.left;
+  const textStartY = canvasSizePaddingConfig.top + borderWidth + baseTextPadding.top;
   const alignmentWidth = getAlignmentWidth(laidOutLines, maxContentWidth);
   const lineStartPositions = laidOutLines.map((line) => getAlignedStartX(line.align, textStartX, alignmentWidth, line.width));
   const renderedMinX = lineStartPositions.length ? Math.min(...lineStartPositions) : textStartX;
@@ -117,10 +204,13 @@ export function calculateCanvasDimensions(
   const verticalBounds = measureRenderedVerticalBounds(laidOutLines, textStartY);
 
   if (borderConfig.enabled) {
+    const contentWidth = contentMaxX - contentMinX;
+    const contentHeight = verticalBounds.maxY - verticalBounds.minY;
+    const textPadding = resolveRoundedPadding(borderConfig, contentWidth, contentHeight);
     const borderX = contentMinX - textPadding.left - borderWidth / 2;
     const borderY = verticalBounds.minY - textPadding.top - borderWidth / 2;
-    const borderRectWidth = contentMaxX - contentMinX + textPadding.left + textPadding.right + borderWidth;
-    const borderRectHeight = verticalBounds.maxY - verticalBounds.minY + textPadding.top + textPadding.bottom + borderWidth;
+    const borderRectWidth = contentWidth + textPadding.left + textPadding.right + borderWidth;
+    const borderRectHeight = contentHeight + textPadding.top + textPadding.bottom + borderWidth;
 
     return {
       width: Math.max(1, Math.ceil(borderX + borderRectWidth + borderStrokeOverflow + canvasSizePaddingConfig.right)),
