@@ -10,8 +10,8 @@ import {
 } from './ui/colorPicker.js';
 import {
   DEFAULT_SETTINGS_STORAGE_KEY,
-  applySavedSettings as applySavedSettingsModule,
   closeSettingsWindow as closeSettingsWindowModule,
+  getSavedSettings as getSavedSettingsModule,
   openSettingsWindow as openSettingsWindowModule,
   persistSettings as persistSettingsModule,
 } from './ui/settings.js';
@@ -54,6 +54,10 @@ import {
   persistFontLibraryToIndexedDb,
   restoreFontLibraryFromIndexedDb,
 } from './fonts/fontPersistenceIndexedDb.js';
+import {
+  persistEditorTemplateToIndexedDb,
+  restoreEditorTemplateFromIndexedDb,
+} from './editor/editorTemplatePersistenceIndexedDb.js';
 import { createManageFontsWindowController } from './ui/manageFontsWindow.js';
 
 const Quill = window.Quill;
@@ -78,7 +82,7 @@ const settingsButton = settingsView.window.openButton;
 const settingsOverlay = settingsView.window.overlay;
 const closeSettingsWindowButton = settingsView.window.closeButton;
 const darkModeToggle = settingsView.preferences.darkModeToggle;
-const APP_VERSION = '1.1.9';
+const APP_VERSION = '1.1.11';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 const SETTINGS_STORAGE_KEY = DEFAULT_SETTINGS_STORAGE_KEY;
 
@@ -414,20 +418,27 @@ function applyDarkMode(enabled) {
 }
 
 function persistSettings() {
-  if (!darkModeToggle) {
-    return;
-  }
+  const settingsPayload = {
+    darkMode: Boolean(darkModeToggle?.checked),
+    addBorderAroundText: Boolean(borderToggle?.checked),
+  };
 
-  persistSettingsModule(window.localStorage, { darkMode: Boolean(darkModeToggle.checked) }, SETTINGS_STORAGE_KEY);
+  persistSettingsModule(window.localStorage, settingsPayload, SETTINGS_STORAGE_KEY);
 }
 
 function applySavedSettings() {
-  applySavedSettingsModule({
-    storage: window.localStorage,
-    darkModeToggle,
-    applyDarkMode,
-    storageKey: SETTINGS_STORAGE_KEY,
-  });
+  const savedSettings = getSavedSettingsModule(window.localStorage, SETTINGS_STORAGE_KEY);
+
+  if (darkModeToggle) {
+    darkModeToggle.checked = Boolean(savedSettings.darkMode);
+    applyDarkMode(darkModeToggle.checked);
+  }
+
+
+  if (borderToggle && typeof savedSettings.addBorderAroundText === 'boolean') {
+    borderToggle.checked = savedSettings.addBorderAroundText;
+    borderToggle.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 }
 
 function setStorageStatusMessage(message = '', isError = false) {
@@ -642,6 +653,91 @@ quill.setContents([
 let activeFontSize = 18;
 let lastKnownSelection = null;
 let isEditingFontSizeInput = false;
+let isApplyingEditorTemplate = false;
+
+function getEditorTemplateSnapshot() {
+  const selection = quill.getSelection() || lastKnownSelection || { index: 0, length: 0 };
+  const format = quill.getFormat(selection);
+
+  return {
+    font: format.font || null,
+    size: format.size || null,
+    bold: Boolean(format.bold),
+    italic: Boolean(format.italic),
+    color: format.color || null,
+    background: format.background || null,
+    align: format.align || 'left',
+    wrapText: Boolean(wrapTextInput?.checked),
+    maxImageWidth: maxImageWidthInput?.value || '',
+  };
+}
+
+async function persistEditorTemplateState() {
+  const status = await persistEditorTemplateToIndexedDb(getEditorTemplateSnapshot());
+  if (!status?.ok && status?.error) {
+    console.warn('Unable to persist editor template to IndexedDB.', status.error);
+  }
+}
+
+function applyEditorTemplateSnapshot(templateData) {
+  if (!templateData || typeof templateData !== 'object') {
+    return;
+  }
+
+  const selection = quill.getSelection() || lastKnownSelection || { index: 0, length: 0 };
+  const index = Number.isFinite(selection.index) ? selection.index : 0;
+  const length = Number.isFinite(selection.length) ? selection.length : 0;
+  const contentLength = Math.max(0, quill.getLength() - 1);
+  const lineLength = Math.max(1, quill.getLength());
+
+  isApplyingEditorTemplate = true;
+
+  if (contentLength > 0) {
+    quill.formatText(0, contentLength, 'font', templateData.font || false, 'silent');
+    quill.formatText(0, contentLength, 'size', templateData.size || false, 'silent');
+    quill.formatText(0, contentLength, 'bold', Boolean(templateData.bold), 'silent');
+    quill.formatText(0, contentLength, 'italic', Boolean(templateData.italic), 'silent');
+    quill.formatText(0, contentLength, 'color', templateData.color || false, 'silent');
+    quill.formatText(0, contentLength, 'background', templateData.background || false, 'silent');
+  }
+
+  quill.formatLine(0, lineLength, 'align', templateData.align && templateData.align !== 'left' ? templateData.align : false, 'silent');
+
+  if (wrapTextInput && typeof templateData.wrapText === 'boolean') {
+    wrapTextInput.checked = templateData.wrapText;
+    syncEditorWrapMode();
+  }
+
+  if (maxImageWidthInput && typeof templateData.maxImageWidth !== 'undefined') {
+    maxImageWidthInput.value = String(templateData.maxImageWidth || '');
+  }
+
+  quill.setSelection(index, length, 'silent');
+  quill.format('font', templateData.font || false, 'silent');
+  quill.format('size', templateData.size || false, 'silent');
+  quill.format('bold', Boolean(templateData.bold), 'silent');
+  quill.format('italic', Boolean(templateData.italic), 'silent');
+  quill.format('color', templateData.color || false, 'silent');
+  quill.format('background', templateData.background || false, 'silent');
+  quill.format('align', templateData.align && templateData.align !== 'left' ? templateData.align : false, 'silent');
+
+  isApplyingEditorTemplate = false;
+  syncFontSizeInputFromSelection();
+}
+
+async function initializeEditorTemplateFromPersistence() {
+  try {
+    const templateData = await restoreEditorTemplateFromIndexedDb();
+    if (!templateData) {
+      await persistEditorTemplateState();
+      return;
+    }
+
+    applyEditorTemplateSnapshot(templateData);
+  } catch (error) {
+    console.warn('Unable to initialize editor template persistence.', error);
+  }
+}
 
 function setFontSizeInputValue(value) {
   if (!fontSizeInput) {
@@ -839,6 +935,23 @@ quill.on('text-change', () => {
   syncFontSizeInputFromSelection();
 });
 
+quill.on('editor-change', () => {
+  if (isApplyingEditorTemplate) {
+    return;
+  }
+
+  void persistEditorTemplateState();
+});
+
+
+wrapTextInput?.addEventListener('change', () => {
+  void persistEditorTemplateState();
+});
+
+maxImageWidthInput?.addEventListener('input', () => {
+  void persistEditorTemplateState();
+});
+
 function isTextWrapEnabled() {
   return !wrapTextInput || wrapTextInput.checked;
 }
@@ -1021,6 +1134,7 @@ const manageFontsWindowController = createManageFontsWindowController({
 });
 
 void initializeFontLibraryFromPersistence();
+void initializeEditorTemplateFromPersistence();
 
 function openManageImagesWindow(slotType = null, slotName = null) {
   const initialImageId = slotType && slotName
