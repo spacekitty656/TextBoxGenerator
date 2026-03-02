@@ -10,8 +10,8 @@ import {
 } from './ui/colorPicker.js';
 import {
   DEFAULT_SETTINGS_STORAGE_KEY,
-  applySavedSettings as applySavedSettingsModule,
   closeSettingsWindow as closeSettingsWindowModule,
+  getSavedSettings as getSavedSettingsModule,
   openSettingsWindow as openSettingsWindowModule,
   persistSettings as persistSettingsModule,
 } from './ui/settings.js';
@@ -82,7 +82,7 @@ const settingsButton = settingsView.window.openButton;
 const settingsOverlay = settingsView.window.overlay;
 const closeSettingsWindowButton = settingsView.window.closeButton;
 const darkModeToggle = settingsView.preferences.darkModeToggle;
-const APP_VERSION = '1.1.9';
+const APP_VERSION = '1.1.10';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 const SETTINGS_STORAGE_KEY = DEFAULT_SETTINGS_STORAGE_KEY;
 
@@ -418,20 +418,36 @@ function applyDarkMode(enabled) {
 }
 
 function persistSettings() {
-  if (!darkModeToggle) {
-    return;
-  }
+  const settingsPayload = {
+    darkMode: Boolean(darkModeToggle?.checked),
+    wrapText: Boolean(wrapTextInput?.checked),
+    maxImageWidth: maxImageWidthInput?.value || '',
+    addBorderAroundText: Boolean(borderToggle?.checked),
+  };
 
-  persistSettingsModule(window.localStorage, { darkMode: Boolean(darkModeToggle.checked) }, SETTINGS_STORAGE_KEY);
+  persistSettingsModule(window.localStorage, settingsPayload, SETTINGS_STORAGE_KEY);
 }
 
 function applySavedSettings() {
-  applySavedSettingsModule({
-    storage: window.localStorage,
-    darkModeToggle,
-    applyDarkMode,
-    storageKey: SETTINGS_STORAGE_KEY,
-  });
+  const savedSettings = getSavedSettingsModule(window.localStorage, SETTINGS_STORAGE_KEY);
+
+  if (darkModeToggle) {
+    darkModeToggle.checked = Boolean(savedSettings.darkMode);
+    applyDarkMode(darkModeToggle.checked);
+  }
+
+  if (wrapTextInput && typeof savedSettings.wrapText === 'boolean') {
+    wrapTextInput.checked = savedSettings.wrapText;
+  }
+
+  if (maxImageWidthInput && typeof savedSettings.maxImageWidth !== 'undefined') {
+    maxImageWidthInput.value = String(savedSettings.maxImageWidth || '');
+  }
+
+  if (borderToggle && typeof savedSettings.addBorderAroundText === 'boolean') {
+    borderToggle.checked = savedSettings.addBorderAroundText;
+    borderToggle.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 }
 
 function setStorageStatusMessage(message = '', isError = false) {
