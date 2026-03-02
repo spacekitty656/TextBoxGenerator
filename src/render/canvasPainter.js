@@ -35,7 +35,7 @@ export function createCanvasPainter({ context, canvas, getBackgroundRectHeightFo
         renderedMinY = Math.min(renderedMinY, glyphTop);
         renderedMaxY = Math.max(renderedMaxY, glyphBottom);
 
-        if (token.style.underline && token.text.trim()) {
+        if (token.style.underline && token.text.length > 0) {
           const underlineY = y + token.style.fontSize + 2;
           const underlineWidth = Math.max(1, token.style.fontSize / 14);
           renderedMaxY = Math.max(renderedMaxY, underlineY + underlineWidth / 2);
@@ -210,7 +210,7 @@ export function createCanvasPainter({ context, canvas, getBackgroundRectHeightFo
         context.fillStyle = token.style.color;
         context.fillText(token.text, x, y);
 
-        if (token.style.underline && token.text.trim()) {
+        if (token.style.underline && token.text.length > 0) {
           const underlineY = y + token.style.fontSize + 2;
           const underlineWidth = Math.max(1, token.style.fontSize / 14);
           context.strokeStyle = token.style.color;
