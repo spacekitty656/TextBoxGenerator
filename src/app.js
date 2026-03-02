@@ -473,8 +473,16 @@ function panelHasVerticalScrollbar(panelElement) {
   return panelElement.scrollHeight > panelElement.clientHeight;
 }
 
+function isHorizontalScrollEvent(event) {
+  if (!event) {
+    return false;
+  }
+
+  return event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
+}
+
 function forwardCanvasPanelScrollToFormPanel(event) {
-  if (!formPanel || panelHasVerticalScrollbar(canvasPanel)) {
+  if (!formPanel || panelHasVerticalScrollbar(canvasPanel) || isHorizontalScrollEvent(event) || event.deltaY === 0) {
     return;
   }
 
