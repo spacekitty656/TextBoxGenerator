@@ -54,6 +54,10 @@ import {
   persistFontLibraryToIndexedDb,
   restoreFontLibraryFromIndexedDb,
 } from './fonts/fontPersistenceIndexedDb.js';
+import {
+  persistEditorTemplateToIndexedDb,
+  restoreEditorTemplateFromIndexedDb,
+} from './editor/editorTemplatePersistenceIndexedDb.js';
 import { createManageFontsWindowController } from './ui/manageFontsWindow.js';
 
 const Quill = window.Quill;
@@ -642,6 +646,67 @@ quill.setContents([
 let activeFontSize = 18;
 let lastKnownSelection = null;
 let isEditingFontSizeInput = false;
+let isApplyingEditorTemplate = false;
+
+function getEditorTemplateSnapshot() {
+  const selection = quill.getSelection() || lastKnownSelection || { index: 0, length: 0 };
+  const format = quill.getFormat(selection);
+
+  return {
+    font: format.font || null,
+    size: format.size || null,
+    bold: Boolean(format.bold),
+    italic: Boolean(format.italic),
+    color: format.color || null,
+    background: format.background || null,
+    align: format.align || 'left',
+  };
+}
+
+async function persistEditorTemplateState() {
+  const status = await persistEditorTemplateToIndexedDb(getEditorTemplateSnapshot());
+  if (!status?.ok && status?.error) {
+    console.warn('Unable to persist editor template to IndexedDB.', status.error);
+  }
+}
+
+function applyEditorTemplateSnapshot(templateData) {
+  if (!templateData || typeof templateData !== 'object') {
+    return;
+  }
+
+  const selection = quill.getSelection() || lastKnownSelection || { index: 0, length: 0 };
+  const index = Number.isFinite(selection.index) ? selection.index : 0;
+  const length = Number.isFinite(selection.length) ? selection.length : 0;
+
+  isApplyingEditorTemplate = true;
+  quill.setSelection(index, length, 'silent');
+
+  quill.format('font', templateData.font || false, 'silent');
+  quill.format('size', templateData.size || false, 'silent');
+  quill.format('bold', Boolean(templateData.bold), 'silent');
+  quill.format('italic', Boolean(templateData.italic), 'silent');
+  quill.format('color', templateData.color || false, 'silent');
+  quill.format('background', templateData.background || false, 'silent');
+  quill.format('align', templateData.align && templateData.align !== 'left' ? templateData.align : false, 'silent');
+  isApplyingEditorTemplate = false;
+
+  syncFontSizeInputFromSelection();
+}
+
+async function initializeEditorTemplateFromPersistence() {
+  try {
+    const templateData = await restoreEditorTemplateFromIndexedDb();
+    if (!templateData) {
+      await persistEditorTemplateState();
+      return;
+    }
+
+    applyEditorTemplateSnapshot(templateData);
+  } catch (error) {
+    console.warn('Unable to initialize editor template persistence.', error);
+  }
+}
 
 function setFontSizeInputValue(value) {
   if (!fontSizeInput) {
@@ -839,6 +904,14 @@ quill.on('text-change', () => {
   syncFontSizeInputFromSelection();
 });
 
+quill.on('editor-change', () => {
+  if (isApplyingEditorTemplate) {
+    return;
+  }
+
+  void persistEditorTemplateState();
+});
+
 function isTextWrapEnabled() {
   return !wrapTextInput || wrapTextInput.checked;
 }
@@ -1021,6 +1094,7 @@ const manageFontsWindowController = createManageFontsWindowController({
 });
 
 void initializeFontLibraryFromPersistence();
+void initializeEditorTemplateFromPersistence();
 
 function openManageImagesWindow(slotType = null, slotName = null) {
   const initialImageId = slotType && slotName
