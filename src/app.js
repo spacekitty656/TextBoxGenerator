@@ -678,10 +678,23 @@ function applyEditorTemplateSnapshot(templateData) {
   const selection = quill.getSelection() || lastKnownSelection || { index: 0, length: 0 };
   const index = Number.isFinite(selection.index) ? selection.index : 0;
   const length = Number.isFinite(selection.length) ? selection.length : 0;
+  const contentLength = Math.max(0, quill.getLength() - 1);
+  const lineLength = Math.max(1, quill.getLength());
 
   isApplyingEditorTemplate = true;
-  quill.setSelection(index, length, 'silent');
 
+  if (contentLength > 0) {
+    quill.formatText(0, contentLength, 'font', templateData.font || false, 'silent');
+    quill.formatText(0, contentLength, 'size', templateData.size || false, 'silent');
+    quill.formatText(0, contentLength, 'bold', Boolean(templateData.bold), 'silent');
+    quill.formatText(0, contentLength, 'italic', Boolean(templateData.italic), 'silent');
+    quill.formatText(0, contentLength, 'color', templateData.color || false, 'silent');
+    quill.formatText(0, contentLength, 'background', templateData.background || false, 'silent');
+  }
+
+  quill.formatLine(0, lineLength, 'align', templateData.align && templateData.align !== 'left' ? templateData.align : false, 'silent');
+
+  quill.setSelection(index, length, 'silent');
   quill.format('font', templateData.font || false, 'silent');
   quill.format('size', templateData.size || false, 'silent');
   quill.format('bold', Boolean(templateData.bold), 'silent');
@@ -689,8 +702,8 @@ function applyEditorTemplateSnapshot(templateData) {
   quill.format('color', templateData.color || false, 'silent');
   quill.format('background', templateData.background || false, 'silent');
   quill.format('align', templateData.align && templateData.align !== 'left' ? templateData.align : false, 'silent');
-  isApplyingEditorTemplate = false;
 
+  isApplyingEditorTemplate = false;
   syncFontSizeInputFromSelection();
 }
 
