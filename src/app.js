@@ -82,7 +82,7 @@ const settingsButton = settingsView.window.openButton;
 const settingsOverlay = settingsView.window.overlay;
 const closeSettingsWindowButton = settingsView.window.closeButton;
 const darkModeToggle = settingsView.preferences.darkModeToggle;
-const APP_VERSION = '1.1.10';
+const APP_VERSION = '1.1.11';
 const BASE_CANVAS_CONTENT_WIDTH = 900;
 const SETTINGS_STORAGE_KEY = DEFAULT_SETTINGS_STORAGE_KEY;
 
@@ -420,8 +420,6 @@ function applyDarkMode(enabled) {
 function persistSettings() {
   const settingsPayload = {
     darkMode: Boolean(darkModeToggle?.checked),
-    wrapText: Boolean(wrapTextInput?.checked),
-    maxImageWidth: maxImageWidthInput?.value || '',
     addBorderAroundText: Boolean(borderToggle?.checked),
   };
 
@@ -436,13 +434,6 @@ function applySavedSettings() {
     applyDarkMode(darkModeToggle.checked);
   }
 
-  if (wrapTextInput && typeof savedSettings.wrapText === 'boolean') {
-    wrapTextInput.checked = savedSettings.wrapText;
-  }
-
-  if (maxImageWidthInput && typeof savedSettings.maxImageWidth !== 'undefined') {
-    maxImageWidthInput.value = String(savedSettings.maxImageWidth || '');
-  }
 
   if (borderToggle && typeof savedSettings.addBorderAroundText === 'boolean') {
     borderToggle.checked = savedSettings.addBorderAroundText;
@@ -676,6 +667,8 @@ function getEditorTemplateSnapshot() {
     color: format.color || null,
     background: format.background || null,
     align: format.align || 'left',
+    wrapText: Boolean(wrapTextInput?.checked),
+    maxImageWidth: maxImageWidthInput?.value || '',
   };
 }
 
@@ -709,6 +702,15 @@ function applyEditorTemplateSnapshot(templateData) {
   }
 
   quill.formatLine(0, lineLength, 'align', templateData.align && templateData.align !== 'left' ? templateData.align : false, 'silent');
+
+  if (wrapTextInput && typeof templateData.wrapText === 'boolean') {
+    wrapTextInput.checked = templateData.wrapText;
+    syncEditorWrapMode();
+  }
+
+  if (maxImageWidthInput && typeof templateData.maxImageWidth !== 'undefined') {
+    maxImageWidthInput.value = String(templateData.maxImageWidth || '');
+  }
 
   quill.setSelection(index, length, 'silent');
   quill.format('font', templateData.font || false, 'silent');
@@ -938,6 +940,15 @@ quill.on('editor-change', () => {
     return;
   }
 
+  void persistEditorTemplateState();
+});
+
+
+wrapTextInput?.addEventListener('change', () => {
+  void persistEditorTemplateState();
+});
+
+maxImageWidthInput?.addEventListener('input', () => {
   void persistEditorTemplateState();
 });
 

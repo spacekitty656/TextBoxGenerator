@@ -139,6 +139,8 @@ describe('indexeddb editor template persistence', () => {
       color: '#112233',
       background: '#fef3c7',
       align: 'center',
+      wrapText: false,
+      maxImageWidth: '720',
     };
 
     const persistStatus = await persistEditorTemplateToIndexedDb(snapshot, { indexedDb });
